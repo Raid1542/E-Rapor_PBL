@@ -1,9 +1,6 @@
-# File konfigurasi lokal (jangan di-commit!)
+#File database
 .env
 
-# Folder dependensi
+# Dependensi Node.js
 node_modules/
-
-# File log & cache
-npm-debug.log*
-.DS_Store
+package-lock.json
