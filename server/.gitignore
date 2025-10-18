@@ -1,0 +1,9 @@
+# File konfigurasi lokal (jangan di-commit!)
+.env
+
+# Folder dependensi
+node_modules/
+
+# File log & cache
+npm-debug.log*
+.DS_Store
