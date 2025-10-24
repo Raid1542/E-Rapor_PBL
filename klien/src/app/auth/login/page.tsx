@@ -3,21 +3,61 @@
 import { useState } from "react";
 
 export default function LoginPage() {
+  //  Perbaiki initial state
   const [formData, setFormData] = useState({
-    email: "",
+    email_sekolah: "",
     password: "",
-    role: "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+
+    const email = formData.email_sekolah;
+    const password = formData.password;
+
+    console.log("📧 Email asli:", JSON.stringify(email));
+    console.log("📏 Panjang asli:", email.length);
+    console.log("🔍 Email setelah trim:", JSON.stringify(email.trim()));
+    console.log("📏 Panjang setelah trim:", email.trim().length);
+
+    if (!email.trim() || !password) {
+      alert("Semuanya wajib diisi");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email_sekolah: email.trim(), // pastikan trim di sini juga
+          password: password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("❌ Error dari backend:", data.message);
+        alert(data.message || "Login gagal");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      window.location.href = "/";
+    } catch (err) {
+      console.error("💥 Error koneksi:", err);
+      alert("Gagal terhubung ke server. Pastikan backend berjalan di port 5000.");
+    }
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    // Hanya trim untuk email
+    const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: trimmedValue,
     });
   };
 
@@ -43,7 +83,7 @@ export default function LoginPage() {
           -webkit-backdrop-filter: blur(10px);
         }
       `}</style>
-      
+
       <div className="min-h-screen relative bg-image">
         {/* Glass Overlay pada Background */}
         <div className="absolute inset-0 glass-overlay"></div>
@@ -96,8 +136,8 @@ export default function LoginPage() {
                   </label>
                   <input
                     type="email"
-                    name="email"
-                    value={formData.email}
+                    name="email_sekolah"
+                    value={formData.email_sekolah}
                     onChange={handleChange}
                     placeholder="Masukkan email Anda"
                     className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 placeholder-gray-400"
@@ -151,15 +191,12 @@ export default function LoginPage() {
                     Role
                   </label>
                   <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
                     className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 cursor-pointer"
                   >
                     <option value="">Pilih Role</option>
                     <option value="admin">Admin</option>
-                    <option value="guru">Guru</option>
-                    <option value="wali_kelas">Wali Kelas</option>
+                    <option value="guru_kelas">Guru Kelas</option>
+                    <option value="guru_bidang_studi">Guru Bidang Studi</option>
                   </select>
                 </div>
 
