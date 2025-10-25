@@ -1,0 +1,52 @@
+# =====================
+#   NODE / DEPENDENCY
+# =====================
+node_modules/
+**/node_modules/
+
+# =====================
+#   ENV FILES (SECRET)
+# =====================
+.env
+**/.env
+
+# =====================
+#   NEXT.JS BUILD
+# =====================
+.next/
+out/
+dist/
+build/
+.cache/
+
+# =====================
+#   LOGS
+# =====================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# =====================
+#   OS FILES
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+#   IDE / EDITOR FILES
+# =====================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =====================
+#   TYPESCRIPT CACHE
+# =====================
+*.tsbuildinfo
+
+# =====================
+#   COVERAGE REPORT
+# =====================
+coverage/
