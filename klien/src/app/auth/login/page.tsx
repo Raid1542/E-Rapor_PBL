@@ -4,20 +4,87 @@ import { useState } from "react";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: "",
+    email_sekolah: "",
     password: "",
     role: "",
   });
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+    setError("");
+
+    const email = formData.email_sekolah;
+    const password = formData.password;
+    const role = formData.role;
+
+    // Validasi
+    if (!email.trim() || !password || !role) {
+      setError("Email, password, dan role wajib diisi");
+      return;
+    }
+
+    console.log("📧 Email:", JSON.stringify(email));
+    console.log("🔐 Password:", password.length, "karakter");
+    console.log("👤 Role:", role);
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email_sekolah: email.trim(),
+          password: password,
+          role: role,
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        console.error("❌ Error dari backend:", data.message);
+        setError(data.message || "Login gagal");
+        setLoading(false);
+        return;
+      }
+
+      console.log("✅ Login berhasil:", data);
+
+      // Simpan token
+      localStorage.setItem("token", data.token);
+      
+      // Simpan user data
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      // Redirect berdasarkan role menggunakan window.location
+      if (role === "admin") {
+        window.location.href = "/admin/dashboard";
+      } else if (role === "guru_kelas") {
+        window.location.href = "/guru-kelas/dashboard";
+      } else if (role === "guru_bidang_studi") {
+        window.location.href = "/guru-bidang-studi/dashboard";
+      }
+
+    } catch (err) {
+      console.error("💥 Error koneksi:", err);
+      setError("Gagal terhubung ke server. Pastikan backend berjalan di port 5000.");
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: trimmedValue,
     });
   };
 
@@ -43,17 +110,14 @@ export default function LoginPage() {
           -webkit-backdrop-filter: blur(10px);
         }
       `}</style>
-      
+
       <div className="min-h-screen relative bg-image">
-        {/* Glass Overlay pada Background */}
         <div className="absolute inset-0 glass-overlay"></div>
 
-        {/* Content */}
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-          {/* Login Card - Solid Background */}
           <div className="w-full max-w-md">
             <div className="bg-white rounded-3xl shadow-2xl p-8">
-              {/* Logo Image */}
+              {/* Logo */}
               <div className="flex justify-center mb-6">
                 <div className="transform hover:scale-105 transition-all duration-300">
                   <img
@@ -74,9 +138,16 @@ export default function LoginPage() {
                 </p>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+
               {/* Form */}
-              <div className="space-y-5">
-                {/* Email Field */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Email */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg
@@ -96,15 +167,16 @@ export default function LoginPage() {
                   </label>
                   <input
                     type="email"
-                    name="email"
-                    value={formData.email}
+                    name="email_sekolah"
+                    value={formData.email_sekolah}
                     onChange={handleChange}
                     placeholder="Masukkan email Anda"
                     className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 placeholder-gray-400"
+                    required
                   />
                 </div>
 
-                {/* Password Field */}
+                {/* Password */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg
@@ -129,10 +201,11 @@ export default function LoginPage() {
                     onChange={handleChange}
                     placeholder="Masukkan password Anda"
                     className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 placeholder-gray-400"
+                    required
                   />
                 </div>
 
-                {/* Role Field */}
+                {/* Role */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg
@@ -155,24 +228,26 @@ export default function LoginPage() {
                     value={formData.role}
                     onChange={handleChange}
                     className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 cursor-pointer"
+                    required
                   >
                     <option value="">Pilih Role</option>
                     <option value="admin">Admin</option>
-                    <option value="guru">Guru</option>
-                    <option value="wali_kelas">Wali Kelas</option>
+                    <option value="guru_kelas">Guru Kelas</option>
+                    <option value="guru_bidang_studi">Guru Bidang Studi</option>
                   </select>
                 </div>
 
-                {/* Login Button */}
+                {/* Button */}
                 <button
-                  onClick={handleSubmit}
-                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 mt-8"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  LOGIN
+                  {loading ? "Loading..." : "LOGIN"}
                 </button>
-              </div>
+              </form>
 
-              {/* Footer Text */}
+              {/* Footer */}
               <div className="text-center mt-6">
                 <p className="text-xs text-black font-light drop-shadow">
                   © 2025 SDIT Ulil Albab. All rights reserved.
