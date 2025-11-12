@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronRight, Users, UserCircle, Award, School, BookOpen } from 'lucide-react';
+<<<<<<< HEAD
+=======
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
 import { UserData } from '@/lib/types';
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+<<<<<<< HEAD
+=======
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
   const [activeMenu, setActiveMenu] = useState<string>('dashboard');
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
 
   useEffect(() => {
     // Cek apakah user sudah login
@@ -19,7 +25,10 @@ export default function AdminDashboardPage() {
     const userData = localStorage.getItem('user');
 
     if (!token) {
+<<<<<<< HEAD
+=======
       // Jika belum login, redirect ke halaman login
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
       window.location.href = '/login';
       return;
     }
@@ -27,7 +36,10 @@ export default function AdminDashboardPage() {
     if (userData) {
       const parsedUser: UserData = JSON.parse(userData);
       
+<<<<<<< HEAD
+=======
       // Cek apakah role adalah admin
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
       if (parsedUser.role !== 'admin') {
         alert('Anda tidak memiliki akses ke halaman ini');
         window.location.href = '/login';
@@ -40,6 +52,11 @@ export default function AdminDashboardPage() {
     setLoading(false);
   }, []);
 
+<<<<<<< HEAD
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+=======
   const handleLogout = (): void => {
     // Hapus token dan user data
     localStorage.removeItem('token');
@@ -52,6 +69,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
@@ -65,6 +83,124 @@ export default function AdminDashboardPage() {
   }
 
   return (
+<<<<<<< HEAD
+    <>
+      {/* Welcome Card */}
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
+        <h2 className="text-2xl font-bold mb-2">
+          Selamat Datang, {user.name || 'Admin'}! 👋
+        </h2>
+        <p className="text-orange-100">
+          Anda login sebagai Administrator. Kelola sistem E-Rapor dengan mudah.
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Card Data Guru */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Guru</p>
+              <p className="text-3xl font-bold text-gray-900">32</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Users className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Card Data Siswa */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Siswa</p>
+              <p className="text-3xl font-bold text-gray-900">245</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Users className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Card Data Admin */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Admin</p>
+              <p className="text-3xl font-bold text-gray-900">5</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <UserCircle className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Card Data Ekstrakurikuler */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Ekstrakurikuler</p>
+              <p className="text-3xl font-bold text-gray-900">8</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Award className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Card Data Kelas */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Kelas</p>
+              <p className="text-3xl font-bold text-gray-900">12</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <School className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Card Data Mata Pelajaran */}
+        <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Data Mata Pelajaran</p>
+              <p className="text-3xl font-bold text-gray-900">15</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <BookOpen className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+            <span className="text-sm font-medium">Lihat detail</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </>
+=======
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar Component */}
       <Sidebar 
@@ -211,5 +347,6 @@ export default function AdminDashboardPage() {
         />
       )}
     </div>
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef
   );
 }

@@ -73,7 +73,11 @@ export default function LoginPage() {
 
     } catch (err) {
       console.error("💥 Error koneksi:", err);
+<<<<<<< HEAD:klien/src/app/login/page.tsx
+      setError("Gagal terhubung ke server. Silahkan coba lagi");
+=======
       setError("Gagal terhubung ke server. Pastikan backend berjalan di port 5000.");
+>>>>>>> fb1ee09d5a28d4ca90c4cc80cf94f9984218d4ef:klien/src/app/auth/login/page.tsx
       setLoading(false);
     }
   };
