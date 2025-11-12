@@ -37,7 +37,7 @@
     "**/*.mts",
     ".next\\dev/types/**/*.ts",
     ".next\\dev/types/**/*.ts"
-  ],
+, "src/app/guru_bidang_studi/dashboard/page.jsx"  ],
   "exclude": [
     "node_modules"
   ]
