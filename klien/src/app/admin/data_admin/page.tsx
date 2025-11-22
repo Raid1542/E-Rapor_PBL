@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Eye, Pencil, Trash2, X, EyeOff, Plus } from 'lucide-react';
 
 const dummyAdmin = [
-  { id: 1, nama: 'Admin', lp: 'L', nip: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
+  { id: 1, nama: 'Admin', lp: 'L', niy: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
 ];
 
 export default function DataAdminPage() {
@@ -18,7 +18,7 @@ export default function DataAdminPage() {
 
   const [formData, setFormData] = useState({
     nama: '',
-    nip: '',
+    niy: '', // Diubah dari nip menjadi niy
     nuptk: '',
     tempatLahir: '',
     tanggalLahir: '',
@@ -57,7 +57,7 @@ export default function DataAdminPage() {
     console.log('Submit data:', formData);
     setFormData({
       nama: '',
-      nip: '',
+      niy: '', // Diubah dari nip menjadi niy
       nuptk: '',
       tempatLahir: '',
       tanggalLahir: '',
@@ -74,7 +74,7 @@ export default function DataAdminPage() {
   const handleReset = () => {
     setFormData({
       nama: '',
-      nip: '',
+      niy: '', // Diubah dari nip menjadi niy
       nuptk: '',
       tempatLahir: '',
       tanggalLahir: '',
@@ -89,7 +89,7 @@ export default function DataAdminPage() {
 
   const filteredAdmin = dummyAdmin.filter(admin =>
     admin.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    admin.nip.includes(searchQuery)
+    admin.niy.includes(searchQuery) // Diubah dari nip menjadi niy
   );
 
   const totalPages = Math.ceil(filteredAdmin.length / itemsPerPage);
@@ -244,13 +244,13 @@ export default function DataAdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">NIP</label>
+                <label className="block text-sm font-medium mb-2">NIY</label> {/* Diubah dari NIP menjadi NIY */}
                 <input
                   type="text"
-                  name="nip"
-                  value={formData.nip}
+                  name="niy" // Diubah dari nip menjadi niy
+                  value={formData.niy} // Diubah dari nip menjadi niy
                   onChange={handleInputChange}
-                  placeholder="Ketik NIP"
+                  placeholder="Ketik NIY" // Diubah dari NIP menjadi NIY
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
@@ -447,7 +447,7 @@ export default function DataAdminPage() {
                   <th className="px-4 py-3 text-left">No.</th>
                   <th className="px-4 py-3 text-left">Nama</th>
                   <th className="px-4 py-3 text-left">L/P</th>
-                  <th className="px-4 py-3 text-left">NIP</th>
+                  <th className="px-4 py-3 text-left">NIY</th> {/* Diubah dari NIP menjadi NIY */}
                   <th className="px-4 py-3 text-left">NUPTK</th>
                   <th className="px-4 py-3 text-left">Status Admin</th>
                   <th className="px-4 py-3 text-left">Aksi</th>
@@ -462,7 +462,7 @@ export default function DataAdminPage() {
                     <td className="px-4 py-3">{startIndex + index + 1}</td>
                     <td className="px-4 py-3">{admin.nama}</td>
                     <td className="px-4 py-3">{admin.lp}</td>
-                    <td className="px-4 py-3">{admin.nip}</td>
+                    <td className="px-4 py-3">{admin.niy}</td> {/* Diubah dari nip menjadi niy */}
                     <td className="px-4 py-3">{admin.nuptk}</td>
                     <td className="px-4 py-3">
                       <span className="text-gray-700">{admin.statusAdmin}</span>
@@ -537,9 +537,9 @@ export default function DataAdminPage() {
                   </span>
                 </div>
                 <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">NIP</span>
+                  <span className="w-48 font-semibold">NIY</span> {/* Diubah dari NIP menjadi NIY */}
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.nip}</span>
+                  <span>{selectedAdmin.niy}</span> {/* Diubah dari nip menjadi niy */}
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">NUPTK</span>

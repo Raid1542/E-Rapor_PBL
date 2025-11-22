@@ -38,7 +38,7 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
     setProfileOpen(false);
     
     // Redirect ke halaman login
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   const handleProfile = () => {
@@ -50,22 +50,11 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-6 py-4">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            {/* Logo Sekolah di Header */}
-            <img
-              src="/images/LogoUA.jpg"
-              alt="Logo SDIT Ulil Albab"
-              className="w-12 h-12 object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                E-Rapor SDIT Ulil Albab
-              </h1>
-              <p className="text-sm text-gray-500">Dashboard Admin</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
           </div>
           
           <div className="relative">

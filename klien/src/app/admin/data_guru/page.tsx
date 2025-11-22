@@ -27,7 +27,7 @@ export default function DataGuruPage() {
 
   const [formData, setFormData] = useState({
     nama: '',
-    niy: '',
+    niy: '', // Tetap menggunakan niy (bukan nip)
     nuptk: '',
     tempatLahir: '',
     tanggalLahir: '',

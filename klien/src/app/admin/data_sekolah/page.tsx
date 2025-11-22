@@ -14,7 +14,7 @@ export default function DataSekolahPage() {
     email: 'sdn1indonesia@gmail.com',
     website: 'google.com',
     kepalaSekolah: 'Erik Santoso, S.Pd',
-    nipKepalaSekolah: '1900002148149320',
+    niyKepalaSekolah: '1900002148149320', // Diubah dari nipKepalaSekolah
     confirmData: false
   });
 
@@ -166,11 +166,11 @@ export default function DataSekolahPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">NIP Kepala Sekolah</label>
+              <label className="block text-sm font-semibold mb-2">NIY Kepala Sekolah</label>
               <input
                 type="text"
-                name="nipKepalaSekolah"
-                value={formData.nipKepalaSekolah}
+                name="niyKepalaSekolah"
+                value={formData.niyKepalaSekolah}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
