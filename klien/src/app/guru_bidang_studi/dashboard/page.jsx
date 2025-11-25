@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, Menu, X, LogOut, User, Edit, Trash2, Plus, Home, Eye } from 'lucide-react'; // Tetap impor semua ikon
+import { ChevronRight, Menu, X, LogOut, User, Edit, Trash2, Plus, Home } from 'lucide-react';
 
 export default function GuruBidangStudiDashboard() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -11,7 +11,7 @@ export default function GuruBidangStudiDashboard() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStudent, setNewStudent] = useState({
-    latihan: 0, uh: 0, pts: 0, pas: 0, notes: ''
+    uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0, deskripsi: ''
   });
 
   const [profileData, setProfileData] = useState({
@@ -57,20 +57,21 @@ export default function GuruBidangStudiDashboard() {
   ]);
 
   const [students, setStudents] = useState([
-    { id: 1, nis: '2024001', name: 'Ahmad Fauzi', latihan: 85, uh: 80, pts: 82, pas: 88, notes: 'Bagus' },
-    { id: 2, nis: '2024002', name: 'Siti Nurhaliza', latihan: 90, uh: 88, pts: 89, pas: 92, notes: 'Sangat baik' },
-    { id: 3, nis: '2024003', name: 'Budi Prasetyo', latihan: 75, uh: 70, pts: 72, pas: 78, notes: 'Perlu ditingkatkan' },
-    { id: 4, nis: '2024004', name: 'Dewi Lestari', latihan: 88, uh: 85, pts: 87, pas: 90, notes: 'Konsisten' },
-    { id: 5, nis: '2024005', name: 'Riko Saputra', latihan: 78, uh: 75, pts: 76, pas: 80, notes: 'Cukup baik' },
-    { id: 6, nis: '2024006', name: 'Aisyah Putri', latihan: 92, uh: 90, pts: 91, pas: 93, notes: 'Excellent' },
-    { id: 7, nis: '2024007', name: 'Farhan Ali', latihan: 80, uh: 82, pts: 81, pas: 85, notes: 'Baik' },
-    { id: 8, nis: '2024008', name: 'Nadia Rahman', latihan: 87, uh: 84, pts: 86, pas: 89, notes: 'Sangat baik' }
+    { id: 1, nis: '2024001', name: 'Ahmad Fauzi', uh1: 80, uh2: 82, uh3: 78, uh4: 85, uh5: 83, pts: 82, pas: 88, deskripsi: 'Bagus' },
+    { id: 2, nis: '2024002', name: 'Siti Nurhaliza', uh1: 88, uh2: 89, uh3: 90, uh4: 87, uh5: 91, pts: 89, pas: 92, deskripsi: 'Sangat baik' },
+    { id: 3, nis: '2024003', name: 'Budi Prasetyo', uh1: 70, uh2: 72, uh3: 68, uh4: 71, uh5: 73, pts: 72, pas: 78, deskripsi: 'Perlu ditingkatkan' },
+    { id: 4, nis: '2024004', name: 'Dewi Lestari', uh1: 85, uh2: 86, uh3: 84, uh4: 87, uh5: 88, pts: 87, pas: 90, deskripsi: 'Konsisten' },
+    { id: 5, nis: '2024005', name: 'Riko Saputra', uh1: 75, uh2: 76, uh3: 74, uh4: 77, uh5: 78, pts: 76, pas: 80, deskripsi: 'Cukup baik' },
+    { id: 6, nis: '2024006', name: 'Aisyah Putri', uh1: 90, uh2: 91, uh3: 92, uh4: 93, uh5: 94, pts: 91, pas: 93, deskripsi: 'Excellent' },
+    { id: 7, nis: '2024007', name: 'Farhan Ali', uh1: 82, uh2: 83, uh3: 81, uh4: 84, uh5: 85, pts: 81, pas: 85, deskripsi: 'Baik' },
+    { id: 8, nis: '2024008', name: 'Nadia Rahman', uh1: 84, uh2: 85, uh3: 86, uh4: 87, uh5: 88, pts: 86, pas: 89, deskripsi: 'Sangat baik' }
   ]);
 
   const [selectedClass, setSelectedClass] = useState(null);
 
-  const calculateAverage = (student) => {
-    const avg = (student.latihan + student.uh + student.pts + student.pas) / 4;
+  const calculateRapor = (student) => {
+    const total = student.uh1 + student.uh2 + student.uh3 + student.uh4 + student.uh5 + student.pts + student.pas;
+    const avg = total / 7;
     return avg.toFixed(1);
   };
 
@@ -95,13 +96,11 @@ export default function GuruBidangStudiDashboard() {
   };
 
   const handleAddStudent = () => {
-    // Validasi hanya untuk nilai-nilai sekarang
-    if (newStudent.latihan === 0 && newStudent.uh === 0 && newStudent.pts === 0 && newStudent.pas === 0) {
+    if (newStudent.uh1 === 0 && newStudent.uh2 === 0 && newStudent.uh3 === 0 && newStudent.uh4 === 0 && newStudent.uh5 === 0 && newStudent.pts === 0 && newStudent.pas === 0) {
       alert('Silakan masukkan setidaknya satu nilai!');
       return;
     }
     const id = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
-    // Dummy NIS dan Nama untuk demo (di sistem nyata, ini akan dipilih dari daftar siswa)
     setStudents([...students, { 
       id, 
       nis: `NEW${id}`, 
@@ -109,7 +108,7 @@ export default function GuruBidangStudiDashboard() {
       ...newStudent 
     }]);
     setShowAddModal(false);
-    setNewStudent({ latihan: 0, uh: 0, pts: 0, pas: 0, notes: '' });
+    setNewStudent({ uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0, deskripsi: '' });
   };
 
   const handleSaveProfile = () => {
@@ -120,73 +119,102 @@ export default function GuruBidangStudiDashboard() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const filteredClasses = classes.filter(c => c.tingkat === activeTab);
 
+  const sidebarBgClass = 'bg-white text-gray-800 border-r border-gray-200';
+
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* 🔸 HEADER UTAMA - LOGO & TEKS DI KIRI, PROFIL DI KANAN 🔸 */}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header Utama */}
       <header className="bg-white shadow-sm border-b border-gray-200 p-4">
         <div className="flex justify-between items-center">
-          {/* Logo dan Teks di Sebelah Kiri */}
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/images/logoUA.jpg" 
-              alt="Logo SDIT Ulil Albab" 
-              className="w-12 h-12 rounded"
+          <div className="flex items-center space-x-4">
+            <img
+              src="/images/logoUA.jpg"
+              alt="Logo SDIT Ulil Albab"
+              className="w-12 h-12 object-contain"
             />
-            <h1 className="text-2xl font-bold text-gray-800">E-Rapor SDIT Ulil Albab</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                E-Rapor SDIT Ulil Albab
+              </h1>
+            </div>
           </div>
 
-          {/* Profil Pengguna di Pojok Kanan Atas */}
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2"
+              className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
             >
-              <span className="text-sm font-medium text-gray-700">{profileData.name}</span>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{profileData.name}</p>
+                <p className="text-xs text-gray-500">{profileData.nip}</p>
+              </div>
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                 <User size={16} className="text-white" />
               </div>
-              <ChevronRight size={16} className="rotate-90" />
+              <ChevronRight size={16} className="text-gray-600 rotate-90" />
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-                <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    setShowProfileModal(true);
-                  }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-blue-600"
-                >
-                  <User size={16} />
-                  <span>Ubah Profil</span>
-                </button>
-                <button
-                  onClick={() => alert('Logout clicked')}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-red-600"
-                >
-                  <LogOut size={16} />
-                  <span>Logout</span>
-                </button>
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="p-4 border-b border-gray-200">
+                  <p className="font-semibold text-gray-900">{profileData.name}</p>
+                  <p className="text-sm text-gray-500">{profileData.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                      {profileData.role}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setShowProfileModal(true);
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    <User size={16} />
+                    <span className="text-sm">Profil Saya</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      localStorage.removeItem('token');
+                      localStorage.removeItem('user');
+                      window.location.href = '/login';
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                  >
+                    <LogOut size={16} />
+                    <span className="text-sm">Logout</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </header>
 
+      {/* Sidebar + Konten Utama */}
       <div className="flex flex-1">
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-orange-600 text-white transition-all duration-300 flex flex-col`}>
-          <div className="p-4 flex items-center justify-between border-b border-orange-500">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-orange-500 rounded">
+        {/* ✅ SIDEBAR — tanpa logo, dengan shadow, warna aktif: orange-500 */}
+        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} ${sidebarBgClass} transition-all duration-300 flex flex-col h-screen fixed left-0 top-16 z-30 shadow-lg`}>
+          <div className="p-4 flex items-center justify-between border-b border-gray-200">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-200 rounded">
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
           
-          <nav className="flex-1 p-4">
+          <nav className="flex-1 p-4 overflow-y-auto">
             <button
-              onClick={() => setCurrentPage('dashboard')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg mb-2 ${
-                currentPage === 'dashboard' ? 'bg-orange-500' : 'hover:bg-orange-500'
+              onClick={() => {
+                setCurrentPage('dashboard');
+                setSelectedClass(null);
+              }}
+              className={`w-full flex items-center space-x-3 p-3 rounded-lg mb-2 transition-colors ${
+                currentPage === 'dashboard' 
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-800 hover:bg-orange-100'
               }`}
             >
               <Home size={20} />
@@ -195,8 +223,10 @@ export default function GuruBidangStudiDashboard() {
             
             <button
               onClick={() => setCurrentPage('input-nilai')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg ${
-                currentPage === 'input-nilai' ? 'bg-orange-500' : 'hover:bg-orange-500'
+              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                currentPage === 'input-nilai' 
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-800 hover:bg-orange-100'
               }`}
             >
               <Edit size={20} />
@@ -205,69 +235,20 @@ export default function GuruBidangStudiDashboard() {
           </nav>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* 🔸 HEADER KONTEN (Dashboard / Input Nilai) - TETAP DI KIRI */}
-          <header className="bg-white shadow-sm border-b border-gray-200 p-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {currentPage === 'dashboard' ? 'Dashboard' : 'Input Nilai'}
-              </h2>
-              
-              <div className="relative">
-                <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center space-x-3 hover:bg-gray-100 rounded-lg p-2"
-                >
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-700">{profileData.name}</p>
-                    <p className="text-xs text-gray-500">{profileData.nip}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                    <User size={20} className="text-white" />
-                  </div>
-                </button>
-
-                {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-                    <button
-                      onClick={() => {
-                        setProfileOpen(false);
-                        setShowProfileModal(true);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-blue-600"
-                    >
-                      <User size={16} />
-                      <span>Ubah Profil</span>
-                    </button>
-                    <button
-                      onClick={() => alert('Logout clicked')}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-red-600"
-                    >
-                      <LogOut size={16} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </header>
-
-          {/* Content */}
+        <div className="flex-1 flex flex-col ml-0 md:ml-64 transition-all duration-300">
           <main className="flex-1 p-6 overflow-auto">
             {currentPage === 'dashboard' ? (
               <>
-                {/* 🔸 CARD "SELAMAT DATANG" TANPA LOGO 🔸 */}
                 <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-6 text-white">
                   <h2 className="text-2xl font-bold mb-2">
                     Selamat Datang, {profileData.name}! 👋
                   </h2>
                   <p className="text-orange-100">
-                    NIP: {profileData.nip} • Kelola nilai siswa SD dengan mudah
+                    NIP: {profileData.nip} • Mata Pelajaran: {profileData.subject}
                   </p>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden border border-gray-200">
                   <div className="flex border-b border-gray-200">
                     {[1, 2, 3, 4, 5, 6].map((tingkat) => (
                       <button
@@ -285,72 +266,50 @@ export default function GuruBidangStudiDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  {/* Hapus logo dari sini */}
-                  <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      Daftar Kelas {activeTab}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Pilih kelas untuk input nilai siswa
-                    </p>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Kelas</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah Siswa</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {filteredClasses.map((classData, index) => (
-                          <tr key={classData.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{classData.name}</td>
-                            <td className="px-6 py-4 text-sm text-gray-600">{classData.studentCount} siswa</td>
-                            <td className="px-6 py-4">
-                              {/* Gunakan komponen Eye dari lucide-react dan ubah teks menjadi "Detail" */}
-                              <button
-                                onClick={() => handleViewDetail(classData)}
-                                className="flex items-center space-x-1 text-green-600 hover:text-green-700 font-medium text-sm bg-green-100 hover:bg-green-200 px-3 py-1 rounded-md"
-                              >
-                                <Eye size={16} />
-                                <span>Detail</span>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {filteredClasses.map((classData) => (
+                    <div
+                      key={classData.id}
+                      className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-shadow"
+                      onClick={() => handleViewDetail(classData)}
+                    >
+                      <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                        <User size={28} className="text-orange-500" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">{classData.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{classData.studentCount} siswa</p>
+                      <button className="mt-4 text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-1 rounded-full font-medium">
+                        Detail
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
               <>
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-6 text-white">
                   <div className="flex justify-between items-center">
                     <div>
                       <button
-                        onClick={() => setCurrentPage('dashboard')}
-                        className="text-orange-600 hover:text-orange-700 mb-2 flex items-center space-x-1"
+                        onClick={() => {
+                          setCurrentPage('dashboard');
+                          setSelectedClass(null);
+                        }}
+                        className="text-orange-100 hover:text-white mb-2 flex items-center space-x-1"
                       >
                         <ChevronRight size={16} className="rotate-180" />
                         <span>Kembali ke Dashboard</span>
                       </button>
-                      <h3 className="text-xl font-semibold text-gray-800">
+                      <h3 className="text-xl font-semibold">
                         {selectedClass ? selectedClass.name : 'Input Nilai'}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-orange-100 mt-1">
                         Mata Pelajaran: {profileData.subject}
                       </p>
                     </div>
                     <button
                       onClick={() => setShowAddModal(true)}
-                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                      className="bg-white text-orange-600 hover:bg-gray-100 px-4 py-2 rounded-lg flex items-center space-x-2 font-medium"
                     >
                       <Plus size={20} />
                       <span>Tambah Nilai</span>
@@ -358,22 +317,24 @@ export default function GuruBidangStudiDashboard() {
                   </div>
                 </div>
 
-                {/* 🔸 TABEL INPUT NILAI DENGAN TEKS "EDIT" DAN "HAPUS" 🔸 */}
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-900 text-white">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">NIS</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Latihan</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ulangan Harian</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PTS</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PAS</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rata-rata</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Catatan</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">NIS</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH1</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH2</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH3</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH4</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH5</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">PTS</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">PAS</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">Nilai Rapor</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">Aksi</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase">Deskripsi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -382,34 +343,33 @@ export default function GuruBidangStudiDashboard() {
                             <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
                             <td className="px-4 py-4 text-sm text-gray-900">{student.nis}</td>
                             <td className="px-4 py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                            <td className="px-4 py-4 text-sm text-gray-900">{student.latihan}</td>
-                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh1}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh2}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh3}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh4}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900">{student.uh5}</td>
                             <td className="px-4 py-4 text-sm text-gray-900">{student.pts}</td>
                             <td className="px-4 py-4 text-sm text-gray-900">{student.pas}</td>
-                            <td className="px-4 py-4 text-sm font-semibold text-gray-900">{calculateAverage(student)}</td>
+                            <td className="px-4 py-4 text-sm font-semibold text-gray-900">{calculateRapor(student)}</td>
                             <td className="px-4 py-4">
                               <div className="flex space-x-2">
-                                {/* Tambahkan teks "Edit" di samping ikon */}
                                 <button
                                   onClick={() => handleEdit(student)}
                                   className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                                  title="Edit"
                                 >
                                   <Edit size={18} />
                                   <span className="text-sm font-medium">Edit</span>
                                 </button>
-                                {/* Tambahkan teks "Hapus" di samping ikon */}
                                 <button
                                   onClick={() => handleDelete(student.id)}
                                   className="text-red-600 hover:text-red-800 flex items-center space-x-1"
-                                  title="Hapus"
                                 >
                                   <Trash2 size={18} />
                                   <span className="text-sm font-medium">Hapus</span>
                                 </button>
                               </div>
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-600">{student.notes}</td>
+                            <td className="px-4 py-4 text-sm text-gray-600">{student.deskripsi}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -422,7 +382,7 @@ export default function GuruBidangStudiDashboard() {
         </div>
       </div>
 
-      {/* Modal Ubah Profil */}
+      {/* Modal Profil */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
@@ -484,27 +444,54 @@ export default function GuruBidangStudiDashboard() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit & Add Modals — tetap seperti aslinya */}
       {editingStudent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-screen overflow-y-auto">
             <h3 className="text-xl font-semibold mb-4">Edit Nilai - {editingStudent.name}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latihan</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH1</label>
                 <input
                   type="number"
-                  value={editingStudent.latihan}
-                  onChange={(e) => setEditingStudent({...editingStudent, latihan: parseInt(e.target.value) || 0})}
+                  value={editingStudent.uh1}
+                  onChange={(e) => setEditingStudent({...editingStudent, uh1: parseInt(e.target.value) || 0})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ulangan Harian</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH2</label>
                 <input
                   type="number"
-                  value={editingStudent.uh}
-                  onChange={(e) => setEditingStudent({...editingStudent, uh: parseInt(e.target.value) || 0})}
+                  value={editingStudent.uh2}
+                  onChange={(e) => setEditingStudent({...editingStudent, uh2: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH3</label>
+                <input
+                  type="number"
+                  value={editingStudent.uh3}
+                  onChange={(e) => setEditingStudent({...editingStudent, uh3: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH4</label>
+                <input
+                  type="number"
+                  value={editingStudent.uh4}
+                  onChange={(e) => setEditingStudent({...editingStudent, uh4: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH5</label>
+                <input
+                  type="number"
+                  value={editingStudent.uh5}
+                  onChange={(e) => setEditingStudent({...editingStudent, uh5: parseInt(e.target.value) || 0})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
@@ -527,11 +514,11 @@ export default function GuruBidangStudiDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                 <input
                   type="text"
-                  value={editingStudent.notes}
-                  onChange={(e) => setEditingStudent({...editingStudent, notes: e.target.value})}
+                  value={editingStudent.deskripsi}
+                  onChange={(e) => setEditingStudent({...editingStudent, deskripsi: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
@@ -554,29 +541,57 @@ export default function GuruBidangStudiDashboard() {
         </div>
       )}
 
-      {/* Add Student Modal - DIPERBARUI */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-screen overflow-y-auto">
             <h3 className="text-xl font-semibold mb-4">Tambah Nilai</h3>
             <div className="space-y-4">
-              {/* Kolom NIS dan Nama dihapus */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latihan</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH1</label>
                 <input
                   type="number"
-                  value={newStudent.latihan}
-                  onChange={(e) => setNewStudent({...newStudent, latihan: parseInt(e.target.value) || 0})}
+                  value={newStudent.uh1}
+                  onChange={(e) => setNewStudent({...newStudent, uh1: parseInt(e.target.value) || 0})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   placeholder="0-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ulangan Harian</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH2</label>
                 <input
                   type="number"
-                  value={newStudent.uh}
-                  onChange={(e) => setNewStudent({...newStudent, uh: parseInt(e.target.value) || 0})}
+                  value={newStudent.uh2}
+                  onChange={(e) => setNewStudent({...newStudent, uh2: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="0-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH3</label>
+                <input
+                  type="number"
+                  value={newStudent.uh3}
+                  onChange={(e) => setNewStudent({...newStudent, uh3: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="0-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH4</label>
+                <input
+                  type="number"
+                  value={newStudent.uh4}
+                  onChange={(e) => setNewStudent({...newStudent, uh4: parseInt(e.target.value) || 0})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="0-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UH5</label>
+                <input
+                  type="number"
+                  value={newStudent.uh5}
+                  onChange={(e) => setNewStudent({...newStudent, uh5: parseInt(e.target.value) || 0})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   placeholder="0-100"
                 />
@@ -602,13 +617,13 @@ export default function GuruBidangStudiDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                 <input
                   type="text"
-                  value={newStudent.notes}
-                  onChange={(e) => setNewStudent({...newStudent, notes: e.target.value})}
+                  value={newStudent.deskripsi}
+                  onChange={(e) => setNewStudent({...newStudent, deskripsi: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Catatan tambahan"
+                  placeholder="Deskripsi tambahan"
                 />
               </div>
             </div>
@@ -630,9 +645,8 @@ export default function GuruBidangStudiDashboard() {
         </div>
       )}
 
-      {/* Overlay for profile dropdown */}
       {profileOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setProfileOpen(false)} />
       )}
     </div>
   );
