@@ -18,7 +18,7 @@ export default function DataAdminPage() {
 
   const [formData, setFormData] = useState({
     nama: '',
-    niy: '', // Diubah dari nip menjadi niy
+    niy: '', 
     nuptk: '',
     tempatLahir: '',
     tanggalLahir: '',
@@ -57,7 +57,7 @@ export default function DataAdminPage() {
     console.log('Submit data:', formData);
     setFormData({
       nama: '',
-      niy: '', // Diubah dari nip menjadi niy
+      niy: '', 
       nuptk: '',
       tempatLahir: '',
       tanggalLahir: '',
