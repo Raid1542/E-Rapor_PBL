@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 
 // Types
 interface UserData {
-  name: string;
-  email: string;
+  id: number;
+  nama_lengkap: string
+  email_sekolah: string;
   role: string;
 }
 
@@ -21,9 +22,10 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
 
   // Default user jika tidak ada
   const currentUser: UserData = {
-    name: user?.name || 'Admin User',
-    email: user?.email || 'admin@sditulilalbab.sch.id',
-    role: user?.role || 'admin'
+    nama_lengkap: user?.nama_lengkap || 'Admin User',
+    email_sekolah: user?.email_sekolah || 'admin@sditulilalbab.sch.id',
+    role: user?.role || 'admin',
+    id: user?.id || 0
   };
 
   const handleLogout = () => {
@@ -38,7 +40,7 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
     setProfileOpen(false);
     
     // Redirect ke halaman login
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   const handleProfile = () => {
@@ -50,22 +52,11 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-6 py-4">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            {/* Logo Sekolah di Header */}
-            <img
-              src="/images/LogoUA.jpg"
-              alt="Logo SDIT Ulil Albab"
-              className="w-12 h-12 object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                E-Rapor SDIT Ulil Albab
-              </h1>
-              <p className="text-sm text-gray-500">Dashboard Admin</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
           </div>
           
           <div className="relative">
@@ -74,7 +65,7 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
               className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
             >
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{currentUser.name}</p>
+                <p className="text-sm font-medium text-gray-900">{currentUser.nama_lengkap}</p>
                 <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
               </div>
               <UserCircle className="w-8 h-8 text-gray-600" />
@@ -85,8 +76,8 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
-                  <p className="font-semibold text-gray-900">{currentUser.name}</p>
-                  <p className="text-sm text-gray-500">{currentUser.email}</p>
+                  <p className="font-semibold text-gray-900">{currentUser.nama_lengkap}</p>
+                  <p className="text-sm text-gray-500">{currentUser.email_sekolah}</p>
                   <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                     {currentUser.role.toUpperCase()}
                   </span>

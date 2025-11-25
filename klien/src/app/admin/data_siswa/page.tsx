@@ -122,7 +122,7 @@ export default function DataSiswaPage() {
       confirmData: false
     });
     setEditMode(false);
-    setEditId(null);
+    setEditId(null);  
     setShowTambah(false);
   };
 

@@ -52,8 +52,8 @@ export default function ResponsiveSidebar() {
     { name: 'Data Tahun Ajaran', url: '/admin/data_tahun_ajaran' },
     { name: 'Data Siswa', url: '/admin/data_siswa' },
     { name: 'Data Kelas', url: '/admin/data_kelas' },
-    { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' },
-    { name: 'Data Ekstrakurikuler', url: '/admin/data_ekstrakurikuler' }
+    { name: 'Data Mata Pelajaran', url: '/admin/data_mata_pelajaran' },
+    { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' }
   ];
 
   const raporSubmenu = [
@@ -82,13 +82,35 @@ export default function ResponsiveSidebar() {
         isExpanded ? 'w-64' : 'w-20'
       }`}
     >
-      <div className="flex items-center justify-center p-4 border-b">
-        <button 
-          onClick={toggleSidebar} 
-          className="p-2 hover:bg-orange-50 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-orange-500" />
-        </button>
+      <div className="flex items-center justify-between p-4 border-b">
+        {isExpanded ? (
+          <>
+            <div className="flex items-center gap-3">
+              <img
+                src="/images/LogoUA.jpg"
+                alt="Logo SDIT Ulil Albab"
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">SDIT Ulil Albab</h2>
+                <p className="text-xs text-gray-500">E-Rapor</p>
+              </div>
+            </div>
+            <button 
+              onClick={toggleSidebar} 
+              className="p-2 hover:bg-orange-50 rounded-lg transition-colors"
+            >
+              <Menu className="w-5 h-5 text-orange-500" />
+            </button>
+          </>
+        ) : (
+          <button 
+            onClick={toggleSidebar} 
+            className="p-2 hover:bg-orange-50 rounded-lg transition-colors mx-auto"
+          >
+            <Menu className="w-6 h-6 text-orange-500" />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
