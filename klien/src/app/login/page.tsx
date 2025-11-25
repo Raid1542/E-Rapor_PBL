@@ -63,9 +63,9 @@ export default function LoginPage() {
       // Redirect berdasarkan role menggunakan window.location
       if (role === "admin") {
         window.location.href = "/admin/dashboard";
-      } else if (role === "guru_kelas") {
-        window.location.href = "/guru-kelas/dashboard";
-      } else if (role === "guru_bidang_studi") {
+      } else if (role === "guru kelas") {
+        window.location.href = "/guru_kelas/beranda_guru_kelas";
+      } else if (role === "guru bidang studi") {
         window.location.href = "/guru-bidang-studi/dashboard";
       }
 

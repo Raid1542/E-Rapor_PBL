@@ -1,18 +1,20 @@
+// controllers/authController.js
 const jwt = require('jsonwebtoken');
 const { comparePassword } = require('../utils/hash');
-const bcrypt = require('bcryptjs');
 const db = require('../config/db');
+const userModel = require('../models/userModel');
 
 const login = async (req, res) => {
-    const { email_sekolah, password, role: selectedRole } = req.body; 
+    const { email_sekolah, password, role: selectedRole } = req.body;
 
     if (!email_sekolah || !password || !selectedRole) {
         return res.status(400).json({ message: 'Email, password, dan role wajib diisi' });
     }
 
     try {
+        // Cari user (tanpa ambil kolom `role` dari tabel `user`)
         const [rows] = await db.execute(
-            'SELECT id_user, email_sekolah, password, role, nama_lengkap, status FROM user WHERE email_sekolah = ?',
+            'SELECT id_user, email_sekolah, password, nama_lengkap, status FROM user WHERE email_sekolah = ?',
             [email_sekolah]
         );
 
@@ -30,15 +32,27 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Email atau password salah' });
         }
 
-        // ✅ VALIDASI: Apakah user benar-benar punya role yang dipilih?
-        if (user.role !== selectedRole) {
+        // ✅ Ambil SEMUA role dari tabel user_role
+        const roles = await userModel.getRolesByUserId(user.id_user);
+
+        // Jika tidak ada role (misal user lama), fallback ke kolom role (opsional)
+        if (roles.length === 0) {
+            // Opsional: ambil dari kolom `role` di `user` jika masih ada
+            const [userWithRole] = await db.execute('SELECT role FROM user WHERE id_user = ?', [user.id_user]);
+            if (userWithRole[0]?.role) {
+                roles.push(userWithRole[0].role);
+            }
+        }
+
+        // ✅ Validasi: apakah user punya role yang dipilih?
+        if (!roles.includes(selectedRole)) {
             return res.status(403).json({
-                message: `Tidak dapat akses sebagai ${selectedRole}`
+                message: `Anda tidak memiliki akses sebagai ${selectedRole}`
             });
         }
 
         const token = jwt.sign(
-            { id: user.id_user, role: user.role },
+            { id: user.id_user, role: selectedRole },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
@@ -48,9 +62,10 @@ const login = async (req, res) => {
             token,
             user: {
                 id: user.id_user,
-                role: user.role,
+                role: selectedRole,
                 nama_lengkap: user.nama_lengkap,
-                email_sekolah: user.email_sekolah
+                email_sekolah: user.email_sekolah,
+                roles: roles // ← kirim semua role ke frontend
             }
         });
 
