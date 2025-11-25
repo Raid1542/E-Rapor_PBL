@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
 const login = async (req, res) => {
-    const { email_sekolah, password, role: selectedRole } = req.body; // ← ambil role dari form
+    const { email_sekolah, password, role: selectedRole } = req.body; 
 
     if (!email_sekolah || !password || !selectedRole) {
         return res.status(400).json({ message: 'Email, password, dan role wajib diisi' });
@@ -33,7 +33,7 @@ const login = async (req, res) => {
         // ✅ VALIDASI: Apakah user benar-benar punya role yang dipilih?
         if (user.role !== selectedRole) {
             return res.status(403).json({
-                message: `Anda tidak memiliki akses sebagai ${selectedRole}`
+                message: `Tidak dapat akses sebagai ${selectedRole}`
             });
         }
 
@@ -50,7 +50,7 @@ const login = async (req, res) => {
                 id: user.id_user,
                 role: user.role,
                 nama_lengkap: user.nama_lengkap,
-                email: user.email_sekolah
+                email_sekolah: user.email_sekolah
             }
         });
 
