@@ -1,28 +1,23 @@
 const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
 
-dotenv.config();
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
-let connection;
+// Tambahkan logging
+pool.getConnection()
+    .then(() => {
+        console.log('✅ Koneksi ke MariaDB berhasil');
+    })
+    .catch((err) => {
+        console.error('❌ Gagal koneksi ke MariaDB:', err.message);
+        process.exit(1); // Hentikan server jika koneksi gagal
+    });
 
-const connectDB = async () => {
-    try {
-        connection = await mysql.createConnection({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-        });
-        console.log('✅ Terhubung ke MariaDB');
-    } catch (error) {
-        console.error('❌ Gagal terhubung ke MariaDB:', error.message);
-        process.exit(1); // Keluar jika gagal koneksi
-    }
-};
-
-// Fungsi untuk mendapatkan koneksi
-const getConnection = () => {
-    return connection;
-};
-
-module.exports = { connectDB, getConnection };
+module.exports = pool;
