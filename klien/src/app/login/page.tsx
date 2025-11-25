@@ -16,28 +16,26 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    const email = formData.email_sekolah;
-    const password = formData.password;
-    const role = formData.role;
+    const { email_sekolah, password, role } = formData;
 
     // Validasi
-    if (!email.trim() || !password || !role) {
+    if (!email_sekolah.trim() || !password || !role) {
       setError("Email, password, dan role wajib diisi");
       return;
     }
 
-    console.log("📧 Email:", JSON.stringify(email));
+    console.log("📧 Email:", JSON.stringify(email_sekolah));
     console.log("🔐 Password:", password.length, "karakter");
     console.log("👤 Role:", role);
 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email_sekolah: email.trim(),
+          email_sekolah: email_sekolah.trim(),
           password: password,
           role: role,
         }),
@@ -233,8 +231,8 @@ export default function LoginPage() {
                   >
                     <option value="">Pilih Role</option>
                     <option value="admin">Admin</option>
-                    <option value="guru_kelas">Guru Kelas</option>
-                    <option value="guru_bidang_studi">Guru Bidang Studi</option>
+                    <option value="guru kelas">Guru Kelas</option>
+                    <option value="guru bidang studi">Guru Bidang Studi</option>
                   </select>
                 </div>
 

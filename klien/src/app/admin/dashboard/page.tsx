@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
       {/* Welcome Card */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
         <h2 className="text-2xl font-bold mb-2">
-          Selamat Datang, {user.name || 'Admin'}! 👋
+          Selamat Datang, {user.nama_lengkap || 'Admin'}! 👋
         </h2>
         <p className="text-orange-100">
           Anda login sebagai Administrator. Kelola sistem E-Rapor dengan mudah.
