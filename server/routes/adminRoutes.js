@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(authenticate, authorize('Admin'));
 
 // --- Data Guru ---
+router.get('/guru', adminController.getGuru);
 router.post('/guru', adminController.tambahGuru);
 router.put('/guru/:id', adminController.editGuru);
 

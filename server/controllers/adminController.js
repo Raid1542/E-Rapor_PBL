@@ -1,5 +1,6 @@
-const db = require('../config/db');
 const userModel = require('../models/userModel');
+const guruModel = require('../models/guruModel');
+const { hashPassword } = require('../utils/hash');
 
 const tambahAdmin = async (req, res) => {
     try {
@@ -19,10 +20,37 @@ const editAdmin = async (req, res) => {
     }
 };
 
-const tambahGuru = async (req, res) => {
+const getGuru = async (req, res) => {
     try {
-        const id = await userModel.createUser({ ...req.body, role: 'Guru Kelas' });
-        res.status(201).json({ message: 'Data guru berhasil ditambahkan', id });
+        const guruList = await guruModel.getAllGuru();
+        res.json({ success: true, data: guruList });
+    } catch (err) {
+        res.status(500).json({ message: 'Gagal mengambil data guru' });
+    }
+};
+
+const tambahGuru = async (req, res) => {
+    const {
+        nama_lengkap,
+        email_sekolah,
+        password,
+        role = 'Guru Kelas',
+        niy,
+        nuptk,
+        tempat_lahir,
+        tanggal_lahir,
+        jenis_kelamin,
+        alamat,
+        no_telepon
+    } = req.body;
+
+    try {
+        const hashedPassword = await hashPassword(password);
+        const userData = { email_sekolah, password: hashedPassword, nama_lengkap, role };
+        const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
+
+        const userId = await guruModel.createGuru(userData, guruData);
+        res.status(201).json({ message: 'Data guru berhasil ditambahkan', id: userId });
     } catch (err) {
         res.status(500).json({ message: 'Gagal menambah data guru' });
     }
@@ -72,6 +100,7 @@ const aturMataPelajaran = async (req, res) => { };
 module.exports = {
     tambahAdmin,
     editAdmin,
+    getGuru,
     tambahGuru,
     editGuru,
     tambahSiswa,

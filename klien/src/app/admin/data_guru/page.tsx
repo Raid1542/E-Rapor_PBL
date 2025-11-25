@@ -1,22 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, Pencil, Trash2, Upload, X, EyeOff, ArrowLeft, Plus } from 'lucide-react';
 
-const dummyGuru = [
-  { id: 1, nama: 'Among Waskita', lp: 'L', niy: '1900007090625706', nuptk: '', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '087865648461', alamat: 'Gg. Bakti No. 573, Administrasi Jakarta Utara 25345, NTB' },
-  { id: 2, nama: 'Cahyono Nashiruddin S.T.', lp: 'P', niy: '1900004960118890', nuptk: '8000008098583964', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 3, nama: 'Calista Nasyiah', lp: 'L', niy: '1900000163071354', nuptk: '8000001090663696', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 4, nama: 'Cici Hariyah S.Kom', lp: 'P', niy: '1900007926573257', nuptk: '8000003985824599', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'PEREMPUAN', telepon: '', alamat: '' },
-  { id: 5, nama: 'Dian Mapel, S.Pd', lp: 'L', niy: '', nuptk: '8000006505026618', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 6, nama: 'Dina Wahyuni', lp: 'P', niy: '1900009752395481', nuptk: '8000003976463390', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'PEREMPUAN', telepon: '', alamat: '' },
-  { id: 7, nama: 'Edward Prasetyo M.Pd', lp: 'L', niy: '', nuptk: '8000003985259744', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 8, nama: 'Embuh Habibi', lp: 'L', niy: '1900002966408958', nuptk: '8000004834312960', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 9, nama: 'Fitria Mayasari', lp: 'L', niy: '1900004087495254', nuptk: '8000000324497648', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'LAKI-LAKI', telepon: '', alamat: '' },
-  { id: 10, nama: 'Hana Permata', lp: 'P', niy: '1900003765162228', nuptk: '8000008290639334', statusGuru: 'AKTIF', tempatLahir: '', tanggalLahir: '', jenisKelamin: 'PEREMPUAN', telepon: '', alamat: '' },
-];
+
 
 export default function DataGuruPage() {
+  const [guruList, setGuruList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
   const [showTambah, setShowTambah] = useState(false);
   const [selectedGuru, setSelectedGuru] = useState(null);
@@ -24,6 +15,24 @@ export default function DataGuruPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const fetchGuru = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/admin/guru");
+        const data = await res.json();
+        if (res.ok) {
+          setGuruList(data.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetch guru:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGuru();
+  }, []);
 
   const [formData, setFormData] = useState({
     nama: '',
@@ -62,22 +71,49 @@ export default function DataGuruPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('Submit data:', formData);
-    setFormData({
-      nama: '',
-      niy: '',
-      nuptk: '',
-      tempatLahir: '',
-      tanggalLahir: '',
-      jenisKelamin: '',
-      alamat: '',
-      telepon: '',
-      email: '',
-      password: '',
-      confirmData: false
-    });
-    setShowTambah(false);
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/guru", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nama_lengkap: formData.nama,       // ← sesuai kolom di backend
+          email_sekolah: formData.email,
+          password: formData.password,
+          role: "Guru Kelas",                 // ← HARUS ADA!
+          niy: formData.niy,
+          nuptk: formData.nuptk,
+          tempat_lahir: formData.tempatLahir,
+          tanggal_lahir: formData.tanggalLahir,
+          jenis_kelamin: formData.jenisKelamin,
+          alamat: formData.alamat,
+          no_telepon: formData.telepon
+        })
+      });
+
+      if (res.ok) {
+        alert("Data guru berhasil ditambahkan");
+        setShowTambah(false);
+        // Refresh data
+        const data = await res.json();
+        setGuruList(prev => [...prev, {
+          id: data.id,
+          nama: formData.nama,
+          lp: formData.jenisKelamin === 'LAKI-LAKI' ? 'L' : 'P',
+          niy: formData.niy,
+          nuptk: formData.nuptk,
+          statusGuru: 'AKTIF',
+          jenisKelamin: formData.jenisKelamin,
+          telepon: formData.telepon,
+          alamat: formData.alamat
+        }]);
+      } else {
+        const error = await res.json();
+        alert(error.message || "Gagal menambah data guru");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   const handleReset = () => {
@@ -96,10 +132,10 @@ export default function DataGuruPage() {
     });
   };
 
-  const filteredGuru = dummyGuru.filter(guru =>
+  const filteredGuru = guruList.filter(guru =>
     guru.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    guru.niy.includes(searchQuery) ||
-    guru.nuptk.includes(searchQuery)
+    (guru.niy && guru.niy.includes(searchQuery)) ||
+    (guru.nuptk && guru.nuptk.includes(searchQuery))
   );
 
   const totalPages = Math.ceil(filteredGuru.length / itemsPerPage);
@@ -129,9 +165,8 @@ export default function DataGuruPage() {
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+              }`}
           >
             {i}
           </button>
@@ -142,9 +177,8 @@ export default function DataGuruPage() {
         <button
           key={1}
           onClick={() => setCurrentPage(1)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
         >
           1
         </button>
@@ -166,9 +200,8 @@ export default function DataGuruPage() {
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+              }`}
           >
             {i}
           </button>
@@ -187,9 +220,8 @@ export default function DataGuruPage() {
         <button
           key={totalPages}
           onClick={() => setCurrentPage(totalPages)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
         >
           {totalPages}
         </button>
