@@ -66,7 +66,7 @@ export default function LoginPage() {
       } else if (role === "guru kelas") {
         window.location.href = "/guru_kelas/beranda_guru_kelas";
       } else if (role === "guru bidang studi") {
-        window.location.href = "/guru-bidang-studi/dashboard";
+        window.location.href = "/guru_bidang_studi/dashboard";
       }
 
     } catch (err) {

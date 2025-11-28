@@ -36,7 +36,7 @@ export default function DataGuruPage() {
 
   const [formData, setFormData] = useState({
     nama: '',
-    niy: '', // Tetap menggunakan niy (bukan nip)
+    niy: '',
     nuptk: '',
     tempatLahir: '',
     tanggalLahir: '',
@@ -45,6 +45,7 @@ export default function DataGuruPage() {
     telepon: '',
     email: '',
     password: '',
+    roles: [],
     confirmData: false
   });
 
@@ -392,6 +393,52 @@ export default function DataGuruPage() {
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">
+                Role (Hak Akses)
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    value="guru kelas"
+                    checked={formData.roles.includes('guru kelas')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => {
+                        if (e.target.checked) {
+                          return { ...prev, roles: [...prev.roles, value] };
+                        } else {
+                          return { ...prev, roles: prev.roles.filter(r => r !== value) };
+                        }
+                      });
+                    }}
+                  />
+                  Guru Kelas
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    value="guru bidang studi"
+                    checked={formData.roles.includes('guru bidang studi')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => {
+                        if (e.target.checked) {
+                          return { ...prev, roles: [...prev.roles, value] };
+                        } else {
+                          return { ...prev, roles: prev.roles.filter(r => r !== value) };
+                        }
+                      });
+                    }}
+                  />
+                  Guru Bidang Studi
+                </label>
+              </div>
+              {formData.roles.length === 0 && (
+                <p className="text-red-500 text-sm mt-1">Pilih minimal satu role</p>
+              )}
             </div>
 
             <div className="mt-6">

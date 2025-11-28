@@ -1,4 +1,3 @@
-// models/userModel.js
 const db = require('../config/db');
 
 const findByEmail = async (email) => {
@@ -28,18 +27,61 @@ const createUser = async (data) => {
     return id_user;
 };
 
-const updateUser = async (id, data) => {
-    const { email_sekolah, nama_lengkap } = data;
+const updateUser = async (id, data, connection) => {
+    const { email_sekolah, nama_lengkap, status } = data;
     await db.execute(
-        'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, updated_at = NOW() WHERE id_user = ?',
-        [email_sekolah, nama_lengkap, id]
+        'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, status = ?, updated_at = NOW() WHERE id_user = ?',
+        [email_sekolah, nama_lengkap, status, id]
     );
 };
 
-// ✅ FUNGSI BARU: Ambil semua role user
 const getRolesByUserId = async (id_user) => {
     const [rows] = await db.execute('SELECT role FROM user_role WHERE id_user = ?', [id_user]);
     return rows.map(row => row.role);
+};
+
+const getAdminList = async () => {
+    const [rows] = await db.execute(`
+    SELECT 
+        u.id_user, 
+        u.email_sekolah, 
+        u.nama_lengkap, 
+        u.status,
+        g.niy, 
+        g.nuptk, 
+        g.tempat_lahir, 
+        g.tanggal_lahir, 
+        g.jenis_kelamin, 
+        g.alamat, 
+        g.no_telepon
+    FROM user u
+    LEFT JOIN guru g ON u.id_user = g.user_id
+    WHERE u.id_user IN (
+        SELECT id_user FROM user_role WHERE role = 'Admin'
+    )
+    ORDER BY u.id_user
+    `);
+    return rows;
+};
+
+const createAdmin = async (userData, connection = db) => {
+    const { email_sekolah, password, nama_lengkap } = userData;
+    const hashedPassword = await require('../utils/hash').hashPassword(password);
+
+    const [result] = await connection.execute(
+        'INSERT INTO user (email_sekolah, password, nama_lengkap, status, created_at, updated_at) VALUES (?, ?, ?, "aktif", NOW(), NOW())',
+        [email_sekolah, hashedPassword, nama_lengkap]
+    );
+
+    const id_user = result.insertId;
+
+    // Simpan role Admin
+    await connection.execute(
+        'INSERT INTO user_role (id_user, role) VALUES (?, "Admin")',
+        [id_user]
+    );
+
+    return id_user;
 };
 
 module.exports = {
@@ -47,5 +89,7 @@ module.exports = {
     findById,
     createUser,
     updateUser,
-    getRolesByUserId // ← tambahkan ini
+    getRolesByUserId,
+    getAdminList,
+    createAdmin
 };

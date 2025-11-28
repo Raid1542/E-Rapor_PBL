@@ -1,22 +1,68 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DataSekolahPage() {
   const [logoPreview, setLogoPreview] = useState(null);
   const [formData, setFormData] = useState({
-    namaSekolah: 'SDN 1 INDONESIA',
-    npsn: '24243243241234',
-    nss: '2423414',
-    kodePos: '43423',
-    telepon: '085505532851',
-    alamat: 'Jl. Indonesia No.17',
-    email: 'sdn1indonesia@gmail.com',
-    website: 'google.com',
-    kepalaSekolah: 'Erik Santoso, S.Pd',
-    niyKepalaSekolah: '1900002148149320', // Diubah dari nipKepalaSekolah
+    namaSekolah: '',
+    npsn: '',
+    nss: '',
+    kodePos: '',
+    telepon: '',
+    alamat: '',
+    email: '',
+    website: '',
+    kepalaSekolah: '',
+    niyKepalaSekolah: '', 
     confirmData: false
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // 🔁 Fetch data sekolah saat halaman dimuat
+  useEffect(() => {
+    const fetchSekolah = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const s = data.data || {};
+
+          setFormData({
+            namaSekolah: s.nama_sekolah || 'SDN 1 INDONESIA',
+            npsn: s.npsn || '24243243241234',
+            nss: s.nss || '2423414',
+            kodePos: s.kode_pos || '43423',
+            telepon: s.telepon || '085505532851',
+            alamat: s.alamat || 'Jl. Indonesia No.17',
+            email: s.email || 'sdn1indonesia@gmail.com',
+            website: s.website || 'google.com',
+            kepalaSekolah: s.kepala_sekolah || 'Erik Santoso, S.Pd',
+            niyKepalaSekolah: s.niy_kepala_sekolah || '1900002148149320',
+            confirmData: false
+          });
+
+          // Tampilkan logo jika ada
+          if (s.logo_path) {
+            setLogoPreview(`http://localhost:5000${s.logo_path}`);
+          }
+        }
+      } catch (err) {
+        console.error('Gagal memuat data sekolah:', err);
+        alert('Gagal memuat data sekolah');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSekolah();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -37,22 +83,98 @@ export default function DataSekolahPage() {
     }
   };
 
-  const handleSubmit = () => {
+  // ✅ Simpan data sekolah
+  const handleSubmit = async () => {
     if (!formData.confirmData) {
       alert('Mohon centang konfirmasi data sebelum menyimpan');
       return;
     }
-    console.log('Submit data sekolah:', formData);
-    // NANTI: Ganti dengan API call
-    // await fetch('/api/sekolah', { method: 'POST', body: JSON.stringify(formData) });
-    alert('Data sekolah berhasil disimpan!');
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          namaSekolah: formData.namaSekolah,
+          npsn: formData.npsn,
+          nss: formData.nss,
+          alamat: formData.alamat,
+          kodePos: formData.kodePos,
+          telepon: formData.telepon,
+          email: formData.email,
+          website: formData.website,
+          kepalaSekolah: formData.kepalaSekolah,
+          niyKepalaSekolah: formData.niyKepalaSekolah
+        })
+      });
+
+      if (res.ok) {
+        alert('Data sekolah berhasil disimpan!');
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Gagal menyimpan data sekolah');
+      }
+    } catch (err) {
+      console.error('Error simpan data:', err);
+      alert('Gagal menghubungi server');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleUpdateLogo = () => {
-    console.log('Update logo');
-    // NANTI: Ganti dengan API call untuk upload logo
-    alert('Logo berhasil diupdate!');
+
+   // ✅ Upload logo
+  const handleUpdateLogo = async () => {
+    const fileInput = document.querySelector('input[type="file"]');
+    const file = fileInput?.files[0];
+
+    if (!file) {
+      alert('Pilih file logo terlebih dahulu');
+      return;
+    }
+
+    setUploading(true);
+    const formDataLogo = new FormData();
+    formDataLogo.append('logo', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/admin/sekolah/logo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataLogo
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLogoPreview(`http://localhost:5000${data.logoPath}`);
+        alert('Logo berhasil diupdate!');
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Gagal mengupload logo');
+      }
+    } catch (err) {
+      console.error('Error upload logo:', err);
+      alert('Gagal menghubungi server');
+    } finally {
+      setUploading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <p className="text-gray-700">Memuat data sekolah...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -193,9 +315,10 @@ export default function DataSekolahPage() {
             <div className="pt-2">
               <button
                 onClick={handleSubmit}
+                disabled={saving}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded transition"
               >
-                Simpan
+                {saving ? 'Menyimpan...' : 'simpan'}
               </button>
             </div>
           </div>
@@ -234,7 +357,7 @@ export default function DataSekolahPage() {
             onClick={handleUpdateLogo}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded transition"
           >
-            Update
+            {uploading ? 'Mengupload...' : 'update Logo'}
           </button>
         </div>
       </div>

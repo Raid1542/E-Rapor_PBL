@@ -1,47 +1,114 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, Pencil, Trash2, X, EyeOff, Plus } from 'lucide-react';
 
-const dummyAdmin = [
-  { id: 1, nama: 'Admin', lp: 'L', niy: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
-];
+//const dummyAdmin = [
+//{ id: 1, nama: 'Admin', lp: 'L', niy: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
+//];*
 
 export default function DataAdminPage() {
+  const [adminData, setAdminData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
   const [showTambah, setShowTambah] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+const [editingId, setEditingId] = useState(null);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
 
+  const fetchAdminData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/admin/admin', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setAdminData(result.data || []);
+      } else {
+        alert('Gagal memuat data admin');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      alert('Error koneksi ke server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+
   const [formData, setFormData] = useState({
-    nama: '',
-    niy: '', // Diubah dari nip menjadi niy
-    nuptk: '',
-    tempatLahir: '',
-    tanggalLahir: '',
-    jenisKelamin: '',
-    alamat: '',
-    telepon: '',
-    email: '',
-    password: '',
-    confirmData: false
-  });
+  email_sekolah: '',
+  nama_lengkap: '',
+  password: '',
+  niy: '',
+  nuptk: '',
+  tempat_lahir: '',
+  tanggal_lahir: '',
+  jenis_kelamin: '',
+  alamat: '',
+  no_telepon: '',
+  confirmData: false
+});
 
   const handleDetail = (admin) => {
     setSelectedAdmin(admin);
     setShowDetail(true);
   };
 
-  const handleEdit = (admin) => {
-    console.log('Edit admin:', admin);
+  const handleEdit = async (admin) => {
+    setFormData({
+      email_sekolah: admin.email || '',
+      nama_lengkap: admin.nama || '',
+      niy: admin.niy || '',
+      nuptk: admin.nuptk || '',
+      tempat_lahir: admin.tempat_lahir || '',
+      tanggal_lahir: admin.tanggal_lahir || '',
+      jenis_kelamin: admin.jenisKelamin === 'LAKI-LAKI' ? 'Laki-laki' : 'Perempuan',
+      alamat: admin.alamat || '',
+      no_telepon: admin.no_telepon || '',
+      password: '',
+      confirmData: true
+    });
+    setEditingId(admin.id);
+    setEditMode(true);
+    setShowTambah(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data admin ini?')) {
-      console.log('Hapus admin:', id);
+
+  const handleDelete = async (id) => {
+    if (!confirm('Apakah anda yakin hapus admin ini?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/admin/admin/${id}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (res.ok) {
+        alert('Admin berhasil dihapus');
+        fetchAdminData();
+      } else {
+        alert('Gagal menghapus admin');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error saat hapus data');
     }
   };
 
@@ -53,41 +120,80 @@ export default function DataAdminPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('Submit data:', formData);
-    setFormData({
-      nama: '',
-      niy: '', // Diubah dari nip menjadi niy
-      nuptk: '',
-      tempatLahir: '',
-      tanggalLahir: '',
-      jenisKelamin: '',
-      alamat: '',
-      telepon: '',
-      email: '',
-      password: '',
-      confirmData: false
+  const handleSubmit = async () => {
+  if (!formData.confirmData) {
+    alert('Harap centang konfirmasi data');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const url = editMode 
+      ? `http://localhost:5000/api/admin/admin/${editingId}` 
+      : 'http:localhost:5000/api/admin/admin';
+    const method = editMode ? 'PUT' : 'POST';
+
+    // Jangan kirim password jika kosong (kecuali saat tambah)
+    const payload = { ...formData };
+    if (editMode && !payload.password) {
+      delete payload.password;
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
     });
-    setShowTambah(false);
-  };
+
+    if (res.ok) {
+      alert(editMode ? 'Admin berhasil diperbarui!' : 'Admin berhasil ditambahkan!');
+      setFormData({
+        email_sekolah: '',
+        nama_lengkap: '',
+        password: '',
+        niy: '',
+        nuptk: '',
+        tempat_lahir: '',
+        tanggal_lahir: '',
+        jenis_kelamin: '',
+        alamat: '',
+        no_telepon: '',
+        confirmData: false
+      });
+      setShowTambah(false);
+      setEditMode(false);
+      setEditingId(null);
+      fetchAdminData();
+    } else {
+      const err = await res.json();
+      alert(err.message || 'Terjadi kesalahan');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Gagal menghubungi server');
+  }
+};
 
   const handleReset = () => {
-    setFormData({
-      nama: '',
-      niy: '', // Diubah dari nip menjadi niy
-      nuptk: '',
-      tempatLahir: '',
-      tanggalLahir: '',
-      jenisKelamin: '',
-      alamat: '',
-      telepon: '',
-      email: '',
-      password: '',
-      confirmData: false
-    });
-  };
+  setFormData({
+    email_sekolah: '',
+    nama_lengkap: '',
+    password: '',
+    niy: '',
+    nuptk: '',
+    tempat_lahir: '',
+    tanggal_lahir: '',
+    jenis_kelamin: '',
+    alamat: '',
+    no_telepon: '',
+    confirmData: false
+  });
+};
 
-  const filteredAdmin = dummyAdmin.filter(admin =>
+  const filteredAdmin = adminData.filter(admin =>
     admin.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
     admin.niy.includes(searchQuery) // Diubah dari nip menjadi niy
   );
@@ -119,9 +225,8 @@ export default function DataAdminPage() {
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+              }`}
           >
             {i}
           </button>
@@ -132,9 +237,8 @@ export default function DataAdminPage() {
         <button
           key={1}
           onClick={() => setCurrentPage(1)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
         >
           1
         </button>
@@ -156,9 +260,8 @@ export default function DataAdminPage() {
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+              }`}
           >
             {i}
           </button>
@@ -177,9 +280,8 @@ export default function DataAdminPage() {
         <button
           key={totalPages}
           onClick={() => setCurrentPage(totalPages)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
         >
           {totalPages}
         </button>
@@ -225,8 +327,8 @@ export default function DataAdminPage() {
                 </label>
                 <input
                   type="text"
-                  name="nama"
-                  value={formData.nama}
+                  name="nama_lengkap"
+                  value={formData.nama_lengkap}
                   onChange={handleInputChange}
                   placeholder="Ketik Nama"
                   className="w-full border border-gray-300 rounded px-4 py-2"
@@ -236,8 +338,8 @@ export default function DataAdminPage() {
                 <label className="block text-sm font-medium mb-2">Email Akun</label>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
+                  name="email_sekolah"
+                  value={formData.email_sekolah}
                   onChange={handleInputChange}
                   placeholder="Ketik Email"
                   className="w-full border border-gray-300 rounded px-4 py-2"
@@ -247,10 +349,10 @@ export default function DataAdminPage() {
                 <label className="block text-sm font-medium mb-2">NIY</label> {/* Diubah dari NIP menjadi NIY */}
                 <input
                   type="text"
-                  name="niy" // Diubah dari nip menjadi niy
-                  value={formData.niy} // Diubah dari nip menjadi niy
+                  name="niy" 
+                  value={formData.niy} 
                   onChange={handleInputChange}
-                  placeholder="Ketik NIY" // Diubah dari NIP menjadi NIY
+                  placeholder="Ketik NIY" 
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
@@ -292,8 +394,8 @@ export default function DataAdminPage() {
                 <label className="block text-sm font-medium mb-2">Tempat Lahir</label>
                 <input
                   type="text"
-                  name="tempatLahir"
-                  value={formData.tempatLahir}
+                  name="tempat_lahir"
+                  value={formData.tempat_lahir}
                   onChange={handleInputChange}
                   placeholder="Ketik Tempat Lahir"
                   className="w-full border border-gray-300 rounded px-4 py-2"
@@ -304,8 +406,8 @@ export default function DataAdminPage() {
                 <label className="block text-sm font-medium mb-2">Tanggal Lahir</label>
                 <input
                   type="date"
-                  name="tanggalLahir"
-                  value={formData.tanggalLahir}
+                  name="tanggal_lahir"
+                  value={formData.tanggal_lahir}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
@@ -316,14 +418,14 @@ export default function DataAdminPage() {
                   Jenis Kelamin <span className="text-red-500">*</span>
                 </label>
                 <select
-                  name="jenisKelamin"
-                  value={formData.jenisKelamin}
+                  name="jenis_kelamin"
+                  value={formData.jenis_kelamin}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 >
                   <option value="">-- Pilih --</option>
-                  <option value="LAKI-LAKI">Laki-laki</option>
-                  <option value="PEREMPUAN">Perempuan</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
                 </select>
               </div>
               <div></div>
@@ -343,8 +445,8 @@ export default function DataAdminPage() {
                 <label className="block text-sm font-medium mb-2">Telepon</label>
                 <input
                   type="tel"
-                  name="telepon"
-                  value={formData.telepon}
+                  name="no_telepon"
+                  value={formData.no_telepon}
                   onChange={handleInputChange}
                   placeholder="Ketik Telepon"
                   className="w-full border border-gray-300 rounded px-4 py-2"
