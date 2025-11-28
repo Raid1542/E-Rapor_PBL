@@ -1,56 +1,90 @@
 const db = require('../config/db');
+const path = require('path');
+const fs = require('fs').promises;
 
-const getOne = async () => {
-    const [rows] = await db.execute('SELECT * FROM sekolah LIMIT 1');
-    return rows[0];
+// Ambil data sekolah (selalu id = 1)
+const getSekolah = async () => {
+    const [rows] = await db.execute('SELECT * FROM sekolah WHERE id = 1');
+    return rows[0] || null;
 };
 
-const update = async (data) => {
-    const {
-        nama_sekolah,
-        npsn,
-        nss,
-        kode_pos,
-        telepon,
-        alamat,
-        email,
-        website,
-        kepala_sekolah,
-        niy_kepala_sekolah,
-        logo
-    } = data;
+// Update data sekolah
+const updateSekolah = async (newData) => {
+    try {
+        // Ambil data sekolah yang sudah ada
+        const existing = await getSekolah();
 
-    const [existing] = await db.execute('SELECT id_sekolah FROM sekolah LIMIT 1');
+        // Jika belum ada data sama sekali, buat default (tapi pastikan tidak null)
+        const defaultData = {
+            nama_sekolah: 'SDIT ULIL ALBAB',
+            npsn: '0000000000',
+            nss: '00000000',
+            alamat: 'Alamat Sekolah',
+            kode_pos: '00000',
+            telepon: '0000000000',
+            email: 'info@sekolah.sch.id',
+            website: 'https://sekolah.sch.id',
+            kepala_sekolah: 'Kepala Sekolah',
+            niy_kepala_sekolah: '0000000000000000',
+            logo_path: '/images/logo-default.png'
+        };
 
-    if (existing.length > 0) {
-        // Update
-        await db.execute(
+        const current = existing || defaultData;
+
+        // Gabungkan: gunakan newData jika ada, jika tidak, pertahankan nilai lama
+        const merged = {
+            nama_sekolah: newData.nama_sekolah ?? current.nama_sekolah,
+            npsn: newData.npsn ?? current.npsn,
+            nss: newData.nss ?? current.nss,
+            alamat: newData.alamat ?? current.alamat,
+            kode_pos: newData.kode_pos ?? current.kode_pos,
+            telepon: newData.telepon ?? current.telepon,
+            email: newData.email ?? current.email,
+            website: newData.website ?? current.website,
+            kepala_sekolah: newData.kepala_sekolah ?? current.kepala_sekolah,
+            niy_kepala_sekolah: newData.niy_kepala_sekolah ?? current.niy_kepala_sekolah,
+            logo_path: newData.logo_path ?? current.logo_path
+        };
+
+        // Sekarang semua field pasti tidak null
+        const [result] = await db.execute(
             `UPDATE sekolah SET 
-        nama_sekolah = ?, 
-        npsn = ?, 
-        nss = ?, 
-        kode_pos = ?, 
-        telepon = ?, 
-        alamat = ?, 
-        email = ?, 
-        website = ?, 
-        kepala_sekolah = ?, 
-        niy_kepala_sekolah = ?, 
-        logo = ? 
-        WHERE id_sekolah = ?`,
-            [nama_sekolah, npsn, nss, kode_pos, telepon, alamat, email, website, kepala_sekolah, niy_kepala_sekolah, logo, existing[0].id_sekolah]
+                nama_sekolah = ?,
+                npsn = ?,
+                nss = ?,
+                alamat = ?,
+                kode_pos = ?,
+                telepon = ?,
+                email = ?,
+                website = ?,
+                kepala_sekolah = ?,
+                niy_kepala_sekolah = ?,
+                logo_path = ?
+            WHERE id = 1`,
+            Object.values(merged)
         );
-    } else {
-        // Insert
-        await db.execute(
-            `INSERT INTO sekolah 
-        (nama_sekolah, npsn, nss, kode_pos, telepon, alamat, email, website, kepala_sekolah, niy_kepala_sekolah, logo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [nama_sekolah, npsn, nss, kode_pos, telepon, alamat, email, website, kepala_sekolah, niy_kepala_sekolah, logo]
-        );
-    }
 
-    return { message: 'Data sekolah berhasil disimpan' };
+        // Jika tidak ada yang di-update (karena belum ada data), lakukan INSERT
+        if (result.affectedRows === 0) {
+            await db.execute(
+                `INSERT INTO sekolah (
+                    id, nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website,
+                    kepala_sekolah, niy_kepala_sekolah, logo_path
+                ) VALUES (
+                    1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )`,
+                Object.values(merged)
+            );
+        }
+
+        console.log('Update/Insert berhasil');
+    } catch (err) {
+        console.error('Error updateSekolah:', err);
+        throw err;
+    }
 };
 
-module.exports = { getOne, update};
+module.exports = {
+    getSekolah,
+    updateSekolah
+};
