@@ -14,22 +14,6 @@ const updateSekolah = async (newData) => {
         // Ambil data sekolah yang sudah ada
         const existing = await getSekolah();
 
-        // Jika belum ada data sama sekali, buat default (tapi pastikan tidak null)
-        const defaultData = {
-            nama_sekolah: 'SDIT ULIL ALBAB',
-            npsn: '0000000000',
-            nss: '00000000',
-            alamat: 'Alamat Sekolah',
-            kode_pos: '00000',
-            telepon: '0000000000',
-            email: 'info@sekolah.sch.id',
-            website: 'https://sekolah.sch.id',
-            kepala_sekolah: 'Kepala Sekolah',
-            niy_kepala_sekolah: '0000000000000000',
-            logo_path: '/images/logo-default.png'
-        };
-
-        const current = existing || defaultData;
 
         // Gabungkan: gunakan newData jika ada, jika tidak, pertahankan nilai lama
         const merged = {

@@ -18,21 +18,35 @@ export default function DataGuruPage() {
 
   useEffect(() => {
     const fetchGuru = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/admin/guru");
-        const data = await res.json();
-        if (res.ok) {
-          setGuruList(data.data || []);
-        }
-      } catch (err) {
-        console.error('Error fetch guru:', err);
-      } finally {
-        setLoading(false);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Silakan login terlebih dahulu');
+        // redirect ke login jika perlu
+        return;
       }
-    };
 
-    fetchGuru();
-  }, []);
+      const res = await fetch("http://localhost:5000/api/admin/guru", {
+        headers: {
+          'Authorization': `Bearer ${token}` // ✅ WAJIB
+        }
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setGuruList(data.data || []);
+      } else {
+        alert('Gagal memuat data guru: ' + (data.message || 'Tidak terotorisasi'));
+      }
+    } catch (err) {
+      console.error('Error fetch guru:', err);
+      alert('Gagal terhubung ke server');
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchGuru();
+}, []);
 
   const [formData, setFormData] = useState({
     nama: '',
@@ -76,7 +90,10 @@ export default function DataGuruPage() {
     try {
       const res = await fetch("http://localhost:5000/api/admin/guru", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           nama_lengkap: formData.nama,       // ← sesuai kolom di backend
           email_sekolah: formData.email,

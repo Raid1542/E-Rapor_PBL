@@ -18,11 +18,12 @@ const getAdmin = async (req, res) => {
             nuptk: row.nuptk || '',
             jenisKelamin: row.jenis_kelamin === 'Perempuan' ? 'PEREMPUAN' : 'LAKI-LAKI',
             lp: row.jenis_kelamin === 'Perempuan' ? 'P' : 'L',
-            alamat: row.alamat,
-            no_telepon: row.telepon
+            alamat: row.alamat || '',
+            no_telepon: row.no_telepon || ''
         }));
         res.json({ success: true, data: adminList });
     } catch (err) {
+        console.error('Error get admin:', err);
         res.status(500).json({ message: 'Gagal mengambil data admin' });
     }
 };
@@ -31,33 +32,31 @@ const getAdminById = async (req, res) => {
     try {
         const { id } = req.params;
         const admin = await userModel.findById(id);
-        if (!admin) {
-            return res.status(404).json({ message: 'Admin tidak ditemukan' });
-        }
+        if (!admin) return res.status(404).json({ message: 'Admin tidak ditemukan' });
 
-        // Ambil data profil dari tabel guru
         const [guruRows] = await db.execute(
             'SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon FROM guru WHERE user_id = ?',
             [id]
         );
         const guru = guruRows[0] || {};
 
-        const response = {
-            id: admin.id_user,
-            nama: admin.nama_lengkap,
-            email: admin.email_sekolah,
-            statusAdmin: admin.status === 'aktif' ? 'AKTIF' : 'NONAKTIF',
-            niy: guru.niy || '',
-            nuptk: guru.nuptk || '',
-            jenisKelamin: guru.jenis_kelamin === 'Perempuan' ? 'PEREMPUAN' : (guru.jenis_kelamin || 'LAKI-LAKI'),
-            lp: guru.jenis_kelamin === 'Perempuan' ? 'P' : 'L',
-            alamat: guru.alamat || '',
-            no_telepon: guru.no_telepon || '',
-            tempat_lahir: guru.tempat_lahir || '',
-            tanggal_lahir: guru.tanggal_lahir || '',
-        };
-
-        res.json({ success: true, data: response });
+        res.json({
+            success: true,
+            data: {
+                id: admin.id_user,
+                nama: admin.nama_lengkap,
+                email: admin.email_sekolah,
+                statusAdmin: admin.status === 'aktif' ? 'AKTIF' : 'NONAKTIF',
+                niy: guru.niy || '',
+                nuptk: guru.nuptk || '',
+                jenisKelamin: guru.jenis_kelamin === 'Perempuan' ? 'PEREMPUAN' : 'LAKI-LAKI',
+                lp: guru.jenis_kelamin === 'Perempuan' ? 'P' : 'L',
+                alamat: guru.alamat || '',
+                no_telepon: guru.no_telepon || '',
+                tempat_lahir: guru.tempat_lahir || '',
+                tanggal_lahir: guru.tanggal_lahir || null
+            }
+        });
     } catch (err) {
         console.error('Error get admin by ID:', err);
         res.status(500).json({ message: 'Gagal mengambil detail admin' });
@@ -69,25 +68,14 @@ const tambahAdmin = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const { email_sekolah, password, nama_lengkap, ...profil } = req.body;
-
-        // Buat user + role admin
-        const id_user = await userModel.createAdmin({ email_sekolah, password, nama_lengkap }, connection);
-
-        // Simpan profil ke tabel guru (jika ada data)
-        if (profil.niy || profil.nuptk || profil.alamat) {
-            await connection.execute(
-                `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id_user, profil.niy, profil.nuptk, profil.tempat_lahir, profil.tanggal_lahir, profil.jenis_kelamin, profil.alamat, profil.no_telepon]
-            );
-        }
+        // ✅ Langsung kirim req.body ke model — semua field lengkap
+        const id_user = await userModel.createAdmin(req.body, connection);
 
         await connection.commit();
         res.status(201).json({ message: 'Admin berhasil ditambahkan', id: id_user });
-
     } catch (err) {
         await connection.rollback();
+        console.error('Error tambah admin:', err.message);
         res.status(500).json({ message: 'Gagal menambah admin' });
     } finally {
         connection.release();
@@ -100,57 +88,13 @@ const editAdmin = async (req, res) => {
         await connection.beginTransaction();
 
         const { id } = req.params;
-        const {
-            email_sekolah,
-            nama_lengkap,
-            status,
-            niy,
-            nuptk,
-            tempat_lahir,
-            tanggal_lahir,
-            jenis_kelamin,
-            alamat,
-            no_telepon
-        } = req.body;
-
-        // 1. Update tabel `user`
-        await connection.execute(
-            `UPDATE user 
-                SET email_sekolah = ?, nama_lengkap = ?, status = ? 
-                WHERE id_user = ?`,
-            [email_sekolah, nama_lengkap, status, id]
-        );
-
-        // 2. Cek apakah sudah ada data di tabel `guru` untuk user ini
-        const [guruRows] = await connection.execute(
-            'SELECT 1 FROM guru WHERE user_id = ?',
-            [id]
-        );
-
-        if (guruRows.length > 0) {
-            // Jika ada → UPDATE
-            await connection.execute(
-                `UPDATE guru 
-                SET niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?, 
-                    jenis_kelamin = ?, alamat = ?, no_telepon = ?
-                WHERE user_id = ?`,
-                [niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, id]
-            );
-        } else {
-            // Jika belum ada → INSERT (opsional, tergantung kebijakan)
-            await connection.execute(
-                `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon]
-            );
-        }
+        await userModel.updateAdmin(id, req.body, connection);
 
         await connection.commit();
         res.json({ message: 'Data admin berhasil diperbarui' });
-
     } catch (err) {
         await connection.rollback();
-        console.error('Error edit admin:', err);
+        console.error('Error edit admin:', err.message);
         res.status(500).json({ message: 'Gagal memperbarui data admin' });
     } finally {
         connection.release();
@@ -160,19 +104,10 @@ const editAdmin = async (req, res) => {
 const hapusAdmin = async (req, res) => {
     try {
         const { id } = req.params;
-
-        // Hapus dari tabel user_role dulu
-        await db.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
-
-        // Hapus dari tabel guru (jika ada)
-        await db.execute('DELETE FROM guru WHERE user_id = ?', [id]);
-
-        // Hapus dari tabel user
-        await db.execute('DELETE FROM user WHERE id_user = ?', [id]);
-
+        await userModel.deleteUserById(id);
         res.json({ message: 'Admin berhasil dihapus' });
     } catch (err) {
-        console.error('Error hapus admin:', err);
+        console.error('Error hapus admin:', err.message);
         res.status(500).json({ message: 'Gagal menghapus admin' });
     }
 };
@@ -261,13 +196,15 @@ const editGuru = async (req, res) => {
         tanggal_lahir,
         jenis_kelamin,
         alamat,
-        no_telepon
+        no_telepon,
+        roles,
+        password
     } = req.body;
 
     try {
-        const userData = { email_sekolah, nama_lengkap };
+        const userData = { email_sekolah, nama_lengkap, password };
         const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
-        await guruModel.updateGuru(id, userData, guruData);
+        await guruModel.updateGuru(id, userData, guruData, roles);
         res.json({ message: 'Data guru berhasil diperbarui' });
     } catch (err) {
         res.status(500).json({ message: 'Gagal memperbarui data guru' });
@@ -344,8 +281,19 @@ const uploadLogo = async (req, res) => {
 
         const logoPath = `/uploads/${req.file.filename}`;
 
-        // ✅ Hanya kirim logo_path — biarkan model isi sisanya dari data lama
-        await sekolahModel.updateSekolah({ logo_path: logoPath });
+        // Cek apakah data sekolah sudah ada
+        const [rows] = await db.execute('SELECT id FROM sekolah WHERE id = 1');
+
+        if (rows.length > 0) {
+            // Jika sudah ada → UPDATE
+            await db.execute('UPDATE sekolah SET logo_path = ? WHERE id = 1', [logoPath]);
+        } else {
+            // Jika belum ada → INSERT (dengan data default)
+            await db.execute(
+                `INSERT INTO sekolah (id, nama_sekolah, logo_path) VALUES (?, ?, ?)`,
+                [1, 'SDIT Ulil Albab', logoPath]
+            );
+        }
 
         res.json({ message: 'Logo berhasil diupdate', logoPath });
     } catch (err) {

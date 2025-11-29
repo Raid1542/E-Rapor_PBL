@@ -109,23 +109,27 @@ const createGuru = async (userData, guruData, roles) => {
 };
 
 // Update guru
-const updateGuru = async (id, userData, guruData) => {
+const updateGuru = async (id, userData, guruData, roles = null) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Update user
-        await connection.execute(
-            `UPDATE user SET email_sekolah = ?, nama_lengkap = ? WHERE id_user = ?`,
-            [userData.email_sekolah, userData.nama_lengkap, id]
-        );
+        // 1. Update user (termasuk password jika ada)
+        let updateUserQuery = 'UPDATE user SET email_sekolah = ?, nama_lengkap = ?';
+        let updateUserParams = [userData.email_sekolah, userData.nama_lengkap];
 
-        // Update atau insert guru
-        const [guruRows] = await connection.execute(
-            'SELECT 1 FROM guru WHERE user_id = ?',
-            [id]
-        );
+        if (userData.password && userData.password.trim() !== '') {
+            const hashedPassword = await require('../utils/hash').hashPassword(userData.password);
+            updateUserQuery += ', password = ?';
+            updateUserParams.push(hashedPassword);
+        }
 
+        updateUserQuery += ' WHERE id_user = ?';
+        updateUserParams.push(id);
+        await connection.execute(updateUserQuery, updateUserParams);
+
+        // 2. Update atau insert guru
+        const [guruRows] = await connection.execute('SELECT 1 FROM guru WHERE user_id = ?', [id]);
         if (guruRows.length > 0) {
             await connection.execute(
                 `UPDATE guru SET 
@@ -133,17 +137,44 @@ const updateGuru = async (id, userData, guruData) => {
             jenis_kelamin = ?, alamat = ?, no_telepon = ?
         WHERE user_id = ?`,
                 [
-                    guruData.niy, guruData.nuptk, guruData.tempat_lahir, guruData.tanggal_lahir,
-                    guruData.jenis_kelamin, guruData.alamat, guruData.no_telepon, id
+                    guruData.niy,
+                    guruData.nuptk,
+                    guruData.tempat_lahir,
+                    guruData.tanggal_lahir,
+                    guruData.jenis_kelamin,
+                    guruData.alamat,
+                    guruData.no_telepon,
+                    id
                 ]
             );
         } else {
             await connection.execute(
                 `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, guruData.niy, guruData.nuptk, guruData.tempat_lahir, guruData.tanggal_lahir,
-                    guruData.jenis_kelamin, guruData.alamat, guruData.no_telepon]
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    id,
+                    guruData.niy,
+                    guruData.nuptk,
+                    guruData.tempat_lahir,
+                    guruData.tanggal_lahir,
+                    guruData.jenis_kelamin,
+                    guruData.alamat,
+                    guruData.no_telepon
+                ]
             );
+        }
+
+        // 3. Update roles
+        if (Array.isArray(roles) && roles.length > 0) {
+            await connection.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
+            for (const role of roles) {
+                if (['guru kelas', 'guru bidang studi'].includes(role)) {
+                    await connection.execute(
+                        'INSERT INTO user_role (id_user, role) VALUES (?, ?)',
+                        [id, role]
+                    );
+                }
+            }
         }
 
         await connection.commit();
@@ -154,7 +185,6 @@ const updateGuru = async (id, userData, guruData) => {
         connection.release();
     }
 };
-
 // Hapus guru
 const deleteGuru = async (id) => {
     const connection = await db.getConnection();

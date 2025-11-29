@@ -63,6 +63,7 @@ const [editingId, setEditingId] = useState(null);
 });
 
   const handleDetail = (admin) => {
+    console.log('Selected Admin:', admin);
     setSelectedAdmin(admin);
     setShowDetail(true);
   };
@@ -130,7 +131,7 @@ const [editingId, setEditingId] = useState(null);
     const token = localStorage.getItem('token');
     const url = editMode 
       ? `http://localhost:5000/api/admin/admin/${editingId}` 
-      : 'http:localhost:5000/api/admin/admin';
+      : 'http://localhost:5000/api/admin/admin';
     const method = editMode ? 'PUT' : 'POST';
 
     // Jangan kirim password jika kosong (kecuali saat tambah)
@@ -651,12 +652,12 @@ const [editingId, setEditingId] = useState(null);
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Jenis Kelamin</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.jenisKelamin}</span>
+                  <span>{selectedAdmin.jenisKelamin === 'LAKI-LAKI' ? 'Laki-laki' : 'Perempuan'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Telepon</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.telepon || '-'}</span>
+                  <span>{selectedAdmin?.no_telepon || '-'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Email</span>

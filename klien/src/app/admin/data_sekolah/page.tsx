@@ -14,7 +14,7 @@ export default function DataSekolahPage() {
     email: '',
     website: '',
     kepalaSekolah: '',
-    niyKepalaSekolah: '', 
+    niyKepalaSekolah: '',
     confirmData: false
   });
   const [loading, setLoading] = useState(true);
@@ -128,7 +128,7 @@ export default function DataSekolahPage() {
   };
 
 
-   // ✅ Upload logo
+  // ✅ Upload logo
   const handleUpdateLogo = async () => {
     const fileInput = document.querySelector('input[type="file"]');
     const file = fileInput?.files[0];
@@ -156,6 +156,8 @@ export default function DataSekolahPage() {
         const data = await res.json();
         setLogoPreview(`http://localhost:5000${data.logoPath}`);
         alert('Logo berhasil diupdate!');
+        window.location.reload(); // ✅ Tambahkan ini
+        localStorage.setItem('logoUpdated', Date.now().toString());
       } else {
         const err = await res.json();
         alert(err.message || 'Gagal mengupload logo');
@@ -186,7 +188,7 @@ export default function DataSekolahPage() {
         {/* Edit Data Sekolah */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-6">Edit Data Sekolah</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold mb-2">Nama Sekolah</label>
@@ -327,7 +329,7 @@ export default function DataSekolahPage() {
         {/* Edit Logo Sekolah */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-6">Edit Logo Sekolah</h2>
-          
+
           <div className="bg-gray-200 rounded-lg p-8 mb-4">
             <p className="text-center text-gray-700 font-semibold mb-4">Logo</p>
             <div className="flex justify-center">

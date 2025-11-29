@@ -15,6 +15,44 @@ export default function ResponsiveSidebar() {
     rapor: false
   });
 
+  // State untuk menyimpan URL logo sekolah
+  const [logoUrl, setLogoUrl] = React.useState<string>('/images/LogoUA.jpg');
+
+  // Ambil logo sekolah dari backend saat halaman dibuka
+  React.useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const { data } = await res.json();
+          if (data?.logo_path) {
+            setLogoUrl(`http://localhost:5000${data.logo_path}`);
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal memuat logo — pakai logo default.');
+      }
+    };
+
+    fetchLogo();
+
+    // ✅ Tambahkan ini: dengarkan perubahan logo
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === 'logoUpdated') {
+      fetchLogo(); // ambil ulang dari backend
+    }
+  };
+
+  window.addEventListener('storage', handleStorage);
+  return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
     if (isExpanded) {
@@ -77,17 +115,16 @@ export default function ResponsiveSidebar() {
   }, [isPenggunaActive, isAdministrasiActive, isRaporActive]);
 
   return (
-    <div 
-      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${
-        isExpanded ? 'w-64' : 'w-20'
-      }`}
+    <div
+      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'
+        }`}
     >
       <div className="flex items-center justify-between p-4 border-b">
         {isExpanded ? (
           <>
             <div className="flex items-center gap-3">
               <img
-                src="/images/LogoUA.jpg"
+                src={logoUrl}
                 alt="Logo SDIT Ulil Albab"
                 className="w-10 h-10 object-contain"
               />
@@ -96,16 +133,16 @@ export default function ResponsiveSidebar() {
                 <p className="text-xs text-gray-500">E-Rapor</p>
               </div>
             </div>
-            <button 
-              onClick={toggleSidebar} 
+            <button
+              onClick={toggleSidebar}
               className="p-2 hover:bg-orange-50 rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5 text-orange-500" />
             </button>
           </>
         ) : (
-          <button 
-            onClick={toggleSidebar} 
+          <button
+            onClick={toggleSidebar}
             className="p-2 hover:bg-orange-50 rounded-lg transition-colors mx-auto"
           >
             <Menu className="w-6 h-6 text-orange-500" />
@@ -116,11 +153,10 @@ export default function ResponsiveSidebar() {
       <div className="flex-1 overflow-y-auto p-4">
         <button
           onClick={() => handleNavigation('Dashboard', '/admin/dashboard')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
-            activeMenu === 'Dashboard' 
-              ? 'bg-orange-500 text-white' 
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Dashboard'
+              ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
           title={!isExpanded ? 'Dashboard' : ''}
         >
           <Home className="w-5 h-5 flex-shrink-0" />
@@ -137,11 +173,10 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('pengguna')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isPenggunaActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isPenggunaActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
+              }`}
             title={!isExpanded ? 'Pengguna' : ''}
           >
             <div className="flex items-center gap-3">
@@ -158,11 +193,10 @@ export default function ResponsiveSidebar() {
                 <button
                   key={idx}
                   onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    activeMenu === item.name 
-                      ? 'bg-orange-400 text-white' 
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                      ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </button>
@@ -174,11 +208,10 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('administrasi')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isAdministrasiActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isAdministrasiActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
+              }`}
             title={!isExpanded ? 'Administrasi' : ''}
           >
             <div className="flex items-center gap-3">
@@ -195,11 +228,10 @@ export default function ResponsiveSidebar() {
                 <button
                   key={idx}
                   onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    activeMenu === item.name 
-                      ? 'bg-orange-400 text-white' 
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                      ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </button>
@@ -210,11 +242,10 @@ export default function ResponsiveSidebar() {
 
         <button
           onClick={() => handleNavigation('Ekstrakurikuler', '/admin/ekstrakurikuler')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
-            activeMenu === 'Ekstrakurikuler' 
-              ? 'bg-orange-500 text-white' 
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Ekstrakurikuler'
+              ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
           title={!isExpanded ? 'Ekstrakurikuler' : ''}
         >
           <Award className="w-5 h-5 flex-shrink-0" />
@@ -224,11 +255,10 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('rapor')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isRaporActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isRaporActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
+              }`}
             title={!isExpanded ? 'Rapor' : ''}
           >
             <div className="flex items-center gap-3">
@@ -245,11 +275,10 @@ export default function ResponsiveSidebar() {
                 <button
                   key={idx}
                   onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    activeMenu === item.name 
-                      ? 'bg-orange-400 text-white' 
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                      ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </button>
@@ -264,14 +293,13 @@ export default function ResponsiveSidebar() {
         {!isExpanded && (
           <div className="border-t border-gray-300 my-4"></div>
         )}
-        
+
         <button
           onClick={() => handleNavigation('Profil', '/admin/profil')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-            activeMenu === 'Profil' 
-              ? 'bg-orange-500 text-white' 
+          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${activeMenu === 'Profil'
+              ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
           title={!isExpanded ? 'Profil' : ''}
         >
           <User className="w-5 h-5 flex-shrink-0" />
