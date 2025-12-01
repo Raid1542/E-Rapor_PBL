@@ -5,44 +5,73 @@ const authorize = require('../middleware/authorize');
 const multer = require('multer');
 const path = require('path');
 
-// ✅ Buat folder jika belum ada
-const uploadDir = path.join(__dirname, '../../public/uploads');
+// ✅ PENTING: Path yang benar
+const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+
+// Buat folder jika belum ada
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
+    console.log('✅ Folder uploads dibuat:', uploadDir);
 }
 
+console.log('📂 Multer upload directory:', uploadDir);
+
+// ✅ Konfigurasi multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir); // gunakan variabel yang sudah dicek
+        console.log('📁 Multer destination:', uploadDir);
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
-        // Validasi ekstensi (opsional tapi direkomendasikan)
-        if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg') {
-            return cb(new Error('Hanya file .png, .jpg, .jpeg yang diizinkan'), false);
+        if (!['.png', '.jpg', '.jpeg'].includes(ext)) {
+            return cb(new Error('Hanya file .png, .jpg, .jpeg yang diizinkan'));
         }
-        cb(null, `logo_sekolah${ext}`);
+        const filename = `logo_sekolah${ext}`;
+        console.log('💾 Multer filename:', filename);
+        cb(null, filename);
     }
 });
 
-const upload = multer({ 
+const excelStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir); // bisa pakai folder yang sama, atau buat folder 'temp'
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `import_guru_${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+});
+
+const uploadExcel = multer({
+    storage: excelStorage,
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext !== '.xlsx' && ext !== '.xls') {
+            return cb(new Error('Hanya file .xlsx atau .xls yang diizinkan'), false);
+        }
+        cb(null, true);
+    },
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // max 2MB
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
 const adminController = require('../controllers/adminController');
 const router = express.Router();
 
-
-// Hanya Admin yang boleh akses semua route di bawah ini
+// Middleware: hanya admin
 router.use(authenticate, authorize('admin'));
 
 // --- Data Guru ---
+router.post('/guru/import', uploadExcel.single('file'), adminController.importGuru);
 router.get('/guru', adminController.getGuru);
 router.get('/guru/:id', adminController.getGuruById);
 router.post('/guru', adminController.tambahGuru);
 router.put('/guru/:id', adminController.editGuru);
-router.delete('/guru/:id', adminController.hapusGuru);
 
 // --- Data Siswa ---
 router.post('/siswa', adminController.tambahSiswa);
