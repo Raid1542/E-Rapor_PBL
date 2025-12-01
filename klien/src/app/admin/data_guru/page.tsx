@@ -77,19 +77,19 @@ export default function DataGuruPage() {
       if (res.ok) {
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => ({
-              id: g.id,
-              nama: g.nama,
-              email: g.email,
-              niy: g.niy,
-              nuptk: g.nuptk,
-              tempat_lahir: g.tempat_lahir || g.tempatLahir || '',
-              tanggal_lahir: g.tanggal_lahir || g.tanggalLahir || '',
-              jenisKelamin: g.jenis_kelamin || g.jenisKelamin || g.lp || '',
-              alamat: g.alamat,
-              no_telepon: g.no_telepon || g.telepon || '',
-              statusGuru: g.statusGuru || 'aktif',
-              roles: g.roles || [],
-            }))
+            id: g.id,
+            nama: g.nama,
+            email: g.email,
+            niy: g.niy,
+            nuptk: g.nuptk,
+            tempat_lahir: g.tempat_lahir || g.tempatLahir || '',
+            tanggal_lahir: g.tanggal_lahir || g.tanggalLahir || '',
+            jenisKelamin: g.jenis_kelamin || g.jenisKelamin || g.lp || '',
+            alamat: g.alamat,
+            no_telepon: g.no_telepon || g.telepon || '',
+            statusGuru: g.statusGuru || 'aktif',
+            roles: g.roles || [],
+          }))
           : [];
         setGuruList(list);
       } else {
@@ -261,17 +261,17 @@ export default function DataGuruPage() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        alert("DATA GURU BERHASIL DIPERBARUI");
+        alert("Data guru berhasil diperbarui");
         setShowEdit(false);
         setEditId(null);
         fetchGuru();
         handleReset();
       } else {
         const error = await res.json();
-        alert(error.message || "GAGAL MEMPERBARUI DATA GURU");
+        alert(error.message || "Gagal memperbarui data guru");
       }
     } catch (err) {
-      alert("Gagal TERHUBUNG KE SERVER");
+      alert("Gagal terhubung ke server");
     }
   };
 
@@ -314,11 +314,11 @@ export default function DataGuruPage() {
         setImportFile(null);
         fetchGuru();
       } else {
-        alert('Gagal: ' + (result.message || 'ERROR TIDAK DIKETAHUI'));
+        alert('Gagal: ' + (result.message || 'Gagal import data guru'));
       }
     } catch (err) {
       console.error('Import error:', err);
-      alert('Gagal MENGHUBUNGI SERVER');
+      alert('Gagal terhubung ke server');
     }
   };
 
@@ -366,12 +366,12 @@ export default function DataGuruPage() {
 
   // --- Render Form (Tambah / Edit) ---
   const renderForm = (isEdit: boolean) => (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6">Data Guru</h1>
-        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 flex-1 break-words">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Data Guru</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">
               {isEdit ? 'Edit Data Guru' : 'Tambah Data Guru'}
             </h2>
             <button
@@ -379,14 +379,16 @@ export default function DataGuruPage() {
                 isEdit ? setShowEdit(false) : setShowTambah(false);
                 handleReset();
               }}
-              className="text-gray-500 hover:text-gray-700 flex-shrink-0"
+              className="text-gray-500 hover:text-gray-700"
             >
               <X size={24} />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            {/* Nama */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Nama <span className="text-red-500">*</span>
               </label>
               <input
@@ -394,68 +396,67 @@ export default function DataGuruPage() {
                 name="nama"
                 value={formData.nama}
                 onChange={handleInputChange}
-                placeholder="Ketik Nama"
-                className={`w-full border ${errors.nama ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                placeholder="Masukkan nama lengkap"
+                className={`w-full border ${errors.nama ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
-              {errors.nama && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.nama}</p>}
+              {errors.nama && <p className="text-red-500 text-xs mt-1">{errors.nama}</p>}
             </div>
+
+            {/* Email */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">Email Akun</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Akun</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Ketik Email"
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="contoh@sekolah.sch.id"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* NIY */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">NIY</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">NIY</label>
               <input
                 type="text"
                 name="niy"
                 value={formData.niy}
                 onChange={handleInputChange}
-                placeholder="Ketik NIY"
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nomor Induk Yayasan"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* NUPTK */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">NUPTK</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">NUPTK</label>
               <input
                 type="text"
                 name="nuptk"
                 value={formData.nuptk}
                 onChange={handleInputChange}
-                placeholder="Ketik NUPTK"
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nomor Unik Pendidik"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* Tempat Lahir */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">Tempat Lahir</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tempat Lahir</label>
               <input
                 type="text"
                 name="tempatLahir"
                 value={formData.tempatLahir}
                 onChange={handleInputChange}
-                placeholder="Ketik Tempat Lahir"
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Misal: Jakarta"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* Tanggal Lahir */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">Telepon</label>
-              <input
-                type="tel"
-                name="no_telepon"
-                value={formData.no_telepon}
-                onChange={handleInputChange}
-                placeholder="Ketik Telepon"
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Tanggal Lahir <span className="text-red-500">*</span>
               </label>
               <input
@@ -465,103 +466,133 @@ export default function DataGuruPage() {
                 onChange={handleInputChange}
                 className={`w-full border ${errors.tanggalLahir ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
-              {errors.tanggalLahir && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.tanggalLahir}</p>}
+              {errors.tanggalLahir && <p className="text-red-500 text-xs mt-1">{errors.tanggalLahir}</p>}
             </div>
+
+            {/* Jenis Kelamin */}
             <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Jenis Kelamin <span className="text-red-500">*</span>
               </label>
               <select
                 name="jenisKelamin"
                 value={formData.jenisKelamin}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
               >
                 <option value="">-- Pilih --</option>
                 <option value="Laki-laki">Laki-laki</option>
                 <option value="Perempuan">Perempuan</option>
               </select>
-              {errors.jenisKelamin && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.jenisKelamin}</p>}
+              {errors.jenisKelamin && <p className="text-red-500 text-xs mt-1">{errors.jenisKelamin}</p>}
             </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs sm:text-sm font-medium mb-2">Alamat</label>
+
+            {/* Telepon */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Telepon</label>
+              <input
+                type="tel"
+                name="no_telepon"
+                value={formData.no_telepon}
+                onChange={handleInputChange}
+                placeholder="misal: 081234567890"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Alamat */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alamat</label>
               <textarea
                 name="alamat"
                 value={formData.alamat}
                 onChange={handleInputChange}
-                placeholder="Ketik Alamat"
+                placeholder="Masukkan alamat lengkap"
                 rows={2}
-                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs sm:text-sm font-medium mb-2">Role (Hak Akses) <span className="text-red-500">*</span></label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { key: 'guru kelas', label: 'Guru Kelas' },
-                  { key: 'guru bidang studi', label: 'Guru Bidang Studi' }
-                ].map(role => {
-                  const active = formData.roles.includes(role.key);
-                  return (
-                    <button
-                      key={role.key}
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => {
-                          if (prev.roles.includes(role.key)) {
-                            return { ...prev, roles: prev.roles.filter(r => r !== role.key) };
-                          }
-                          return { ...prev, roles: [...prev.roles, role.key] };
-                        });
-                        setErrors(prev => {
-                          const copy = { ...prev };
-                          delete copy.roles;
-                          return copy;
-                        });
-                      }}
-                      className={`px-3 py-1 rounded-full border transition select-none ${
-                        active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
+
+            {/* === Role & Status dalam satu baris responsif === */}
+            <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Role (Hak Akses) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'guru kelas', label: 'Guru Kelas' },
+                      { key: 'guru bidang studi', label: 'Guru Bidang Studi' }
+                    ].map(role => {
+                      const active = formData.roles.includes(role.key);
+                      return (
+                        <button
+                          key={role.key}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              roles: prev.roles.includes(role.key)
+                                ? prev.roles.filter(r => r !== role.key)
+                                : [...prev.roles, role.key]
+                            }));
+                            setErrors(prev => ({ ...prev, roles: '' }));
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${active
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                            }`}
+                        >
+                          {role.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {errors.roles && <p className="text-red-500 text-xs mt-1">{errors.roles}</p>}
+                </div>
+
+                {/* Status Guru — hanya saat edit */}
+                {isEdit && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Status Guru <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="statusGuru"
+                      value={formData.statusGuru}
+                      onChange={handleInputChange}
+                      className={`w-full border ${errors.statusGuru ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     >
-                      {role.label}
-                    </button>
-                  );
-                })}
+                      <option value="">-- Pilih --</option>
+                      <option value="aktif">Aktif</option>
+                      <option value="nonaktif">Nonaktif</option>
+                    </select>
+                    {errors.statusGuru && <p className="text-red-500 text-xs mt-1">{errors.statusGuru}</p>}
+                  </div>
+                )}
               </div>
-              {errors.roles && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.roles}</p>}
             </div>
-            {isEdit && (
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2">
-                  Status Guru <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="statusGuru"
-                  value={formData.statusGuru}
-                  onChange={handleInputChange}
-                  className={`w-full border ${errors.statusGuru ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                >
-                  <option value="">-- Pilih --</option>
-                  <option value="aktif">Aktif</option>
-                  <option value="nonaktif">Nonaktif</option>
-                </select>
-                {errors.statusGuru && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.statusGuru}</p>}
-              </div>
-            )}
           </div>
-          <div className="mt-6 sm:mt-7">
-            <label className="flex items-center gap-2 cursor-pointer">
+
+          {/* Konfirmasi */}
+          <div className="mt-6">
+            <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 name="confirmData"
                 checked={formData.confirmData}
                 onChange={handleInputChange}
-                className="w-4 h-4 cursor-pointer"
+                className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               />
-              <span className="text-xs sm:text-sm text-gray-700">Saya yakin sudah mengisi dengan benar</span>
+              <span className="text-sm text-gray-700">
+                Saya yakin data yang diisi sudah benar
+              </span>
             </label>
-            {errors.confirmData && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.confirmData}</p>}
+            {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
           </div>
+
           <div className="mt-6 sm:mt-8">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
@@ -653,7 +684,10 @@ export default function DataGuruPage() {
                 )}
               </div>
               <button
-                onClick={() => { setImportClosing(true); setShowImport(true); }}
+                onClick={() => {
+                  setShowImport(true);
+                  setImportClosing(false);
+                }}
                 className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
               >
                 <Upload size={20} />
@@ -690,12 +724,12 @@ export default function DataGuruPage() {
                       <td className="px-4 py-3 text-center align-middle">{guru.niy || '-'}</td>
                       <td className="px-4 py-3 text-center align-middle">{guru.nuptk || '-'}</td>
                       <td className="px-4 py-3 text-center align-middle">
-                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guru.statusGuru === 'AKTIF' || guru.statusGuru === 'aktif'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                        }`}>
-                        {guru.statusGuru?.toUpperCase() || 'AKTIF'}
-                      </span>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guru.statusGuru === 'AKTIF' || guru.statusGuru === 'aktif'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                          }`}>
+                          {guru.statusGuru?.toUpperCase() || 'AKTIF'}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
                         <div className="flex justify-center gap-1 sm:gap-2">
@@ -779,10 +813,11 @@ export default function DataGuruPage() {
                   <span className="font-semibold text-xs sm:text-sm col-span-1 sm:col-span-1">Status</span>
                   <span className="text-xs sm:text-sm">:</span>
                   <div className="col-span-1 sm:col-span-2">
-                    <span className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${
-                      selectedGuru.statusGuru === 'aktif' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                    }`}>
-                      {selectedGuru.statusGuru?.toUpperCase() || '                                          ``  `'}
+                    <span className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${selectedGuru.statusGuru === 'AKTIF' || selectedGuru.statusGuru === 'aktif'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                      }`}>
+                      {selectedGuru.statusGuru?.toUpperCase() || 'AKTIF'}
                     </span>
                   </div>
                 </div>
@@ -830,6 +865,15 @@ export default function DataGuruPage() {
                   <span className="text-xs sm:text-sm">:</span>
                   <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">{selectedGuru.email || '-'}</span>
                 </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Hak Akses</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">
+                    {selectedGuru.roles && selectedGuru.roles.length > 0
+                      ? selectedGuru.roles.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', ')
+                      : '-'}
+                  </span>
+                </div>
               </div>
               <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
                 <button
@@ -866,7 +910,7 @@ export default function DataGuruPage() {
       {/* Modal Import */}
       {showImport && (
         <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${importClosing ? 'opacity-0' : 'opacity-100'}`}
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${importClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setImportClosing(true);
@@ -877,14 +921,13 @@ export default function DataGuruPage() {
             }
           }}
         >
-          <div className="absolute inset-0 bg-gray-900/50"></div>
+          <div className="absolute inset-0 bg-gray-900/70"></div>
           <div
-            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md p-6 transform transition-all duration-200 ${
-              importClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-            }`}
+            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${importClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Import Data Guru</h2>
+            {/* Header Modal */}
+            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Import Data Guru</h2>
               <button
                 onClick={() => {
                   setImportClosing(true);
@@ -894,45 +937,60 @@ export default function DataGuruPage() {
                   }, 200);
                 }}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Tutup modal"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">Format file: <strong>.xlsx</strong> atau <strong>.xls</strong></p>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">{importFile ? importFile.name : 'Klik untuk pilih file'}</p>
-                </div>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleImportExcel}
-                disabled={!importFile}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded disabled:bg-gray-300 transition"
-              >
-                Import
-              </button>
-              <button
-                onClick={() => {
-                  setImportClosing(true);
-                  setTimeout(() => {
-                    setShowImport(false);
-                    setImportClosing(false);
-                  }, 200);
-                }}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-100"
-              >
-                Batal
-              </button>
+
+            {/* Body Modal */}
+            <div className="p-4 sm:p-6">
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-3">
+                  Format file yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>
+                </p>
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600">
+                      {importFile ? (
+                        <span className="font-medium text-blue-600">{importFile.name}</span>
+                      ) : (
+                        'Klik untuk pilih file'
+                      )}
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Footer Modal */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleImportExcel}
+                  disabled={!importFile}
+                  className={`flex-1 py-2.5 rounded-lg font-medium transition ${!importFile ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                >
+                  Import
+                </button>
+                <button
+                  onClick={() => {
+                    setImportClosing(true);
+                    setTimeout(() => {
+                      setShowImport(false);
+                      setImportClosing(false);
+                    }, 200);
+                  }}
+                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition"
+                >
+                  Batal
+                </button>
+              </div>
             </div>
           </div>
         </div>

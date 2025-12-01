@@ -33,6 +33,28 @@ const storage = multer.diskStorage({
     }
 });
 
+const excelStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir); // bisa pakai folder yang sama, atau buat folder 'temp'
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `import_guru_${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+});
+
+const uploadExcel = multer({
+    storage: excelStorage,
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext !== '.xlsx' && ext !== '.xls') {
+            return cb(new Error('Hanya file .xlsx atau .xls yang diizinkan'), false);
+        }
+        cb(null, true);
+    },
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
 const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB
@@ -45,7 +67,7 @@ const router = express.Router();
 router.use(authenticate, authorize('admin'));
 
 // --- Data Guru ---
-router.post('/guru/import', adminController.importGuru);
+router.post('/guru/import', uploadExcel.single('file'), adminController.importGuru);
 router.get('/guru', adminController.getGuru);
 router.get('/guru/:id', adminController.getGuruById);
 router.post('/guru', adminController.tambahGuru);

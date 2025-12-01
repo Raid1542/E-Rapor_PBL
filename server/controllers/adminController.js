@@ -262,7 +262,7 @@ const importGuru = async (req, res) => {
             throw new Error('File Excel kosong');
         }
 
-        const requiredFields = ['email_sekolah', 'password', 'nama_lengkap'];
+        const requiredFields = ['email_sekolah', 'nama_lengkap'];
         const firstRow = data[0];
         for (const field of requiredFields) {
             if (!(field in firstRow)) {
@@ -273,7 +273,7 @@ const importGuru = async (req, res) => {
         // Proses setiap baris
         for (const row of data) {
             // Validasi data wajib
-            if (!row.email_sekolah || !row.password || !row.nama_lengkap) {
+            if (!row.email_sekolah || !row.nama_lengkap) {
                 throw new Error(`Data tidak lengkap pada baris: ${JSON.stringify(row)}`);
             }
 
@@ -282,9 +282,11 @@ const importGuru = async (req, res) => {
             const validRoles = roles.filter(r => ['guru kelas', 'guru bidang studi'].includes(r));
 
             // Buat user + guru + role
+            const password = row.password || 'sekolah123!';
+
             const userData = {
                 email_sekolah: row.email_sekolah,
-                password: row.password,
+                password: password,
                 nama_lengkap: row.nama_lengkap
             };
             const guruData = {
