@@ -1,4 +1,3 @@
-// models/guruModel.js
 const db = require('../config/db');
 const { hashPassword } = require('../utils/hash');
 
@@ -17,14 +16,8 @@ const getAllGuru = async () => {
         g.jenis_kelamin,
         g.alamat,
         g.no_telepon,
-        CASE 
-        WHEN g.jenis_kelamin = 'Perempuan' THEN 'P' 
-        ELSE 'L' 
-        END AS lp,
-        CASE 
-        WHEN u.status = 'aktif' THEN 'AKTIF' 
-        ELSE 'NONAKTIF' 
-        END AS statusGuru
+        CASE WHEN u.status = 'aktif' THEN 'AKTIF' ELSE 'NONAKTIF' END AS statusGuru,
+        GROUP_CONCAT(ur.role) AS roles
     FROM user u
     INNER JOIN guru g ON u.id_user = g.user_id
     INNER JOIN user_role ur ON u.id_user = ur.id_user
@@ -32,7 +25,10 @@ const getAllGuru = async () => {
     GROUP BY u.id_user
     ORDER BY u.nama_lengkap
     `);
-    return rows;
+    return rows.map(row => ({
+        ...row,
+        roles: row.roles ? row.roles.split(',') : []
+    }))
 };
 
 // Ambil guru by ID
@@ -48,13 +44,22 @@ const getGuruById = async (id) => {
         g.tempat_lahir,
         g.tanggal_lahir,
         g.jenis_kelamin,
+        g.jenis_kelamin AS lp,
         g.alamat,
-        g.no_telepon
+        g.no_telepon,
+        GROUP_CONCAT(ur.role) AS roles
     FROM user u
     INNER JOIN guru g ON u.id_user = g.user_id
+    LEFT JOIN user_role ur ON u.id_user = ur.id_user
     WHERE u.id_user = ?
+    GROUP BY u.id_user
     `, [id]);
-    return rows[0];
+    const row = rows[0];
+    if (!row) return null;
+    return {
+        ...row,
+        roles: row.roles ? row.roles.split(',') : []
+    };
 };
 
 // Buat guru baru (dengan multi-role)
@@ -64,7 +69,10 @@ const createGuru = async (userData, guruData, roles) => {
         await connection.beginTransaction();
 
         // 1. Hash password
-        const hashedPassword = await hashPassword(userData.password);
+        const finalPassword = userData.password && userData.password.trim() !== ''
+            ? userData.password
+            : 'sekolah123'; // password default
+        const hashedPassword = await hashPassword(finalPassword);
 
         // 2. Insert ke user
         const [userResult] = await connection.execute(
@@ -109,15 +117,23 @@ const createGuru = async (userData, guruData, roles) => {
 };
 
 // Update guru
+// Update guru
 const updateGuru = async (id, userData, guruData, roles = null) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 1. Update user (termasuk password jika ada)
+        // === 1. Update data user ===
         let updateUserQuery = 'UPDATE user SET email_sekolah = ?, nama_lengkap = ?';
         let updateUserParams = [userData.email_sekolah, userData.nama_lengkap];
 
+        // Tambahkan status jika dikirim
+        if (userData.status !== undefined) {
+            updateUserQuery += ', status = ?';
+            updateUserParams.push(userData.status);
+        }
+
+        // Hash & update password hanya jika ada
         if (userData.password && userData.password.trim() !== '') {
             const hashedPassword = await require('../utils/hash').hashPassword(userData.password);
             updateUserQuery += ', password = ?';
@@ -128,43 +144,45 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
         updateUserParams.push(id);
         await connection.execute(updateUserQuery, updateUserParams);
 
-        // 2. Update atau insert guru
+        // === 2. Update atau insert data guru ===
         const [guruRows] = await connection.execute('SELECT 1 FROM guru WHERE user_id = ?', [id]);
         if (guruRows.length > 0) {
+            // Update existing
             await connection.execute(
                 `UPDATE guru SET 
-            niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
-            jenis_kelamin = ?, alamat = ?, no_telepon = ?
-        WHERE user_id = ?`,
+                    niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
+                    jenis_kelamin = ?, alamat = ?, no_telepon = ?
+                WHERE user_id = ?`,
                 [
-                    guruData.niy,
-                    guruData.nuptk,
-                    guruData.tempat_lahir,
-                    guruData.tanggal_lahir,
-                    guruData.jenis_kelamin,
-                    guruData.alamat,
-                    guruData.no_telepon,
+                    guruData.niy || '',
+                    guruData.nuptk || '',
+                    guruData.tempat_lahir || '',
+                    guruData.tanggal_lahir || '',
+                    guruData.jenis_kelamin || 'Laki-laki',
+                    guruData.alamat || '',
+                    guruData.no_telepon || '',
                     id
                 ]
             );
         } else {
+            // Insert baru (jika belum ada profil guru)
             await connection.execute(
                 `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     id,
-                    guruData.niy,
-                    guruData.nuptk,
-                    guruData.tempat_lahir,
-                    guruData.tanggal_lahir,
-                    guruData.jenis_kelamin,
-                    guruData.alamat,
-                    guruData.no_telepon
+                    guruData.niy || '',
+                    guruData.nuptk || '',
+                    guruData.tempat_lahir || '',
+                    guruData.tanggal_lahir || '',
+                    guruData.jenis_kelamin || 'Laki-laki',
+                    guruData.alamat || '',
+                    guruData.no_telepon || ''
                 ]
             );
         }
 
-        // 3. Update roles
+        // === 3. Update roles (opsional) ===
         if (Array.isArray(roles) && roles.length > 0) {
             await connection.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
             for (const role of roles) {
@@ -179,22 +197,7 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
 
         await connection.commit();
     } catch (err) {
-        await connection.rollback();
-        throw err;
-    } finally {
-        connection.release();
-    }
-};
-// Hapus guru
-const deleteGuru = async (id) => {
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-        await connection.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
-        await connection.execute('DELETE FROM guru WHERE user_id = ?', [id]);
-        await connection.execute('DELETE FROM user WHERE id_user = ?', [id]);
-        await connection.commit();
-    } catch (err) {
+        console.error('ModelError updateGuru:', err); // 🔍 tambahkan ini untuk debug
         await connection.rollback();
         throw err;
     } finally {
@@ -206,6 +209,5 @@ module.exports = {
     getAllGuru,
     getGuruById,
     createGuru,
-    updateGuru,
-    deleteGuru
+    updateGuru
 };

@@ -14,8 +14,25 @@ const updateSekolah = async (newData) => {
         // Ambil data sekolah yang sudah ada
         const existing = await getSekolah();
 
+        // Data default jika belum ada sama sekali
+        const defaultData = {
+            nama_sekolah: 'SDIT ULIL ALBAB',
+            npsn: '0000000000',
+            nss: '00000000',
+            alamat: 'Alamat Sekolah',
+            kode_pos: '00000',
+            telepon: '0000000000',
+            email: 'info@sekolah.sch.id',
+            website: 'https://sekolah.sch.id',
+            kepala_sekolah: 'Kepala Sekolah',
+            niy_kepala_sekolah: '0000000000000000',
+            logo_path: '/images/logo-default.png'
+        };
 
-        // Gabungkan: gunakan newData jika ada, jika tidak, pertahankan nilai lama
+        // Gunakan existing jika ada, kalau tidak pakai default
+        const current = existing || defaultData;
+
+        // Gabungkan: newData menimpa current
         const merged = {
             nama_sekolah: newData.nama_sekolah ?? current.nama_sekolah,
             npsn: newData.npsn ?? current.npsn,
@@ -30,33 +47,32 @@ const updateSekolah = async (newData) => {
             logo_path: newData.logo_path ?? current.logo_path
         };
 
-        // Sekarang semua field pasti tidak null
+        // Update atau Insert
         const [result] = await db.execute(
             `UPDATE sekolah SET 
-                nama_sekolah = ?,
-                npsn = ?,
-                nss = ?,
-                alamat = ?,
-                kode_pos = ?,
-                telepon = ?,
-                email = ?,
-                website = ?,
-                kepala_sekolah = ?,
-                niy_kepala_sekolah = ?,
-                logo_path = ?
-            WHERE id = 1`,
+        nama_sekolah = ?,
+        npsn = ?,
+        nss = ?,
+        alamat = ?,
+        kode_pos = ?,
+        telepon = ?,
+        email = ?,
+        website = ?,
+        kepala_sekolah = ?,
+        niy_kepala_sekolah = ?,
+        logo_path = ?
+      WHERE id = 1`,
             Object.values(merged)
         );
 
-        // Jika tidak ada yang di-update (karena belum ada data), lakukan INSERT
         if (result.affectedRows === 0) {
             await db.execute(
                 `INSERT INTO sekolah (
-                    id, nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website,
-                    kepala_sekolah, niy_kepala_sekolah, logo_path
-                ) VALUES (
-                    1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                )`,
+          id, nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website,
+          kepala_sekolah, niy_kepala_sekolah, logo_path
+        ) VALUES (
+          1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )`,
                 Object.values(merged)
             );
         }

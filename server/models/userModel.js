@@ -43,10 +43,10 @@ const getRolesByUserId = async (id_user) => {
 const getAdminList = async () => {
     const [rows] = await db.execute(`
     SELECT 
-        u.id_user, 
-        u.email_sekolah, 
-        u.nama_lengkap, 
-        u.status,
+        u.id_user AS id, 
+        u.email_sekolah AS email, 
+        u.nama_lengkap AS nama, 
+        u.status AS statusAdmin,
         g.niy, 
         g.nuptk, 
         g.tempat_lahir, 
@@ -67,18 +67,23 @@ const getAdminList = async () => {
 const createAdmin = async (userData, connection = db) => {
     const {
         email_sekolah,
-        password,
+        password, // bisa undefined
         nama_lengkap,
         niy = '',
         nuptk = '',
         tempat_lahir = '',
-        tanggal_lahir = null,       // ✅ null untuk DATE
-        jenis_kelamin = 'Laki-laki', // ✅ nilai default valid
+        tanggal_lahir = null,
+        jenis_kelamin = 'Laki-laki',
         alamat = '',
         no_telepon = ''
     } = userData;
 
-    const hashedPassword = await require('../utils/hash').hashPassword(password);
+    // ✅ Jika tidak ada password, gunakan default
+    const finalPassword = password && password.trim() !== '' 
+        ? password 
+        : 'sekolah123'; // atau "admin123", dll
+
+    const hashedPassword = await require('../utils/hash').hashPassword(finalPassword);
 
     // 1. Insert ke user
     const [result] = await connection.execute(
@@ -96,8 +101,8 @@ const createAdmin = async (userData, connection = db) => {
     // 3. Insert ke guru
     await connection.execute(
         `INSERT INTO guru (
-        user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [id_user, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon]
     );
 

@@ -17,9 +17,11 @@ export default function ResponsiveSidebar() {
 
   // State untuk menyimpan URL logo sekolah
   const [logoUrl, setLogoUrl] = React.useState<string>('/images/LogoUA.jpg');
-
+  
   // Ambil logo sekolah dari backend saat halaman dibuka
   React.useEffect(() => {
+    let mounted = true;
+
     const fetchLogo = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -29,28 +31,45 @@ export default function ResponsiveSidebar() {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (res.ok) {
-          const { data } = await res.json();
-          if (data?.logo_path) {
-            setLogoUrl(`http://localhost:5000${data.logo_path}`);
-          }
+        if (!res.ok) return;
+        const { data } = await res.json();
+        if (data?.logo_path && mounted) {
+          // tambahkan timestamp untuk menghindari cache lama
+          setLogoUrl(`http://localhost:5000${data.logo_path}?t=${Date.now()}`);
         }
       } catch (err) {
-        console.warn('Gagal memuat logo — pakai logo default.');
+        console.warn('Gagal memuat logo — pakai logo default.', err);
       }
     };
 
     fetchLogo();
 
-    // ✅ Tambahkan ini: dengarkan perubahan logo
-  const handleStorage = (e: StorageEvent) => {
-    if (e.key === 'logoUpdated') {
-      fetchLogo(); // ambil ulang dari backend
-    }
-  };
+    // Handle logo update event dengan CustomEvent
+    const handleLogoUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { logoPath, timestamp } = customEvent.detail || {};
+      
+      if (logoPath) {
+        // Update logo dengan timestamp dari event
+        setLogoUrl(`http://localhost:5000${logoPath}?t=${timestamp || Date.now()}`);
+      } else {
+        // Fallback: fetch ulang jika tidak ada detail
+        fetchLogo();
+      }
+    };
 
-  window.addEventListener('storage', handleStorage);
-  return () => window.removeEventListener('storage', handleStorage);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'token') fetchLogo();
+    };
+
+    window.addEventListener('logoUpdated', handleLogoUpdate);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('logoUpdated', handleLogoUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const toggleSidebar = () => {
@@ -127,6 +146,7 @@ export default function ResponsiveSidebar() {
                 src={logoUrl}
                 alt="Logo SDIT Ulil Albab"
                 className="w-10 h-10 object-contain"
+                key={logoUrl} // Force re-render saat URL berubah
               />
               <div>
                 <h2 className="text-sm font-bold text-gray-900">SDIT Ulil Albab</h2>
