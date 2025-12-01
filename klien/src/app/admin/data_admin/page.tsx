@@ -3,17 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Eye, Pencil, Trash2, X, EyeOff, Plus } from 'lucide-react';
 
-//const dummyAdmin = [
-//{ id: 1, nama: 'Admin', lp: 'L', niy: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
-//];*
-
 export default function DataAdminPage() {
   const [adminData, setAdminData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
   const [showTambah, setShowTambah] = useState(false);
   const [editMode, setEditMode] = useState(false);
-const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -49,19 +45,57 @@ const [editingId, setEditingId] = useState(null);
   }, []);
 
   const [formData, setFormData] = useState({
-  email_sekolah: '',
-  nama_lengkap: '',
-  password: '',
-  niy: '',
-  nuptk: '',
-  tempat_lahir: '',
-  tanggal_lahir: '',
-  jenis_kelamin: '',
-  alamat: '',
-  no_telepon: '',
-  confirmData: false
-});
+    email_sekolah: '',
+    nama_lengkap: '',
+    password: '',
+    niy: '',
+    nuptk: '',
+    tempat_lahir: '',
+    tanggal_lahir: '',
+    jenis_kelamin: '',
+    alamat: '',
+    no_telepon: '',
+    confirmData: false
+  });
 
+  // ✅ VALIDASI FORM
+  const validateForm = () => {
+    // Validasi email
+    if (formData.email_sekolah && !formData.email_sekolah.includes('@')) {
+      alert('Format email tidak valid! Harus mengandung @');
+      return false;
+    }
+
+    // Validasi telepon (hanya angka)
+    if (formData.no_telepon && !/^\d+$/.test(formData.no_telepon)) {
+      alert('Nomor telepon hanya boleh berisi angka!');
+      return false;
+    }
+
+    // Validasi required fields
+    if (!formData.nama_lengkap.trim()) {
+      alert('Nama lengkap harus diisi!');
+      return false;
+    }
+
+    if (!formData.jenis_kelamin) {
+      alert('Jenis kelamin harus dipilih!');
+      return false;
+    }
+
+    // Validasi password untuk tambah data baru
+    if (!editMode && !formData.password) {
+      alert('Password harus diisi untuk data baru!');
+      return false;
+    }
+
+    if (!editMode && formData.password.length < 6) {
+      alert('Password minimal 6 karakter!');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleDetail = (admin) => {
     setSelectedAdmin(admin);
@@ -70,15 +104,15 @@ const [editingId, setEditingId] = useState(null);
 
   const handleEdit = async (admin) => {
     setFormData({
-      email_sekolah: admin.email || '',
-      nama_lengkap: admin.nama || '',
+      email_sekolah: admin.email || admin.email_sekolah || '',
+      nama_lengkap: admin.nama || admin.nama_lengkap || '',
       niy: admin.niy || '',
       nuptk: admin.nuptk || '',
       tempat_lahir: admin.tempat_lahir || '',
       tanggal_lahir: admin.tanggal_lahir || '',
-      jenis_kelamin: admin.jenisKelamin === 'LAKI-LAKI' ? 'Laki-laki' : 'Perempuan',
+      jenis_kelamin: admin.jenis_kelamin || (admin.jenisKelamin === 'LAKI-LAKI' ? 'Laki-laki' : 'Perempuan'),
       alamat: admin.alamat || '',
-      no_telepon: admin.no_telepon || '',
+      no_telepon: admin.no_telepon || admin.telepon || '',
       password: '',
       confirmData: true
     });
@@ -86,7 +120,6 @@ const [editingId, setEditingId] = useState(null);
     setEditMode(true);
     setShowTambah(true);
   };
-
 
   const handleDelete = async (id) => {
     if (!confirm('Apakah anda yakin hapus admin ini?')) return;
@@ -121,83 +154,129 @@ const [editingId, setEditingId] = useState(null);
     }));
   };
 
+  // ✅ PERBAIKAN: FUNCTION handleSubmit YANG SUDAH DIPERBAIKI
   const handleSubmit = async () => {
-  if (!formData.confirmData) {
-    alert('Harap centang konfirmasi data');
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem('token');
-    const url = editMode 
-      ? `http://localhost:5000/api/admin/admin/${editingId}` 
-      : 'http:localhost:5000/api/admin/admin';
-    const method = editMode ? 'PUT' : 'POST';
-
-    // Jangan kirim password jika kosong (kecuali saat tambah)
-    const payload = { ...formData };
-    if (editMode && !payload.password) {
-      delete payload.password;
+    if (!formData.confirmData) {
+      alert('Harap centang konfirmasi data');
+      return;
     }
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(payload),
->>>>>>> de02acf73977dc147de42852edbca8f82f883cca
-    });
+    if (!validateForm()) {
+      return;
+    }
 
-    if (res.ok) {
-      alert(editMode ? 'Admin berhasil diperbarui!' : 'Admin berhasil ditambahkan!');
-      setFormData({
-        email_sekolah: '',
-        nama_lengkap: '',
-        password: '',
-        niy: '',
-        nuptk: '',
-        tempat_lahir: '',
-        tanggal_lahir: '',
-        jenis_kelamin: '',
-        alamat: '',
-        no_telepon: '',
-        confirmData: false
+    try {
+      const token = localStorage.getItem('token');
+      const url = editMode 
+        ? `http://localhost:5000/api/admin/admin/${editingId}` 
+        : 'http://localhost:5000/api/admin/admin';
+      
+      const method = editMode ? 'PUT' : 'POST';
+
+      // ✅ PERBAIKAN: Convert semua empty string/undefined ke null
+      const payload = {
+        nama_lengkap: formData.nama_lengkap.trim() || null,
+        email_sekolah: formData.email_sekolah.trim() || null,
+        niy: formData.niy.trim() || null,
+        nuptk: formData.nuptk.trim() || null,
+        tempat_lahir: formData.tempat_lahir.trim() || null,
+        tanggal_lahir: formData.tanggal_lahir || null,
+        jenis_kelamin: formData.jenis_kelamin || null,
+        alamat: formData.alamat.trim() || null,
+        no_telepon: formData.no_telepon.trim() || null
+      };
+
+      // ✅ Hanya tambah password jika diisi
+      if (!editMode || formData.password) {
+        payload.password = formData.password || null;
+      }
+
+      console.log('🔵 DEBUG - Payload dikirim:', payload);
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload),
       });
-      setShowTambah(false);
-      setEditMode(false);
-      setEditingId(null);
-      fetchAdminData();
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Terjadi kesalahan');
+
+      const responseText = await res.text();
+      console.log('🟡 DEBUG - Response Status:', res.status);
+      console.log('🟡 DEBUG - Response Text:', responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { message: 'Response bukan JSON' };
+      }
+      
+      if (res.ok) {
+        alert(editMode ? '✅ Admin berhasil diperbarui!' : '✅ Admin berhasil ditambahkan!');
+        setFormData({
+          email_sekolah: '',
+          nama_lengkap: '',
+          password: '',
+          niy: '',
+          nuptk: '',
+          tempat_lahir: '',
+          tanggal_lahir: '',
+          jenis_kelamin: '',
+          alamat: '',
+          no_telepon: '',
+          confirmData: false
+        });
+        setShowTambah(false);
+        setEditMode(false);
+        setEditingId(null);
+        fetchAdminData();
+      } else {
+        console.error('🔴 ERROR - Full Error:', {
+          status: res.status,
+          statusText: res.statusText,
+          responseText: responseText,
+          responseData: responseData
+        });
+        
+        let errorMessage = `❌ Gagal ${editMode ? 'memperbarui' : 'menambah'} data admin!\n\n`;
+        errorMessage += `Status: ${res.status} ${res.statusText}\n`;
+        
+        if (responseData.message) {
+          errorMessage += `Pesan: ${responseData.message}\n`;
+        }
+        if (responseData.error) {
+          errorMessage += `Error: ${responseData.error}\n`;
+        }
+        
+        alert(errorMessage);
+      }
+    } catch (error) {
+      console.error('🔴 NETWORK ERROR:', error);
+      alert('🌐 Gagal menghubungi server. Pastikan backend berjalan di port 5000.');
     }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Gagal menghubungi server');
-  }
-};
+  };
 
   const handleReset = () => {
-  setFormData({
-    email_sekolah: '',
-    nama_lengkap: '',
-    password: '',
-    niy: '',
-    nuptk: '',
-    tempat_lahir: '',
-    tanggal_lahir: '',
-    jenis_kelamin: '',
-    alamat: '',
-    no_telepon: '',
-    confirmData: false
-  });
-};
+    setFormData({
+      email_sekolah: '',
+      nama_lengkap: '',
+      password: '',
+      niy: '',
+      nuptk: '',
+      tempat_lahir: '',
+      tanggal_lahir: '',
+      jenis_kelamin: '',
+      alamat: '',
+      no_telepon: '',
+      confirmData: false
+    });
+  };
 
   const filteredAdmin = adminData.filter(admin =>
-    admin.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    admin.niy.includes(searchQuery) // Diubah dari nip menjadi niy
+    admin.nama?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    admin.niy?.includes(searchQuery)
   );
 
   const totalPages = Math.ceil(filteredAdmin.length / itemsPerPage);
@@ -227,8 +306,9 @@ const [editingId, setEditingId] = useState(null);
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-              }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${
+              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
           >
             {i}
           </button>
@@ -239,19 +319,16 @@ const [editingId, setEditingId] = useState(null);
         <button
           key={1}
           onClick={() => setCurrentPage(1)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${
+            currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+          }`}
         >
           1
         </button>
       );
 
       if (currentPage > 3) {
-        pages.push(
-          <span key="dots1" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
+        pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       }
 
       const start = Math.max(2, currentPage - 1);
@@ -262,8 +339,9 @@ const [editingId, setEditingId] = useState(null);
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-              }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${
+              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+            }`}
           >
             {i}
           </button>
@@ -271,19 +349,16 @@ const [editingId, setEditingId] = useState(null);
       }
 
       if (currentPage < totalPages - 2) {
-        pages.push(
-          <span key="dots2" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
+        pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
       }
 
       pages.push(
         <button
           key={totalPages}
           onClick={() => setCurrentPage(totalPages)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+          className={`px-3 py-1 border border-gray-300 rounded transition ${
+            currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+          }`}
         >
           {totalPages}
         </button>
@@ -305,6 +380,17 @@ const [editingId, setEditingId] = useState(null);
     return pages;
   };
 
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (showTambah) {
     return (
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
@@ -313,9 +399,16 @@ const [editingId, setEditingId] = useState(null);
 
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Tambah Data Admin</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                {editMode ? 'Edit Data Admin' : 'Tambah Data Admin'}
+              </h2>
               <button
-                onClick={() => setShowTambah(false)}
+                onClick={() => {
+                  setShowTambah(false);
+                  setEditMode(false);
+                  setEditingId(null);
+                  handleReset();
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X size={24} />
@@ -332,10 +425,12 @@ const [editingId, setEditingId] = useState(null);
                   name="nama_lengkap"
                   value={formData.nama_lengkap}
                   onChange={handleInputChange}
-                  placeholder="Ketik Nama"
+                  placeholder="Ketik Nama Lengkap"
                   className="w-full border border-gray-300 rounded px-4 py-2"
+                  required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Email Akun</label>
                 <input
@@ -343,24 +438,34 @@ const [editingId, setEditingId] = useState(null);
                   name="email_sekolah"
                   value={formData.email_sekolah}
                   onChange={handleInputChange}
-                  placeholder="Ketik Email"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
+                  placeholder="contoh: email@sekolah.com"
+                  className={`w-full border rounded px-4 py-2 ${
+                    formData.email_sekolah && !formData.email_sekolah.includes('@') 
+                      ? 'border-red-500' 
+                      : 'border-gray-300'
+                  }`}
                 />
+                {formData.email_sekolah && !formData.email_sekolah.includes('@') && (
+                  <p className="text-red-500 text-xs mt-1">Format email harus mengandung @</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">NIY</label> {/* Diubah dari NIP menjadi NIY */}
+                <label className="block text-sm font-medium mb-2">NIY</label>
                 <input
                   type="text"
-                  name="niy" 
-                  value={formData.niy} 
+                  name="niy"
+                  value={formData.niy}
                   onChange={handleInputChange}
-                  placeholder="Ketik NIY" 
+                  placeholder="Ketik NIY"
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Password Akun <span className="text-red-500">*</span>
+                  {editMode ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password Akun'} 
+                  <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -368,8 +473,10 @@ const [editingId, setEditingId] = useState(null);
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Ketik Password"
+                    placeholder={editMode ? "Kosongkan jika tidak ingin mengubah" : "Minimal 6 karakter"}
                     className="w-full border border-gray-300 rounded px-4 py-2 pr-10"
+                    required={!editMode}
+                    minLength={6}
                   />
                   <button
                     type="button"
@@ -379,7 +486,11 @@ const [editingId, setEditingId] = useState(null);
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {!editMode && formData.password && formData.password.length < 6 && (
+                  <p className="text-red-500 text-xs mt-1">Password minimal 6 karakter</p>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">NUPTK</label>
                 <input
@@ -391,7 +502,7 @@ const [editingId, setEditingId] = useState(null);
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
-              <div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Tempat Lahir</label>
                 <input
@@ -403,7 +514,7 @@ const [editingId, setEditingId] = useState(null);
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
-              <div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Tanggal Lahir</label>
                 <input
@@ -414,7 +525,7 @@ const [editingId, setEditingId] = useState(null);
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
-              <div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Jenis Kelamin <span className="text-red-500">*</span>
@@ -424,35 +535,43 @@ const [editingId, setEditingId] = useState(null);
                   value={formData.jenis_kelamin}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
+                  required
                 >
                   <option value="">-- Pilih --</option>
                   <option value="Laki-laki">Laki-laki</option>
                   <option value="Perempuan">Perempuan</option>
                 </select>
               </div>
-              <div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Alamat</label>
                 <textarea
                   name="alamat"
                   value={formData.alamat}
                   onChange={handleInputChange}
-                  placeholder="Ketik Alamat"
+                  placeholder="Ketik Alamat Lengkap"
                   rows={3}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
               </div>
-              <div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Telepon</label>
                 <input
                   type="tel"
                   name="no_telepon"
                   value={formData.no_telepon}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Telepon"
+                  onChange={(e) => {
+                    // Hanya allow angka
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData(prev => ({ ...prev, no_telepon: value }));
+                  }}
+                  placeholder="Contoh: 08123456789"
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 />
+                {formData.no_telepon && !/^\d+$/.test(formData.no_telepon) && (
+                  <p className="text-red-500 text-xs mt-1">Hanya boleh angka</p>
+                )}
               </div>
             </div>
 
@@ -483,7 +602,12 @@ const [editingId, setEditingId] = useState(null);
                 Reset
               </button>
               <button
-                onClick={() => setShowTambah(false)}
+                onClick={() => {
+                  setShowTambah(false);
+                  setEditMode(false);
+                  setEditingId(null);
+                  handleReset();
+                }}
                 className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2 rounded transition"
               >
                 Batal
@@ -510,7 +634,6 @@ const [editingId, setEditingId] = useState(null);
                 <Plus size={20} />
                 Tambah Admin
               </button>
-
             </div>
           </div>
 
@@ -534,7 +657,7 @@ const [editingId, setEditingId] = useState(null);
             </div>
             <input
               type="text"
-              placeholder="Cari..."
+              placeholder="Cari nama atau NIY..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -551,53 +674,67 @@ const [editingId, setEditingId] = useState(null);
                   <th className="px-4 py-3 text-left">No.</th>
                   <th className="px-4 py-3 text-left">Nama</th>
                   <th className="px-4 py-3 text-left">L/P</th>
-                  <th className="px-4 py-3 text-left">NIY</th> {/* Diubah dari NIP menjadi NIY */}
+                  <th className="px-4 py-3 text-left">NIY</th>
                   <th className="px-4 py-3 text-left">NUPTK</th>
                   <th className="px-4 py-3 text-left">Status Admin</th>
                   <th className="px-4 py-3 text-left">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {currentAdmin.map((admin, index) => (
-                  <tr
-                    key={admin.id}
-                    className="border-b border-gray-200 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-3">{startIndex + index + 1}</td>
-                    <td className="px-4 py-3">{admin.nama}</td>
-                    <td className="px-4 py-3">{admin.lp}</td>
-                    <td className="px-4 py-3">{admin.niy}</td> {/* Diubah dari nip menjadi niy */}
-                    <td className="px-4 py-3">{admin.nuptk}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-gray-700">{admin.statusAdmin}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDetail(admin)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
-                        >
-                          <Eye size={16} />
-                          Detail
-                        </button>
-                        <button
-                          onClick={() => handleEdit(admin)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded flex items-center gap-1 transition"
-                        >
-                          <Pencil size={16} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(admin.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
-                        >
-                          <Trash2 size={16} />
-                          Hapus
-                        </button>
-                      </div>
+                {currentAdmin.length > 0 ? (
+                  currentAdmin.map((admin, index) => (
+                    <tr
+                      key={admin.id}
+                      className="border-b border-gray-200 hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3">{startIndex + index + 1}</td>
+                      <td className="px-4 py-3">{admin.nama || admin.nama_lengkap}</td>
+                      <td className="px-4 py-3">{(admin.jenis_kelamin || admin.jenisKelamin)?.charAt(0) || '-'}</td>
+                      <td className="px-4 py-3">{admin.niy || '-'}</td>
+                      <td className="px-4 py-3">{admin.nuptk || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          admin.statusAdmin === 'Aktif' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {admin.statusAdmin || 'Tidak Aktif'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleDetail(admin)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
+                          >
+                            <Eye size={16} />
+                            Detail
+                          </button>
+                          <button
+                            onClick={() => handleEdit(admin)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded flex items-center gap-1 transition"
+                          >
+                            <Pencil size={16} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(admin.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
+                          >
+                            <Trash2 size={16} />
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                      {adminData.length === 0 ? 'Tidak ada data admin' : 'Data tidak ditemukan'}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -630,20 +767,24 @@ const [editingId, setEditingId] = useState(null);
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold">{selectedAdmin.nama}</h3>
+                <h3 className="text-xl font-semibold">{selectedAdmin.nama || selectedAdmin.nama_lengkap}</h3>
               </div>
               <div className="space-y-3">
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Status Admin</span>
                   <span className="mr-4">:</span>
-                  <span className="bg-green-500 text-white px-3 py-1 rounded text-sm">
-                    {selectedAdmin.statusAdmin}
+                  <span className={`px-3 py-1 rounded text-sm ${
+                    selectedAdmin.statusAdmin === 'Aktif' 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-red-500 text-white'
+                  }`}>
+                    {selectedAdmin.statusAdmin || 'Tidak Aktif'}
                   </span>
                 </div>
                 <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">NIY</span> {/* Diubah dari NIP menjadi NIY */}
+                  <span className="w-48 font-semibold">NIY</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.niy}</span> {/* Diubah dari nip menjadi niy */}
+                  <span>{selectedAdmin.niy || '-'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">NUPTK</span>
@@ -653,17 +794,17 @@ const [editingId, setEditingId] = useState(null);
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Jenis Kelamin</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.jenisKelamin}</span>
+                  <span>{selectedAdmin.jenis_kelamin || selectedAdmin.jenisKelamin || '-'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Telepon</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.telepon || '-'}</span>
+                  <span>{selectedAdmin.no_telepon || selectedAdmin.telepon || '-'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Email</span>
                   <span className="mr-4">:</span>
-                  <span>{selectedAdmin.email || '-'}</span>
+                  <span>{selectedAdmin.email || selectedAdmin.email_sekolah || '-'}</span>
                 </div>
                 <div className="flex border-b pb-2">
                   <span className="w-48 font-semibold">Alamat</span>
