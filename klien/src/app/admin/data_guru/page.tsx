@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, Upload, X, Plus, Search, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
 
 interface Guru {
   id: number;
@@ -59,6 +59,35 @@ export default function DataGuruPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importClosing, setImportClosing] = useState(false);
 
+  // === Filter Modal ===
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterClosing, setFilterClosing] = useState(false);
+  const [filterValues, setFilterValues] = useState({
+    role: '',
+    jenisKelamin: '',
+    status: ''
+  });
+  const [openedFilterValues, setOpenedFilterValues] = useState({
+    role: '',
+    jenisKelamin: '',
+    status: ''
+  });
+
+  const resetFilter = () => {
+    setFilterValues({ role: '', jenisKelamin: '', status: '' });
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  const closeFilterModal = () => {
+    setFilterClosing(true);
+    setTimeout(() => {
+      setFilterValues(openedFilterValues); // 🔁 kembali ke nilai sebelum modal dibuka
+      setShowFilter(false);
+      setFilterClosing(false);
+    }, 200);
+  };
+
   useEffect(() => {
     fetchGuru();
   }, []);
@@ -82,11 +111,11 @@ export default function DataGuruPage() {
             email: g.email,
             niy: g.niy,
             nuptk: g.nuptk,
-            tempat_lahir: g.tempat_lahir || g.tempatLahir || '',
-            tanggal_lahir: g.tanggal_lahir || g.tanggalLahir || '',
-            jenisKelamin: g.jenis_kelamin || g.jenisKelamin || g.lp || '',
+            tempat_lahir: g.tempat_lahir || '',
+            tanggal_lahir: g.tanggal_lahir || '',
+            jenisKelamin: g.jenis_kelamin || g.lp || '',
             alamat: g.alamat,
-            no_telepon: g.no_telepon || g.telepon || '',
+            no_telepon: g.no_telepon || '',
             statusGuru: g.statusGuru || 'aktif',
             roles: g.roles || [],
           }))
@@ -179,15 +208,7 @@ export default function DataGuruPage() {
     }
     if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      const firstKey = Object.keys(newErrors)[0];
-      setTimeout(() => {
-        const el = document.querySelector(`[name="${firstKey}"]`) as HTMLElement | null;
-        if (el && typeof el.focus === 'function') el.focus();
-      }, 10);
-      return false;
-    }
-    return true;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmitTambah = async () => {
@@ -239,7 +260,7 @@ export default function DataGuruPage() {
       return;
     }
     try {
-      const payload: any = {
+      const payload = {
         nama_lengkap: formData.nama,
         email_sekolah: formData.email,
         roles: formData.roles,
@@ -322,11 +343,28 @@ export default function DataGuruPage() {
     }
   };
 
-  const filteredGuru = guruList.filter((guru) =>
-    guru.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (guru.niy && guru.niy.includes(searchQuery)) ||
-    (guru.nuptk && guru.nuptk.includes(searchQuery))
-  );
+  // === Filter & Pencarian Gabungan ===
+  const filteredGuru = guruList.filter((guru) => {
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch = !query ||
+      guru.nama?.toLowerCase().includes(query) ||
+      guru.email?.toLowerCase().includes(query) ||
+      guru.niy?.includes(query) ||
+      guru.nuptk?.includes(query) ||
+      guru.tempat_lahir?.toLowerCase().includes(query) ||
+      guru.no_telepon?.includes(query);
+
+    const matchesRole = !filterValues.role || 
+      (guru.roles && guru.roles.includes(filterValues.role));
+
+    const matchesJenisKelamin = !filterValues.jenisKelamin || 
+      (guru.jenisKelamin?.toLowerCase() === filterValues.jenisKelamin.toLowerCase());
+
+    const matchesStatus = !filterValues.status || 
+      (guru.statusGuru?.toLowerCase() === filterValues.status.toLowerCase());
+
+    return matchesSearch && matchesRole && matchesJenisKelamin && matchesStatus;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredGuru.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -364,7 +402,6 @@ export default function DataGuruPage() {
     return pages;
   };
 
-  // --- Render Form (Tambah / Edit) ---
   const renderForm = (isEdit: boolean) => (
     <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
@@ -384,7 +421,6 @@ export default function DataGuruPage() {
               <X size={24} />
             </button>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {/* Nama */}
             <div>
@@ -401,7 +437,6 @@ export default function DataGuruPage() {
               />
               {errors.nama && <p className="text-red-500 text-xs mt-1">{errors.nama}</p>}
             </div>
-
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Akun</label>
@@ -414,7 +449,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* NIY */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">NIY</label>
@@ -427,7 +461,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* NUPTK */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">NUPTK</label>
@@ -440,7 +473,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* Tempat Lahir */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tempat Lahir</label>
@@ -453,7 +485,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* Tanggal Lahir */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -468,7 +499,6 @@ export default function DataGuruPage() {
               />
               {errors.tanggalLahir && <p className="text-red-500 text-xs mt-1">{errors.tanggalLahir}</p>}
             </div>
-
             {/* Jenis Kelamin */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -486,7 +516,6 @@ export default function DataGuruPage() {
               </select>
               {errors.jenisKelamin && <p className="text-red-500 text-xs mt-1">{errors.jenisKelamin}</p>}
             </div>
-
             {/* Telepon */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Telepon</label>
@@ -499,7 +528,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* Alamat */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Alamat</label>
@@ -512,7 +540,6 @@ export default function DataGuruPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             {/* === Role & Status dalam satu baris responsif === */}
             <div className="md:col-span-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -552,7 +579,6 @@ export default function DataGuruPage() {
                   </div>
                   {errors.roles && <p className="text-red-500 text-xs mt-1">{errors.roles}</p>}
                 </div>
-
                 {/* Status Guru — hanya saat edit */}
                 {isEdit && (
                   <div>
@@ -575,7 +601,6 @@ export default function DataGuruPage() {
               </div>
             </div>
           </div>
-
           {/* Konfirmasi */}
           <div className="mt-6">
             <label className="flex items-start gap-2 cursor-pointer">
@@ -592,7 +617,6 @@ export default function DataGuruPage() {
             </label>
             {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
           </div>
-
           <div className="mt-6 sm:mt-8">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
@@ -626,7 +650,6 @@ export default function DataGuruPage() {
   if (showTambah) return renderForm(false);
   if (showEdit) return renderForm(true);
 
-  // --- Tampilan Utama ---
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -685,6 +708,17 @@ export default function DataGuruPage() {
               </div>
               <button
                 onClick={() => {
+                  setOpenedFilterValues({ ...filterValues }); // 🔸 Simpan nilai sebelum buka
+                  setShowFilter(true);
+                  setFilterClosing(false);
+                }}
+                className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+              >
+                <Filter size={20} />
+                Filter Guru
+              </button>
+              <button
+                onClick={() => {
                   setShowImport(true);
                   setImportClosing(false);
                 }}
@@ -720,7 +754,7 @@ export default function DataGuruPage() {
                     <tr key={guru.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
                       <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                       <td className="px-4 py-3 align-middle font-medium">{guru.nama}</td>
-                      <td className="px-4 py-3 text-center align-middle">{formatGender(guru.jenisKelamin || guru.lp)}</td>
+                      <td className="px-4 py-3 text-center align-middle">{formatGender(guru.jenisKelamin)}</td>
                       <td className="px-4 py-3 text-center align-middle">{guru.niy || '-'}</td>
                       <td className="px-4 py-3 text-center align-middle">{guru.nuptk || '-'}</td>
                       <td className="px-4 py-3 text-center align-middle">
@@ -768,7 +802,7 @@ export default function DataGuruPage() {
         </div>
       </div>
 
-      {/* Modal Detail */}
+      {/* === Modal Detail === */}
       {showDetail && selectedGuru && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
@@ -834,7 +868,7 @@ export default function DataGuruPage() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm">Jenis Kelamin</span>
                   <span className="text-xs sm:text-sm">:</span>
-                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">{formatGender(selectedGuru.jenisKelamin || selectedGuru.lp)}</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">{formatGender(selectedGuru.jenisKelamin)}</span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm">Tempat Lahir</span>
@@ -907,7 +941,7 @@ export default function DataGuruPage() {
         </div>
       )}
 
-      {/* Modal Import */}
+      {/* === Modal Import === */}
       {showImport && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${importClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
@@ -925,7 +959,6 @@ export default function DataGuruPage() {
           <div
             className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${importClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
           >
-            {/* Header Modal */}
             <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800">Import Data Guru</h2>
               <button
@@ -942,35 +975,41 @@ export default function DataGuruPage() {
                 <X size={20} />
               </button>
             </div>
-
-            {/* Body Modal */}
             <div className="p-4 sm:p-6">
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3">
-                  Format file yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>
+              <p className="text-sm text-gray-600 mb-4">
+                Format file: <strong>.xlsx</strong> atau <strong>.xls</strong>
+              </p>
+              <div className="mb-4">
+                <a
+                  href="http://localhost:5000/templates/template_import_guru.xlsx"
+                  download
+                  className="text-blue-500 text-sm hover:underline flex items-center gap-1"
+                >
+                  📥 Unduh template Excel
+                </a>
+                <p className="text-xs text-gray-500 mt-1">
+                  Isi sesuai contoh, lalu simpan sebagai <strong>.xlsx</strong>
                 </p>
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {importFile ? (
-                        <span className="font-medium text-blue-600">{importFile.name}</span>
-                      ) : (
-                        'Klik untuk pilih file'
-                      )}
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                </label>
               </div>
-
-              {/* Footer Modal */}
-              <div className="flex gap-3">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">
+                    {importFile ? (
+                      <span className="font-medium text-blue-600">{importFile.name}</span>
+                    ) : (
+                      'Klik untuk pilih file'
+                    )}
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+              </label>
+              <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleImportExcel}
                   disabled={!importFile}
@@ -989,6 +1028,96 @@ export default function DataGuruPage() {
                   className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition"
                 >
                   Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === Modal Filter === */}
+      {showFilter && (
+        <div
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${filterClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeFilterModal();
+            }
+          }}
+        >
+          <div className="absolute inset-0 bg-gray-900/70"></div>
+          <div
+            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${filterClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+          >
+            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Filter Guru</h2>
+              <button
+                onClick={closeFilterModal}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Tutup filter"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4">
+              {/* Filter Role */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={filterValues.role}
+                  onChange={(e) => setFilterValues(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Semua Role</option>
+                  <option value="guru kelas">Guru Kelas</option>
+                  <option value="guru bidang studi">Guru Bidang Studi</option>
+                </select>
+              </div>
+              {/* Filter Jenis Kelamin */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
+                <select
+                  value={filterValues.jenisKelamin}
+                  onChange={(e) => setFilterValues(prev => ({ ...prev, jenisKelamin: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Semua Jenis Kelamin</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </div>
+              {/* Filter Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={filterValues.status}
+                  onChange={(e) => setFilterValues(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
+                </select>
+              </div>
+              {/* Tombol Aksi */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={resetFilter}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-100 transition text-sm"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => {
+                    setFilterClosing(true);
+                    setTimeout(() => {
+                      setShowFilter(false);
+                      setFilterClosing(false);
+                    }, 200);
+                  }}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition text-sm"
+                >
+                  Terapkan
                 </button>
               </div>
             </div>

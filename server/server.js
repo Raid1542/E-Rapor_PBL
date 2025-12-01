@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const app = express();
 
-// ✅ CORS dulu
+// ✅ CORS
 app.use(cors({
     origin: 'http://localhost:3000',
     credentials: true
@@ -16,18 +16,27 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ STATIC FILES - INI YANG PALING PENTING
+// ✅ Folder uploads
 const uploadsPath = path.join(__dirname, 'public', 'uploads');
 console.log('📂 Uploads path:', uploadsPath);
 
-// Buat folder jika belum ada
 if (!fs.existsSync(uploadsPath)) {
     fs.mkdirSync(uploadsPath, { recursive: true });
     console.log('✅ Folder uploads dibuat');
 }
 
-// Serve static files
+// ✅ Folder templates (untuk template import)
+const templatesPath = path.join(__dirname, 'public', 'templates');
+console.log('📂 Templates path:', templatesPath);
+
+if (!fs.existsSync(templatesPath)) {
+    fs.mkdirSync(templatesPath, { recursive: true });
+    console.log('✅ Folder templates dibuat');
+}
+
+// ✅ Serve static files
 app.use('/uploads', express.static(uploadsPath));
+app.use('/templates', express.static(templatesPath)); // ← Tambahkan ini
 
 // ✅ Routes
 const authRoutes = require('./routes/authRoutes');
@@ -51,6 +60,7 @@ app.get('/debug/uploads', (req, res) => {
     }
 });
 
+// ✅ Root
 app.get('/', (req, res) => {
     res.send('Backend E-Rapor SDIT Ulil Albab berjalan!');
 });
@@ -59,4 +69,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
     console.log(`📂 Uploads: http://localhost:${PORT}/uploads/`);
+    console.log(`📥 Templates: http://localhost:${PORT}/templates/`);
 });

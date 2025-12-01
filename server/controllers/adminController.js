@@ -252,12 +252,10 @@ const importGuru = async (req, res) => {
             return res.status(400).json({ message: 'File Excel diperlukan' });
         }
 
-        // Baca file Excel
         const workbook = XLSX.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-        // Validasi minimal ada kolom wajib
         if (data.length === 0) {
             throw new Error('File Excel kosong');
         }
@@ -270,18 +268,36 @@ const importGuru = async (req, res) => {
             }
         }
 
-        // Proses setiap baris
         for (const row of data) {
-            // Validasi data wajib
             if (!row.email_sekolah || !row.nama_lengkap) {
                 throw new Error(`Data tidak lengkap pada baris: ${JSON.stringify(row)}`);
             }
 
-            // Format role (default: guru kelas)
-            const roles = row.roles ? row.roles.toString().split(',').map(r => r.trim()) : ['guru kelas'];
-            const validRoles = roles.filter(r => ['guru kelas', 'guru bidang studi'].includes(r));
+            // ✅ VALIDASI & KONVERSI TANGGAL DI DALAM LOOP
+            let tanggal_lahir = row.tanggal_lahir || '';
+            if (typeof tanggal_lahir === 'number') {
+                const date = new Date((tanggal_lahir - 25569) * 86400 * 1000);
+                if (isNaN(date.getTime())) {
+                    tanggal_lahir = null;
+                } else {
+                    const yyyy = date.getFullYear();
+                    const mm = String(date.getMonth() + 1).padStart(2, '0');
+                    const dd = String(date.getDate()).padStart(2, '0');
+                    tanggal_lahir = `${yyyy}-${mm}-${dd}`;
+                }
+            } else if (typeof tanggal_lahir === 'string') {
+                tanggal_lahir = tanggal_lahir.trim();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal_lahir)) {
+                    tanggal_lahir = null;
+                }
+            } else {
+                tanggal_lahir = null;
+            }
 
-            // Buat user + guru + role
+            const roles = row.roles
+                ? row.roles.toString().split(',').map(r => r.trim())
+                : ['guru kelas'];
+            const validRoles = roles.filter(r => ['guru kelas', 'guru bidang studi'].includes(r));
             const password = row.password || 'sekolah123!';
 
             const userData = {
@@ -290,28 +306,24 @@ const importGuru = async (req, res) => {
                 nama_lengkap: row.nama_lengkap
             };
             const guruData = {
-                niy: row.niy || '',
-                nuptk: row.nuptk || '',
-                tempat_lahir: row.tempat_lahir || '',
-                tanggal_lahir: row.tanggal_lahir || '',
+                niy: row.niy || null,
+                nuptk: row.nuptk || null,
+                tempat_lahir: row.tempat_lahir || null,
+                tanggal_lahir: tanggal_lahir, // ✅ Bisa null atau 'YYYY-MM-DD'
                 jenis_kelamin: row.jenis_kelamin || 'Laki-laki',
-                alamat: row.alamat || '',
-                no_telepon: row.no_telepon || ''
+                alamat: row.alamat || null,
+                no_telepon: row.no_telepon || null
             };
 
-            const userId = await guruModel.createGuru(userData, guruData, validRoles);
+            await guruModel.createGuru(userData, guruData, validRoles);
         }
 
         await connection.commit();
-
-        // Hapus file sementara
         fs.unlinkSync(req.file.path);
-
         res.json({ message: 'Import data guru berhasil', total: data.length });
     } catch (err) {
         await connection.rollback();
         console.error('Error import guru:', err);
-        // Hapus file sementara jika error
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
