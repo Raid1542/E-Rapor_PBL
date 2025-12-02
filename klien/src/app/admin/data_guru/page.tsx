@@ -33,6 +33,20 @@ interface FormDataType {
   confirmData: boolean;
 }
 
+// Fungsi format tanggal lahir ke "1 Januari 2016"
+const formatTanggalIndonesia = (dateStr?: string | null): string => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
+  const hari = date.getDate();
+  const bulan = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ][date.getMonth()];
+  const tahun = date.getFullYear();
+  return `${hari} ${bulan} ${tahun}`;
+};
+
 export default function DataGuruPage() {
   const formatGender = (g?: string | null) => {
     if (!g) return '-';
@@ -82,7 +96,7 @@ export default function DataGuruPage() {
   const closeFilterModal = () => {
     setFilterClosing(true);
     setTimeout(() => {
-      setFilterValues(openedFilterValues); // 🔁 kembali ke nilai sebelum modal dibuka
+      setFilterValues(openedFilterValues);
       setShowFilter(false);
       setFilterClosing(false);
     }, 200);
@@ -106,19 +120,19 @@ export default function DataGuruPage() {
       if (res.ok) {
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => ({
-            id: g.id,
-            nama: g.nama,
-            email: g.email,
-            niy: g.niy,
-            nuptk: g.nuptk,
-            tempat_lahir: g.tempat_lahir || '',
-            tanggal_lahir: g.tanggal_lahir || '',
-            jenisKelamin: g.jenis_kelamin || g.lp || '',
-            alamat: g.alamat,
-            no_telepon: g.no_telepon || '',
-            statusGuru: g.statusGuru || 'aktif',
-            roles: g.roles || [],
-          }))
+              id: g.id,
+              nama: g.nama,
+              email: g.email,
+              niy: g.niy,
+              nuptk: g.nuptk,
+              tempat_lahir: g.tempat_lahir || '',
+              tanggal_lahir: g.tanggal_lahir || '',
+              jenisKelamin: g.jenis_kelamin || '',
+              alamat: g.alamat,
+              no_telepon: g.no_telepon || '',
+              statusGuru: g.statusGuru || 'aktif',
+              roles: g.roles || [],
+            }))
           : [];
         setGuruList(list);
       } else {
@@ -163,7 +177,7 @@ export default function DataGuruPage() {
       nuptk: guru.nuptk || '',
       tempatLahir: guru.tempat_lahir || '',
       tanggalLahir: guru.tanggal_lahir || '',
-      jenisKelamin: guru.jenisKelamin || 'Laki-laki',
+      jenisKelamin: guru.jenisKelamin || '',
       alamat: guru.alamat || '',
       no_telepon: guru.no_telepon || '',
       roles: Array.isArray(guru.roles) ? guru.roles : [],
@@ -253,12 +267,35 @@ export default function DataGuruPage() {
   };
 
   const handleSubmitEdit = async () => {
+    const originalData = guruList.find(g => g.id === editId);
+    if (!originalData) return;
+
+    const hasChanged =
+      formData.nama !== (originalData.nama || '') ||
+      formData.email !== (originalData.email || '') ||
+      formData.niy !== (originalData.niy || '') ||
+      formData.nuptk !== (originalData.nuptk || '') ||
+      formData.tempatLahir !== (originalData.tempat_lahir || '') ||
+      formData.tanggalLahir !== (originalData.tanggal_lahir || '') ||
+      formData.jenisKelamin !== (originalData.jenisKelamin || '') ||
+      formData.alamat !== (originalData.alamat || '') ||
+      formData.no_telepon !== (originalData.no_telepon || '') ||
+      formData.statusGuru !== (originalData.statusGuru || 'aktif') ||
+      JSON.stringify(formData.roles.sort()) !== JSON.stringify((originalData.roles || []).sort());
+
+    if (!hasChanged) {
+      alert("Tidak ada perubahan data.");
+      return;
+    }
+
     if (!validate(true)) return;
+
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Sesi login telah habis. Silakan login ulang.');
       return;
     }
+
     try {
       const payload = {
         nama_lengkap: formData.nama,
@@ -353,16 +390,12 @@ export default function DataGuruPage() {
       guru.nuptk?.includes(query) ||
       guru.tempat_lahir?.toLowerCase().includes(query) ||
       guru.no_telepon?.includes(query);
-
-    const matchesRole = !filterValues.role || 
+    const matchesRole = !filterValues.role ||
       (guru.roles && guru.roles.includes(filterValues.role));
-
-    const matchesJenisKelamin = !filterValues.jenisKelamin || 
+    const matchesJenisKelamin = !filterValues.jenisKelamin ||
       (guru.jenisKelamin?.toLowerCase() === filterValues.jenisKelamin.toLowerCase());
-
-    const matchesStatus = !filterValues.status || 
+    const matchesStatus = !filterValues.status ||
       (guru.statusGuru?.toLowerCase() === filterValues.status.toLowerCase());
-
     return matchesSearch && matchesRole && matchesJenisKelamin && matchesStatus;
   });
 
@@ -708,7 +741,7 @@ export default function DataGuruPage() {
               </div>
               <button
                 onClick={() => {
-                  setOpenedFilterValues({ ...filterValues }); // 🔸 Simpan nilai sebelum buka
+                  setOpenedFilterValues({ ...filterValues });
                   setShowFilter(true);
                   setFilterClosing(false);
                 }}
@@ -729,7 +762,6 @@ export default function DataGuruPage() {
               </button>
             </div>
           </div>
-
           {/* Tabel Data */}
           <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
             <table className="w-full min-w-[600px] table-auto text-sm">
@@ -789,7 +821,6 @@ export default function DataGuruPage() {
               </tbody>
             </table>
           </div>
-
           {/* Pagination */}
           <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
             <div className="text-sm text-gray-600">
@@ -881,7 +912,7 @@ export default function DataGuruPage() {
                   <span className="font-semibold text-xs sm:text-sm">Tanggal Lahir</span>
                   <span className="text-xs sm:text-sm">:</span>
                   <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">
-                    {selectedGuru.tanggal_lahir || '-'}
+                    {formatTanggalIndonesia(selectedGuru.tanggal_lahir)}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">

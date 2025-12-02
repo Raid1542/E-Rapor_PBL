@@ -36,7 +36,7 @@ if (!fs.existsSync(templatesPath)) {
 
 // ✅ Serve static files
 app.use('/uploads', express.static(uploadsPath));
-app.use('/templates', express.static(templatesPath)); // ← Tambahkan ini
+app.use('/templates', express.static(templatesPath));
 
 // ✅ Routes
 const authRoutes = require('./routes/authRoutes');
