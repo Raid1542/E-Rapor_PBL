@@ -92,7 +92,7 @@ const createGuru = async (userData, guruData, roles) => {
                 guruData.nuptk || null,
                 guruData.tempat_lahir || null,
                 guruData.tanggal_lahir || null,
-                guruData.jenis_kelamin || 'Laki-laki',
+                guruData.jenis_kelamin || null,
                 guruData.alamat || null,
                 guruData.no_telepon || null
             ]
@@ -157,7 +157,7 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
                     guruData.nuptk || '',
                     guruData.tempat_lahir || '',
                     guruData.tanggal_lahir || '',
-                    guruData.jenis_kelamin || 'Laki-laki',
+                    guruData.jenis_kelamin || '',
                     guruData.alamat || '',
                     guruData.no_telepon || '',
                     id
@@ -174,7 +174,7 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
                     guruData.nuptk || null,
                     guruData.tempat_lahir || null,
                     guruData.tanggal_lahir || null, // ✅ null, bukan ''
-                    guruData.jenis_kelamin || 'Laki-laki',
+                    guruData.jenis_kelamin || null,
                     guruData.alamat || null,
                     guruData.no_telepon || null
                 ]

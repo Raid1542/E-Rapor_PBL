@@ -270,6 +270,11 @@ export default function DataGuruPage() {
     const originalData = guruList.find(g => g.id === editId);
     if (!originalData) return;
 
+    const normalize = (str: string | null | undefined): string => {
+  return (str || '').toString().trim().toLowerCase();
+};
+
+
     const hasChanged =
       formData.nama !== (originalData.nama || '') ||
       formData.email !== (originalData.email || '') ||
@@ -277,7 +282,7 @@ export default function DataGuruPage() {
       formData.nuptk !== (originalData.nuptk || '') ||
       formData.tempatLahir !== (originalData.tempat_lahir || '') ||
       formData.tanggalLahir !== (originalData.tanggal_lahir || '') ||
-      formData.jenisKelamin !== (originalData.jenisKelamin || '') ||
+      normalize(formData.jenisKelamin) !== normalize(originalData.jenisKelamin) ||
       formData.alamat !== (originalData.alamat || '') ||
       formData.no_telepon !== (originalData.no_telepon || '') ||
       formData.statusGuru !== (originalData.statusGuru || 'aktif') ||
