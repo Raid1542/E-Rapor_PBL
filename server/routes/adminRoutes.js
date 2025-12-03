@@ -5,44 +5,33 @@ const authorize = require('../middleware/authorize');
 const multer = require('multer');
 const path = require('path');
 
-// ✅ PENTING: Path yang benar
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-
-// Buat folder jika belum ada
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('✅ Folder uploads dibuat:', uploadDir);
 }
 
-console.log('📂 Multer upload directory:', uploadDir);
-
-// ✅ Konfigurasi multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        console.log('📁 Multer destination:', uploadDir);
-        cb(null, uploadDir);
-    },
+// ✅ Storage untuk logo sekolah
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
         if (!['.png', '.jpg', '.jpeg'].includes(ext)) {
             return cb(new Error('Hanya file .png, .jpg, .jpeg yang diizinkan'));
         }
-        const filename = `logo_sekolah${ext}`;
-        console.log('💾 Multer filename:', filename);
-        cb(null, filename);
+        cb(null, `logo_sekolah${ext}`);
     }
 });
 
+// ✅ Storage untuk import Excel
 const excelStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir); // bisa pakai folder yang sama, atau buat folder 'temp'
-    },
+    destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, `import_guru_${uniqueSuffix}${path.extname(file.originalname)}`);
     }
 });
 
+const uploadLogo = multer({ storage: logoStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 const uploadExcel = multer({
     storage: excelStorage,
     fileFilter: (req, file, cb) => {
@@ -52,12 +41,7 @@ const uploadExcel = multer({
         }
         cb(null, true);
     },
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-});
-
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 const adminController = require('../controllers/adminController');
@@ -74,6 +58,9 @@ router.post('/guru', adminController.tambahGuru);
 router.put('/guru/:id', adminController.editGuru);
 
 // --- Data Siswa ---
+router.post('/siswa/import', uploadExcel.single('file'), adminController.importSiswa);
+router.get('/siswa', adminController.getSiswa);
+router.get('/siswa/:id', adminController.getSiswaById);
 router.post('/siswa', adminController.tambahSiswa);
 router.put('/siswa/:id', adminController.editSiswa);
 
@@ -87,7 +74,7 @@ router.delete('/admin/:id', adminController.hapusAdmin);
 // --- Data Sekolah ---
 router.get('/sekolah', adminController.getSekolah);
 router.put('/sekolah', adminController.editSekolah);
-router.post('/sekolah/logo', upload.single('logo'), adminController.uploadLogo);
+router.post('/sekolah/logo', uploadLogo.single('logo'), adminController.uploadLogo);
 
 // --- Atur Kelas & Guru Kelas ---
 router.post('/kelas', adminController.aturKelas);

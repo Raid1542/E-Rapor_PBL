@@ -2,30 +2,25 @@ const XLSX = require('xlsx');
 const userModel = require('../models/userModel');
 const guruModel = require('../models/guruModel');
 const sekolahModel = require('../models/sekolahModel');
+const siswaModel = require('../models/siswaModel');
 const path = require('path');
 const fs = require('fs');
-const { hashPassword } = require('../utils/hash');
 const db = require('../config/db');
 
+// ============== ADMIN ==============
 const getAdmin = async (req, res) => {
     try {
         const rows = await userModel.getAdminList();
         const adminList = rows.map(row => {
             let tanggal_lahir = '';
             if (row.tanggal_lahir) {
-                // Jika row.tanggal_lahir adalah objek Date
                 if (row.tanggal_lahir instanceof Date) {
                     const d = row.tanggal_lahir;
-                    const yyyy = d.getFullYear();
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    tanggal_lahir = `${yyyy}-${mm}-${dd}`;
+                    tanggal_lahir = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 } else if (typeof row.tanggal_lahir === 'string') {
-                    // Jika string, ambil hanya bagian tanggal (sebelum 'T')
                     tanggal_lahir = row.tanggal_lahir.split('T')[0];
                 }
             }
-
             return {
                 id: row.id,
                 nama: row.nama,
@@ -34,7 +29,7 @@ const getAdmin = async (req, res) => {
                 niy: row.niy || '',
                 nuptk: row.nuptk || '',
                 tempat_lahir: row.tempat_lahir || '',
-                tanggal_lahir: tanggal_lahir, // ✅ Pasti string YYYY-MM-DD
+                tanggal_lahir: tanggal_lahir,
                 jenis_kelamin: row.jenis_kelamin || '',
                 alamat: row.alamat || '',
                 no_telepon: row.no_telepon || ''
@@ -85,10 +80,7 @@ const tambahAdmin = async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        // ✅ Langsung kirim req.body ke model — semua field lengkap
         const id_user = await userModel.createAdmin(req.body, connection);
-
         await connection.commit();
         res.status(201).json({ message: 'Admin berhasil ditambahkan', id: id_user });
     } catch (err) {
@@ -104,10 +96,8 @@ const editAdmin = async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
         const { id } = req.params;
         await userModel.updateAdmin(id, req.body, connection);
-
         await connection.commit();
         res.json({ message: 'Data admin berhasil diperbarui' });
     } catch (err) {
@@ -130,6 +120,7 @@ const hapusAdmin = async (req, res) => {
     }
 };
 
+// ============== GURU ==============
 const getGuru = async (req, res) => {
     try {
         const guruList = await guruModel.getAllGuru();
@@ -144,9 +135,7 @@ const getGuruById = async (req, res) => {
     try {
         const { id } = req.params;
         const guru = await guruModel.getGuruById(id);
-        if (!guru) {
-            return res.status(404).json({ message: 'Guru tidak ditemukan' });
-        }
+        if (!guru) return res.status(404).json({ message: 'Guru tidak ditemukan' });
         res.json({ success: true, data: guru });
     } catch (err) {
         res.status(500).json({ message: 'Gagal mengambil detail guru' });
@@ -154,43 +143,19 @@ const getGuruById = async (req, res) => {
 };
 
 const tambahGuru = async (req, res) => {
-    const {
-        nama_lengkap,
-        email_sekolah,
-        roles = [],
-        niy,
-        nuptk,
-        tempat_lahir,
-        tanggal_lahir,
-        jenis_kelamin,
-        alamat,
-        no_telepon
-    } = req.body;
-
-    // Validasi wajib
+    const { nama_lengkap, email_sekolah, roles = [], niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon } = req.body;
     if (!email_sekolah || !nama_lengkap) {
         return res.status(400).json({ message: 'Email dan nama wajib diisi' });
     }
-
-    // ✅ 1. Pastikan roles adalah array
     if (!Array.isArray(roles)) {
         return res.status(400).json({ message: 'Roles harus berupa array' });
     }
-
-    // ✅ 2. Normalize roles (trim + lowercase)
-    const normalizedRoles = roles.map(role => {
-        if (typeof role !== 'string') return '';
-        return role.trim().toLowerCase();
-    }).filter(role => role.length > 0); // Hapus string kosong
-
-    // ✅ 3. Validasi role
+    const normalizedRoles = roles.map(role => typeof role === 'string' ? role.trim().toLowerCase() : '').filter(Boolean);
     const allowedRoles = ['guru kelas', 'guru bidang studi'];
     const validRoles = normalizedRoles.filter(role => allowedRoles.includes(role));
-
     if (validRoles.length === 0) {
         return res.status(400).json({ message: 'Pilih minimal satu hak akses yang valid' });
     }
-
     try {
         const DEFAULT_PASSWORD = process.env.DEFAULT_GURU_PASSWORD || 'sekolah123';
         const userData = { email_sekolah, password: DEFAULT_PASSWORD, nama_lengkap, status: 'aktif' };
@@ -205,34 +170,7 @@ const tambahGuru = async (req, res) => {
 
 const editGuru = async (req, res) => {
     const { id } = req.params;
-    const {
-        email_sekolah,
-        nama_lengkap,
-        status,
-        niy,
-        nuptk,
-        tempat_lahir,
-        tanggal_lahir,
-        jenis_kelamin,
-        alamat,
-        no_telepon,
-        roles,
-        password
-    } = req.body;
-
-    if (roles !== undefined) {
-        if (!Array.isArray(roles)) {
-            return res.status(400).json({ message: 'Roles harus berupa array' });
-        }
-        const normalizedRoles = roles.map(r => typeof r === 'string' ? r.trim().toLowerCase() : '').filter(r => r);
-        const allowedRoles = ['guru kelas', 'guru bidang studi'];
-        const validRoles = normalizedRoles.filter(r => allowedRoles.includes(r));
-        if (validRoles.length === 0) {
-            return res.status(400).json({ message: 'Role tidak valid' });
-        }
-        // Gunakan validRoles di updateGuru
-    }
-
+    const { email_sekolah, nama_lengkap, status, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, roles, password } = req.body;
     try {
         const userData = { email_sekolah, nama_lengkap, password, status };
         const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
@@ -247,116 +185,74 @@ const importGuru = async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        if (!req.file) {
-            return res.status(400).json({ message: 'File Excel diperlukan' });
-        }
-
-        // Baca file Excel
+        if (!req.file) return res.status(400).json({ message: 'File Excel diperlukan' });
         const workbook = XLSX.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-        // Validasi minimal ada kolom wajib
-        if (data.length === 0) {
-            throw new Error('File Excel kosong');
-        }
-
+        if (data.length === 0) throw new Error('File Excel kosong');
         const requiredFields = ['email_sekolah', 'nama_lengkap'];
         const firstRow = data[0];
         for (const field of requiredFields) {
-            if (!(field in firstRow)) {
-                throw new Error(`Kolom wajib "${field}" tidak ditemukan di Excel`);
-            }
+            if (!(field in firstRow)) throw new Error(`Kolom wajib "${field}" tidak ditemukan`);
         }
-
-        // Proses setiap baris
         for (const row of data) {
-            // Validasi data wajib
-            if (!row.email_sekolah || !row.nama_lengkap) {
-                throw new Error(`Data tidak lengkap pada baris: ${JSON.stringify(row)}`);
+            if (!row.email_sekolah || !row.nama_lengkap) throw new Error(`Data tidak lengkap`);
+            let tanggal_lahir = row.tanggal_lahir || '';
+            if (typeof tanggal_lahir === 'number') {
+                const date = new Date((tanggal_lahir - 25569) * 86400 * 1000);
+                if (!isNaN(date.getTime())) {
+                    tanggal_lahir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                } else {
+                    tanggal_lahir = null;
+                }
+            } else if (typeof tanggal_lahir === 'string') {
+                tanggal_lahir = tanggal_lahir.trim();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal_lahir)) tanggal_lahir = null;
+            } else {
+                tanggal_lahir = null;
             }
-
-            // Format role (default: guru kelas)
-            const roles = row.roles ? row.roles.toString().split(',').map(r => r.trim()) : ['guru kelas'];
+            const roles = (row.roles ? row.roles.toString().split(',').map(r => r.trim()) : ['guru kelas']);
             const validRoles = roles.filter(r => ['guru kelas', 'guru bidang studi'].includes(r));
-
-            // Buat user + guru + role
             const password = row.password || 'sekolah123!';
-
-            const userData = {
-                email_sekolah: row.email_sekolah,
-                password: password,
-                nama_lengkap: row.nama_lengkap
-            };
+            const userData = { email_sekolah: row.email_sekolah, password, nama_lengkap: row.nama_lengkap };
             const guruData = {
-                niy: row.niy || '',
-                nuptk: row.nuptk || '',
-                tempat_lahir: row.tempat_lahir || '',
-                tanggal_lahir: row.tanggal_lahir || '',
+                niy: row.niy || null,
+                nuptk: row.nuptk || null,
+                tempat_lahir: row.tempat_lahir || null,
+                tanggal_lahir,
                 jenis_kelamin: row.jenis_kelamin || 'Laki-laki',
-                alamat: row.alamat || '',
-                no_telepon: row.no_telepon || ''
+                alamat: row.alamat || null,
+                no_telepon: row.no_telepon || null
             };
-
-            const userId = await guruModel.createGuru(userData, guruData, validRoles);
+            await guruModel.createGuru(userData, guruData, validRoles);
         }
-
         await connection.commit();
-
-        // Hapus file sementara
         fs.unlinkSync(req.file.path);
-
         res.json({ message: 'Import data guru berhasil', total: data.length });
     } catch (err) {
         await connection.rollback();
-        console.error('Error import guru:', err);
-        // Hapus file sementara jika error
-        if (req.file && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(500).json({ message: err.message || 'Gagal mengimport data guru' });
     } finally {
         connection.release();
     }
 };
 
-// Ambil data sekolah
+// ============== SEKOLAH ==============
 const getSekolah = async (req, res) => {
     try {
         const sekolah = await sekolahModel.getSekolah();
-        if (!sekolah) {
-            return res.status(404).json({ message: 'Data sekolah belum diatur' });
-        }
-
-        // ✅ PERBAIKAN: Return format yang konsisten dengan frontend
-        res.json({
-            success: true,
-            data: sekolah  // ← UBAH dari 'sekolah' jadi 'data'
-        });
+        if (!sekolah) return res.status(404).json({ message: 'Data sekolah belum diatur' });
+        res.json({ success: true, data: sekolah });
     } catch (err) {
         console.error('Error get sekolah:', err);
         res.status(500).json({ message: 'Gagal mengambil data sekolah' });
     }
 };
 
-// Edit data sekolah (partial update aman)
 const editSekolah = async (req, res) => {
     try {
-        const {
-            namaSekolah,
-            npsn,
-            nss,
-            alamat,
-            kodePos,
-            telepon,
-            email,
-            website,
-            kepalaSekolah,
-            niyKepalaSekolah
-        } = req.body;
-
-        // ✅ Kirim hanya field yang dikirim (sudah benar)
+        const { namaSekolah, npsn, nss, alamat, kodePos, telepon, email, website, kepalaSekolah, niyKepalaSekolah } = req.body;
         const data = {};
         if (namaSekolah !== undefined) data.nama_sekolah = namaSekolah;
         if (npsn !== undefined) data.npsn = npsn;
@@ -368,7 +264,6 @@ const editSekolah = async (req, res) => {
         if (website !== undefined) data.website = website;
         if (kepalaSekolah !== undefined) data.kepala_sekolah = kepalaSekolah;
         if (niyKepalaSekolah !== undefined) data.niy_kepala_sekolah = niyKepalaSekolah;
-
         await sekolahModel.updateSekolah(data);
         res.json({ message: 'Data sekolah berhasil diperbarui' });
     } catch (err) {
@@ -377,40 +272,19 @@ const editSekolah = async (req, res) => {
     }
 };
 
-// Upload logo sekolah
 const uploadLogo = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'File logo diperlukan' });
-        }
-
+        if (!req.file) return res.status(400).json({ message: 'File logo diperlukan' });
         const logoPath = `/uploads/${req.file.filename}`;
-
-        // ✅ Gunakan sekolahModel untuk konsistensi (opsional tapi direkomendasikan)
         const [rows] = await db.execute('SELECT id FROM sekolah WHERE id = 1');
         if (rows.length > 0) {
             await db.execute('UPDATE sekolah SET logo_path = ? WHERE id = 1', [logoPath]);
         } else {
-            await db.execute(
-                `INSERT INTO sekolah (id, nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website, kepala_sekolah, niy_kepala_sekolah, logo_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    1,
-                    'SDIT Ulil Albab',
-                    '0000000000',
-                    '00000000',
-                    'Alamat Sekolah',
-                    '00000',
-                    '0000000000',
-                    'info@sekolah.sch.id',
-                    'https://sekolah.sch.id',
-                    'Kepala Sekolah',
-                    '0000000000000000',
-                    logoPath
-                ]
-            );
+            await db.execute(`
+                INSERT INTO sekolah (id, nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website, kepala_sekolah, niy_kepala_sekolah, logo_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [1, 'SDIT Ulil Albab', '0000000000', '00000000', 'Alamat Sekolah', '00000', '0000000000', 'info@sekolah.sch.id', 'https://sekolah.sch.id', 'Kepala Sekolah', '0000000000000000', logoPath]);
         }
-
         res.json({ message: 'Logo berhasil diupdate', logoPath });
     } catch (err) {
         console.error('Error upload logo:', err);
@@ -418,37 +292,185 @@ const uploadLogo = async (req, res) => {
     }
 };
 
-const tambahSiswa = async (req, res) => {
-    const { nis, nisn, nama_lengkap, kelas_id } = req.body;
+// ============== SISWA ==============
+const getSiswa = async (req, res) => {
     try {
-        await db.execute(
-            'INSERT INTO siswa (nis, nisn, nama_lengkap, kelas_id, status) VALUES (?, ?, ?, ?, "aktif")',
-            [nis, nisn, nama_lengkap, kelas_id]
-        );
-        res.status(201).json({ message: 'Data siswa berhasil ditambahkan' });
+        const siswaList = await siswaModel.getAllSiswa();
+        res.json({ success: true, data: siswaList });
     } catch (err) {
-        res.status(500).json({ message: 'Gagal menambah data siswa' });
+        console.error('Error get siswa:', err);
+        res.status(500).json({ message: 'Gagal mengambil data siswa' });
+    }
+};
+
+const getSiswaById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const siswa = await siswaModel.getSiswaById(id);
+        if (!siswa) return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        res.json({ success: true, data: siswa });
+    } catch (err) {
+        res.status(500).json({ message: 'Gagal mengambil detail siswa' });
+    }
+};
+
+// ✅ Fungsi bantu: dapatkan id_kelas dari nama_kelas (misal "1A" → 1)
+const getKelasIdByName = async (namaKelas) => {
+    const [rows] = await db.execute('SELECT id_kelas FROM kelas WHERE nama_kelas = ?', [namaKelas]);
+    if (rows.length === 0) {
+        throw new Error(`Kelas "${namaKelas}" tidak ditemukan`);
+    }
+    return rows[0].id_kelas;
+};
+
+const tambahSiswa = async (req, res) => {
+    const {
+        nis,
+        nisn,
+        nama_lengkap,
+        tempat_lahir,
+        tanggal_lahir,
+        jenis_kelamin,
+        alamat,
+        kelas_id // string dari frontend: "1A", "2B", dll.
+    } = req.body;
+
+    if (!nis || !nisn || !nama_lengkap || !kelas_id) {
+        return res.status(400).json({ message: 'NIS, NISN, Nama, dan Kelas wajib diisi' });
+    }
+
+    try {
+        // 🔍 Cari id_kelas berdasarkan nama_kelas
+        const kelasIdInt = await getKelasIdByName(kelas_id);
+
+        const id = await siswaModel.createSiswa({
+            nis,
+            nisn,
+            nama_lengkap,
+            tempat_lahir,
+            tanggal_lahir,
+            jenis_kelamin,
+            alamat,
+            kelas_id: kelasIdInt,
+            status: 'aktif'
+        });
+        res.status(201).json({ message: 'Siswa berhasil ditambahkan', id });
+    } catch (err) {
+        console.error('Error tambah siswa:', err.message);
+        res.status(500).json({ message: err.message || 'Gagal menambah siswa' });
     }
 };
 
 const editSiswa = async (req, res) => {
-    const { nis, nisn, nama_lengkap, kelas_id } = req.body;
+    const { id } = req.params;
+    const {
+        nis,
+        nisn,
+        nama_lengkap,
+        tempat_lahir,
+        tanggal_lahir,
+        jenis_kelamin,
+        alamat,
+        kelas_id: namaKelas, // ← ini adalah string seperti "1A"
+        status
+    } = req.body;
+
     try {
-        await db.execute(
-            'UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ? WHERE id_siswa = ?',
-            [nis, nisn, nama_lengkap, kelas_id, req.params.id]
-        );
+        // ✅ KONVERSI NAMA KELAS ("1A") → ID KELAS (integer)
+        const kelasIdInt = await getKelasIdByName(namaKelas);
+
+        // ✅ Tentukan status akhir
+        const finalStatus = status !== undefined ? status : 'aktif';
+
+        // ✅ Update data siswa
+        const updated = await siswaModel.updateSiswa(id, {
+            nis,
+            nisn,
+            nama_lengkap,
+            tempat_lahir,
+            tanggal_lahir,
+            jenis_kelamin,
+            alamat,
+            kelas_id: kelasIdInt, // ← Kirim integer, bukan string
+            status: finalStatus
+        });
+
+        if (!updated) {
+            return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        }
+
         res.json({ message: 'Data siswa berhasil diperbarui' });
     } catch (err) {
+        console.error('Error edit siswa:', err);
+        if (err.message?.includes('tidak ditemukan')) {
+            return res.status(400).json({ message: err.message });
+        }
         res.status(500).json({ message: 'Gagal memperbarui data siswa' });
     }
 };
 
-const aturKelas = async (req, res) => { };
-const kelolaEkskul = async (req, res) => { };
-const lihatRapor = async (req, res) => { };
-const aturTahunAjaran = async (req, res) => { };
-const aturMataPelajaran = async (req, res) => { };
+const importSiswa = async (req, res) => {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        if (!req.file) return res.status(400).json({ message: 'File Excel diperlukan' });
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        if (data.length === 0) throw new Error('File Excel kosong');
+        const requiredFields = ['nis', 'nisn', 'nama_lengkap', 'kelas_id'];
+        const firstRow = data[0];
+        for (const field of requiredFields) {
+            if (!(field in firstRow)) throw new Error(`Kolom wajib "${field}" tidak ditemukan`);
+        }
+        for (const row of data) {
+            if (!row.nis || !row.nisn || !row.nama_lengkap || !row.kelas_id) throw new Error(`Data tidak lengkap`);
+            let tanggal_lahir = row.tanggal_lahir || '';
+            if (typeof tanggal_lahir === 'number') {
+                const date = new Date((tanggal_lahir - 25569) * 86400 * 1000);
+                if (!isNaN(date.getTime())) {
+                    tanggal_lahir = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                } else {
+                    tanggal_lahir = null;
+                }
+            } else if (typeof tanggal_lahir === 'string') {
+                tanggal_lahir = tanggal_lahir.trim();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal_lahir)) tanggal_lahir = null;
+            } else {
+                tanggal_lahir = null;
+            }
+            // 🔍 Dapatkan id_kelas dari nama_kelas (misal "1A")
+            const kelasIdInt = await getKelasIdByName(String(row.kelas_id).trim());
+            await siswaModel.createSiswa({
+                nis: row.nis,
+                nisn: row.nisn,
+                nama_lengkap: row.nama_lengkap,
+                tempat_lahir: row.tempat_lahir || '',
+                tanggal_lahir,
+                jenis_kelamin: row.jenis_kelamin || '',
+                alamat: row.alamat || '',
+                kelas_id: kelasIdInt,
+                status: 'aktif'
+            }, connection);
+        }
+        await connection.commit();
+        fs.unlinkSync(req.file.path);
+        res.json({ message: 'Import data siswa berhasil', total: data.length });
+    } catch (err) {
+        await connection.rollback();
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ message: err.message || 'Gagal mengimport data siswa' });
+    } finally {
+        connection.release();
+    }
+};
+
+// ============== FITUR LAIN ==============
+const aturKelas = (req, res) => res.json({ message: 'Fitur belum tersedia' });
+const kelolaEkskul = (req, res) => res.json({ message: 'Fitur belum tersedia' });
+const lihatRapor = (req, res) => res.json({ message: 'Fitur belum tersedia' });
+const aturTahunAjaran = (req, res) => res.json({ message: 'Fitur belum tersedia' });
+const aturMataPelajaran = (req, res) => res.json({ message: 'Fitur belum tersedia' });
 
 module.exports = {
     getAdmin,
@@ -464,8 +486,11 @@ module.exports = {
     getSekolah,
     editSekolah,
     uploadLogo,
+    getSiswa,
+    getSiswaById,
     tambahSiswa,
     editSiswa,
+    importSiswa,
     aturKelas,
     kelolaEkskul,
     lihatRapor,

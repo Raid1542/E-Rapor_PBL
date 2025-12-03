@@ -85,16 +85,16 @@ const createGuru = async (userData, guruData, roles) => {
         // 3. Insert ke guru
         await connection.execute(
             `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 userId,
-                guruData.niy || '',
-                guruData.nuptk || '',
-                guruData.tempat_lahir || '',
-                guruData.tanggal_lahir || '',
-                guruData.jenis_kelamin || 'Laki-laki',
-                guruData.alamat || '',
-                guruData.no_telepon || ''
+                guruData.niy || null,
+                guruData.nuptk || null,
+                guruData.tempat_lahir || null,
+                guruData.tanggal_lahir || null,
+                guruData.jenis_kelamin || null,
+                guruData.alamat || null,
+                guruData.no_telepon || null
             ]
         );
 
@@ -116,7 +116,6 @@ const createGuru = async (userData, guruData, roles) => {
     }
 };
 
-// Update guru
 // Update guru
 const updateGuru = async (id, userData, guruData, roles = null) => {
     const connection = await db.getConnection();
@@ -158,7 +157,7 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
                     guruData.nuptk || '',
                     guruData.tempat_lahir || '',
                     guruData.tanggal_lahir || '',
-                    guruData.jenis_kelamin || 'Laki-laki',
+                    guruData.jenis_kelamin || '',
                     guruData.alamat || '',
                     guruData.no_telepon || '',
                     id
@@ -170,14 +169,14 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
                 `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    id,
-                    guruData.niy || '',
-                    guruData.nuptk || '',
-                    guruData.tempat_lahir || '',
-                    guruData.tanggal_lahir || '',
-                    guruData.jenis_kelamin || 'Laki-laki',
-                    guruData.alamat || '',
-                    guruData.no_telepon || ''
+                    userId,
+                    guruData.niy || null,
+                    guruData.nuptk || null,
+                    guruData.tempat_lahir || null,
+                    guruData.tanggal_lahir || null, // ✅ null, bukan ''
+                    guruData.jenis_kelamin || null,
+                    guruData.alamat || null,
+                    guruData.no_telepon || null
                 ]
             );
         }
