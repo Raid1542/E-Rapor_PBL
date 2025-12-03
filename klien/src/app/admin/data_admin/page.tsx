@@ -1,11 +1,36 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Eye, Pencil, Trash2, X, EyeOff, Plus } from 'lucide-react';
+import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
+import { Eye, Pencil, X, Plus, Search, Trash2 } from 'lucide-react';
 
-//const dummyAdmin = [
-//{ id: 1, nama: 'Admin', lp: 'L', niy: '1900002154666979', nuptk: '8000005490594546', jenisKelamin: 'LAKI-LAKI', statusAdmin: 'AKTIF', tempatLahir: '', tanggalLahir: '', alamat: '', telepon: '', email: '' },
-//];*
+interface Admin {
+  id: number;
+  nama: string;
+  email?: string;
+  statusAdmin?: string;
+  niy?: string;
+  nuptk?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  jenis_kelamin?: string;
+  alamat?: string;
+  no_telepon?: string;
+  lp?: string;
+}
+
+interface FormDataType {
+  nama: string;
+  niy: string;
+  nuptk: string;
+  tempat_lahir: string;
+  tanggal_lahir: string;
+  jenisKelamin: string;
+  alamat: string;
+  no_telepon: string;
+  email: string;
+  statusAdmin: string;
+  confirmData: boolean;
+}
 
 export default function DataAdminPage() {
   const formatGender = (g?: string | null) => {
@@ -56,9 +81,9 @@ export default function DataAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
   const [showTambah, setShowTambah] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-const [editingId, setEditingId] = useState(null);
-  const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [detailClosing, setDetailClosing] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -123,23 +148,19 @@ const [editingId, setEditingId] = useState(null);
     }
   };
 
-  useEffect(() => {
-    fetchAdminData();
-  }, []);
-
-  const [formData, setFormData] = useState({
-  email_sekolah: '',
-  nama_lengkap: '',
-  password: '',
-  niy: '',
-  nuptk: '',
-  tempat_lahir: '',
-  tanggal_lahir: '',
-  jenis_kelamin: '',
-  alamat: '',
-  no_telepon: '',
-  confirmData: false
-});
+  const [formData, setFormData] = useState<FormDataType>({
+    nama: '',
+    niy: '',
+    nuptk: '',
+    tempat_lahir: '',
+    tanggal_lahir: '',
+    jenisKelamin: '',
+    alamat: '',
+    no_telepon: '',
+    email: '',
+    statusAdmin: 'aktif',
+    confirmData: false
+  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -153,21 +174,19 @@ const [editingId, setEditingId] = useState(null);
     console.log('✏️ Handle Edit dipanggil:', admin);
     setEditId(admin.id);
     setFormData({
-      email_sekolah: admin.email || '',
-      nama_lengkap: admin.nama || '',
+      nama: admin.nama || '',
       niy: admin.niy || '',
       nuptk: admin.nuptk || '',
       tempat_lahir: admin.tempat_lahir || '',
-      tanggal_lahir: admin.tanggal_lahir || '',
-      jenis_kelamin: admin.jenisKelamin === 'LAKI-LAKI' ? 'Laki-laki' : 'Perempuan',
+      tanggal_lahir: formatDateInput(admin.tanggal_lahir) || '', // Format untuk input
+      jenisKelamin: (admin.jenis_kelamin as string) || 'Laki-laki',
       alamat: admin.alamat || '',
       no_telepon: admin.no_telepon || '',
-      password: '',
-      confirmData: true
+      email: admin.email || '',
+      statusAdmin: admin.statusAdmin?.toLowerCase() === 'aktif' ? 'aktif' : 'nonaktif',
+      confirmData: false
     });
-    setEditingId(admin.id);
-    setEditMode(true);
-    setShowTambah(true);
+    setShowEdit(true);
   };
 
   const handleDelete = async (id: number): Promise<void> => {
@@ -248,83 +267,131 @@ const [editingId, setEditingId] = useState(null);
     return true;
   };
 
-  const handleSubmit = async () => {
-  if (!formData.confirmData) {
-    alert('Harap centang konfirmasi data');
-    return;
-  }
+  const handleSubmitAdd = async (): Promise<void> => {
+    if (!validate()) return;
 
-  try {
     const token = localStorage.getItem('token');
-    const url = editMode 
-      ? `http://localhost:5000/api/admin/admin/${editingId}` 
-      : 'http:localhost:5000/api/admin/admin';
-    const method = editMode ? 'PUT' : 'POST';
-
-    // Jangan kirim password jika kosong (kecuali saat tambah)
-    const payload = { ...formData };
-    if (editMode && !payload.password) {
-      delete payload.password;
+    if (!token) {
+      alert('Sesi login telah habis. Silakan login ulang.');
+      return;
     }
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const payload = {
+        nama_lengkap: formData.nama,
+        email_sekolah: formData.email,
+        niy: formData.niy,
+        nuptk: formData.nuptk,
+        tempat_lahir: formData.tempat_lahir,
+        tanggal_lahir: formData.tanggal_lahir,
+        jenis_kelamin: formData.jenisKelamin,
+        alamat: formData.alamat,
+        no_telepon: formData.no_telepon
+      };
 
-    if (res.ok) {
-      alert(editMode ? 'Admin berhasil diperbarui!' : 'Admin berhasil ditambahkan!');
-      setFormData({
-        email_sekolah: '',
-        nama_lengkap: '',
-        password: '',
-        niy: '',
-        nuptk: '',
-        tempat_lahir: '',
-        tanggal_lahir: '',
-        jenis_kelamin: '',
-        alamat: '',
-        no_telepon: '',
-        confirmData: false
+      const res = await fetch("http://localhost:5000/api/admin/admin", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
       });
-      setShowTambah(false);
-      setEditMode(false);
-      setEditingId(null);
-      fetchAdminData();
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Terjadi kesalahan');
+
+      if (res.ok) {
+        alert("Data admin berhasil ditambahkan");
+        setShowTambah(false);
+        fetchAdmin();
+        handleReset();
+      } else {
+        const error = await res.json();
+        alert(error.message || "Gagal menambah data admin");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
     }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Gagal menghubungi server');
-  }
-};
+  };
 
-  const handleReset = () => {
-  setFormData({
-    email_sekolah: '',
-    nama_lengkap: '',
-    password: '',
-    niy: '',
-    nuptk: '',
-    tempat_lahir: '',
-    tanggal_lahir: '',
-    jenis_kelamin: '',
-    alamat: '',
-    no_telepon: '',
-    confirmData: false
+  const handleSubmitEdit = async (): Promise<void> => {
+    if (!validate()) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login telah habis. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const statusForDB = formData.statusAdmin;
+
+      const payload = {
+        nama_lengkap: formData.nama,
+        email_sekolah: formData.email,
+        status: statusForDB,
+        niy: formData.niy,
+        nuptk: formData.nuptk,
+        tempat_lahir: formData.tempat_lahir,
+        tanggal_lahir: formData.tanggal_lahir,
+        jenis_kelamin: formData.jenisKelamin,
+        alamat: formData.alamat,
+        no_telepon: formData.no_telepon
+      };
+
+      const res = await fetch(`http://localhost:5000/api/admin/admin/${editId}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("Data admin berhasil diperbarui");
+        setShowEdit(false);
+        setEditId(null);
+        fetchAdmin();
+        handleReset();
+      } else {
+        const error = await res.json();
+        alert(error.message || "Gagal memperbarui data admin");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  const handleReset = (): void => {
+    setFormData({
+      nama: '',
+      niy: '',
+      nuptk: '',
+      tempat_lahir: '',
+      tanggal_lahir: '',
+      jenisKelamin: '',
+      alamat: '',
+      no_telepon: '',
+      email: '',
+      statusAdmin: 'aktif',
+      confirmData: false
+    });
+    setErrors({});
+  };
+
+  const filteredAdmin = adminList.filter(admin => {
+    const nama = admin.nama?.toLowerCase() || '';
+    const email = admin.email?.toLowerCase() || '';
+    const niy = admin.niy?.toLowerCase() || '';
+    const nuptk = admin.nuptk?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+
+    return (
+      nama.includes(query) ||
+      email.includes(query) ||
+      niy.includes(query) ||
+      nuptk.includes(query)
+    );
   });
-};
-
-  const filteredAdmin = adminData.filter(admin =>
-    admin.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    admin.niy.includes(searchQuery) // Diubah dari nip menjadi niy
-  );
 
   const totalPages = Math.ceil(filteredAdmin.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -344,69 +411,19 @@ const [editingId, setEditingId] = useState(null);
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-              }`}
-          >
-            {i}
-          </button>
+          <button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>
         );
       }
     } else {
-      pages.push(
-        <button
-          key={1}
-          onClick={() => setCurrentPage(1)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
-        >
-          1
-        </button>
-      );
-
-      if (currentPage > 3) {
-        pages.push(
-          <span key="dots1" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
-      }
-
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        pages.push(
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-              }`}
-          >
-            {i}
-          </button>
-        );
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
-
-      if (currentPage < totalPages - 2) {
-        pages.push(
-          <span key="dots2" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
-      }
-
-      pages.push(
-        <button
-          key={totalPages}
-          onClick={() => setCurrentPage(totalPages)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
-        >
-          {totalPages}
-        </button>
-      );
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
 
     if (currentPage < totalPages) {
@@ -416,165 +433,172 @@ const [editingId, setEditingId] = useState(null);
     return pages;
   };
 
-  if (loading) {
-    return (
-      <div className="flex-1 p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data...</p>
-        </div>
-      </div>
-    );
-  }
+  // Render Form Component
+  const renderForm = (isEdit: boolean) => (
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+      <div className="w-full max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6">Data Admin</h1>
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-6 gap-4">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 flex-1 break-words">
+              {isEdit ? 'Edit Data Admin' : 'Tambah Data Admin'}
+            </h2>
+            <button
+              onClick={() => {
+                isEdit ? setShowEdit(false) : setShowTambah(false);
+                handleReset();
+              }}
+              className="text-gray-500 hover:text-gray-700 flex-shrink-0"
+            >
+              <X size={24} />
+            </button>
+          </div>
 
-  if (showTambah) {
-    return (
-      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Admin</h1>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Tambah Data Admin</h2>
-              <button
-                onClick={() => setShowTambah(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            {/* Nama */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">
+                Nama <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nama"
+                value={formData.nama}
+                onChange={handleInputChange}
+                placeholder="Ketik Nama"
+                className={`w-full border ${errors.nama ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {errors.nama && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.nama}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            {/* Email */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">Email Akun</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Ketik Email"
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* NIY */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">NIY</label>
+              <input
+                type="text"
+                name="niy"
+                value={formData.niy}
+                onChange={handleInputChange}
+                placeholder="Ketik NIY"
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* NUPTK */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">NUPTK</label>
+              <input
+                type="text"
+                name="nuptk"
+                value={formData.nuptk}
+                onChange={handleInputChange}
+                placeholder="Ketik NUPTK"
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Tempat Lahir */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">Tempat Lahir</label>
+              <input
+                type="text"
+                name="tempat_lahir"
+                value={formData.tempat_lahir}
+                onChange={handleInputChange}
+                placeholder="Ketik Tempat Lahir"
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Telepon */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">Telepon</label>
+              <input
+                type="tel"
+                name="no_telepon"
+                value={formData.no_telepon}
+                onChange={handleInputChange}
+                placeholder="Ketik Telepon"
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Tanggal Lahir */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">
+                Tanggal Lahir <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="tanggal_lahir"
+                value={formData.tanggal_lahir}
+                onChange={handleInputChange}
+                className={`w-full border ${errors.tanggal_lahir ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {errors.tanggal_lahir && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.tanggal_lahir}</p>}
+            </div>
+
+            {/* Jenis Kelamin */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">
+                Jenis Kelamin <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="jenisKelamin"
+                value={formData.jenisKelamin}
+                onChange={handleInputChange}
+                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              >
+                <option value="">-- Pilih --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+              {errors.jenisKelamin && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.jenisKelamin}</p>}
+            </div>
+
+            {/* Alamat */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs sm:text-sm font-medium mb-2">Alamat</label>
+              <textarea
+                name="alamat"
+                value={formData.alamat}
+                onChange={handleInputChange}
+                placeholder="Ketik Alamat"
+                rows={2}
+                className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Status Admin — Hanya di Edit */}
+            {isEdit && (
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Nama <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="nama_lengkap"
-                  value={formData.nama_lengkap}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Nama"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Email Akun</label>
-                <input
-                  type="email"
-                  name="email_sekolah"
-                  value={formData.email_sekolah}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Email"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">NIY</label> {/* Diubah dari NIP menjadi NIY */}
-                <input
-                  type="text"
-                  name="niy" 
-                  value={formData.niy} 
-                  onChange={handleInputChange}
-                  placeholder="Ketik NIY" 
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Password Akun <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Ketik Password"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">NUPTK</label>
-                <input
-                  type="text"
-                  name="nuptk"
-                  value={formData.nuptk}
-                  onChange={handleInputChange}
-                  placeholder="Ketik NUPTK"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div></div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Tempat Lahir</label>
-                <input
-                  type="text"
-                  name="tempat_lahir"
-                  value={formData.tempat_lahir}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Tempat Lahir"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div></div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Tanggal Lahir</label>
-                <input
-                  type="date"
-                  name="tanggal_lahir"
-                  value={formData.tanggal_lahir}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div></div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Jenis Kelamin <span className="text-red-500">*</span>
+                <label className="block text-xs sm:text-sm font-medium mb-2">
+                  Status Admin <span className="text-red-500">*</span>
                 </label>
                 <select
-                  name="jenis_kelamin"
-                  value={formData.jenis_kelamin}
+                  name="statusAdmin"
+                  value={formData.statusAdmin}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
+                  className={`w-full border ${errors.statusAdmin ? 'border-red-500' : 'border-gray-300'} rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
                   <option value="">-- Pilih --</option>
-                  <option value="Laki-laki">Laki-laki</option>
-                  <option value="Perempuan">Perempuan</option>
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
                 </select>
-              </div>
-              <div></div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Alamat</label>
-                <textarea
-                  name="alamat"
-                  value={formData.alamat}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Alamat"
-                  rows={3}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div></div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Telepon</label>
-                <input
-                  type="tel"
-                  name="no_telepon"
-                  value={formData.no_telepon}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Telepon"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
+                {errors.statusAdmin && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.statusAdmin}</p>}
               </div>
             )}
           </div>
@@ -611,8 +635,8 @@ const [editingId, setEditingId] = useState(null);
                 Reset
               </button>
               <button
-                onClick={() => setShowTambah(false)}
-                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2 rounded transition"
+                onClick={isEdit ? handleSubmitEdit : handleSubmitAdd}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition flex items-center justify-center"
               >
                 {isEdit ? 'Update' : 'Simpan'}
               </button>
@@ -632,98 +656,112 @@ const [editingId, setEditingId] = useState(null);
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Admin</h1>
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowTambah(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-              >
-                <Plus size={20} />
-                Tambah Admin
-              </button>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <button
+              onClick={() => setShowTambah(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+            >
+              <Plus size={20} />
+              Tambah Admin
+            </button>
 
-            </div>
-          </div>
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-gray-700 text-sm">Tampilkan</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-gray-700 text-sm">data</span>
+              </div>
 
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">Tampilkan</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="border border-gray-300 rounded px-3 py-1"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-gray-700">data</span>
+              <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Pencarian"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              type="text"
-              placeholder="Cari..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 rounded px-4 py-2 w-64"
-            />
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
             <table className="w-full min-w-[600px] table-auto text-sm">
               <thead>
-                <tr className="bg-gray-700 text-white">
-                  <th className="px-4 py-3 text-left">No.</th>
-                  <th className="px-4 py-3 text-left">Nama</th>
-                  <th className="px-4 py-3 text-left">L/P</th>
-                  <th className="px-4 py-3 text-left">NIY</th> {/* Diubah dari NIP menjadi NIY */}
-                  <th className="px-4 py-3 text-left">NUPTK</th>
-                  <th className="px-4 py-3 text-left">Status Admin</th>
-                  <th className="px-4 py-3 text-left">Aksi</th>
+                <tr>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Jenis Kelamin</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIY</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NUPTK</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {currentAdmin.map((admin, index) => (
-                  <tr
-                    key={admin.id}
-                    className="border-b border-gray-200 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-3">{startIndex + index + 1}</td>
-                    <td className="px-4 py-3">{admin.nama}</td>
-                    <td className="px-4 py-3">{admin.lp}</td>
-                    <td className="px-4 py-3">{admin.niy}</td> {/* Diubah dari nip menjadi niy */}
-                    <td className="px-4 py-3">{admin.nuptk}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-gray-700">{admin.statusAdmin}</span>
+                  <tr key={admin.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                    <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                    <td className="px-4 py-3 align-middle font-medium">{admin.nama}</td>
+                    <td className="px-4 py-3 text-center align-middle">{formatGender(admin.jenis_kelamin || admin.lp)}</td>
+                    <td className="px-4 py-3 text-center align-middle">{admin.niy || '-'}</td>
+                    <td className="px-4 py-3 text-center align-middle">{admin.nuptk || '-'}</td>
+                    <td className="px-4 py-3 text-center align-middle">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${admin.statusAdmin === 'AKTIF' || admin.statusAdmin === 'aktif'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                        }`}>
+                        {admin.statusAdmin?.toUpperCase() || 'AKTIF'}
+                      </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                    <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
+                      <div className="flex justify-center gap-1 sm:gap-2">
                         <button
                           onClick={() => handleDetail(admin)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                         >
                           <Eye size={16} />
-                          Detail
+                          <span className="hidden sm:inline">Detail</span>
                         </button>
                         <button
                           onClick={() => handleEdit(admin)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded flex items-center gap-1 transition"
+                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                         >
                           <Pencil size={16} />
-                          Edit
+                          <span className="hidden sm:inline">Edit</span>
                         </button>
                         <button
                           onClick={() => handleDelete(admin.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                         >
                           <Trash2 size={16} />
-                          Hapus
+                          <span className="hidden sm:inline">Hapus</span>
                         </button>
                       </div>
                     </td>
@@ -782,20 +820,35 @@ const [editingId, setEditingId] = useState(null);
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold">{selectedAdmin.nama}</h3>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">{selectedAdmin.nama}</h3>
               </div>
-              <div className="space-y-3">
-                <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">Status Admin</span>
-                  <span className="mr-4">:</span>
-                  <span className="bg-green-500 text-white px-3 py-1 rounded text-sm">
-                    {selectedAdmin.statusAdmin}
-                  </span>
+              <div className="space-y-2 sm:space-y-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm col-span-1 sm:col-span-1">Status</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <div className="col-span-1 sm:col-span-2">
+                    <span className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${selectedAdmin.statusAdmin === 'AKTIF' || selectedAdmin.statusAdmin === 'aktif'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                      }`}>
+                      {selectedAdmin.statusAdmin?.toUpperCase() || 'AKTIF'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">NIY</span> {/* Diubah dari NIP menjadi NIY */}
-                  <span className="mr-4">:</span>
-                  <span>{selectedAdmin.niy}</span> {/* Diubah dari nip menjadi niy */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">NIY</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">{selectedAdmin.niy || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">NUPTK</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">{selectedAdmin.nuptk || '-'}</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Jenis Kelamin</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">{formatGender(selectedAdmin.jenis_kelamin || selectedAdmin.lp)}</span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm">Tempat Lahir</span>
@@ -804,20 +857,22 @@ const [editingId, setEditingId] = useState(null);
                     {selectedAdmin.tempat_lahir || '-'}
                   </span>
                 </div>
-                <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">Jenis Kelamin</span>
-                  <span className="mr-4">:</span>
-                  <span>{selectedAdmin.jenisKelamin}</span>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Tanggal Lahir</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">
+                    {formatTanggalIndo(selectedAdmin.tanggal_lahir)} 
+                  </span>
                 </div>
-                <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">Telepon</span>
-                  <span className="mr-4">:</span>
-                  <span>{selectedAdmin.telepon || '-'}</span>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Telepon</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">{selectedAdmin.no_telepon || '-'}</span>
                 </div>
-                <div className="flex border-b pb-2">
-                  <span className="w-48 font-semibold">Email</span>
-                  <span className="mr-4">:</span>
-                  <span>{selectedAdmin.email || '-'}</span>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Alamat</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-1 sm:col-span-2 break-words">{selectedAdmin.alamat || '-'}</span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm">Email</span>
