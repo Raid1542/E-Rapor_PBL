@@ -86,7 +86,9 @@ router.post('/ekskul', adminController.kelolaEkskul);
 router.get('/rapor/:siswaId', adminController.lihatRapor);
 
 // --- Tahun Ajaran & Semester ---
-router.post('/tahun-ajaran', adminController.aturTahunAjaran);
+router.get('/tahun-ajaran', adminController.getTahunAjaran);
+router.post('/tahun-ajaran', adminController.tambahTahunAjaran);
+router.put('/tahun-ajaran/:id', adminController.updateTahunAjaran);
 
 // --- Kurikulum & Mata Pelajaran ---
 router.post('/mata-pelajaran', adminController.aturMataPelajaran);

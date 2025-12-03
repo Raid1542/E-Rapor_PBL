@@ -1,206 +1,403 @@
-"use client"
+'use client';
 
-import React, { useState } from 'react';
-import { Calendar, Pencil } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Pencil, Plus, Search, Filter, X } from 'lucide-react';
 
-const DataTahunPelajaran = () => {
-  const [showEditModal, setShowEditModal] = useState(false);
+interface TahunAjaran {
+  id_tahun_ajaran: number;
+  tahun_ajaran: string; // "2024/2025"
+  semester: 'Ganjil' | 'Genap';
+  tanggal_pembagian_rapor: string; // "2025-06-16"
+  status: 'aktif' | 'nonaktif';
+}
 
-  const [tahunPelajaran, setTahunPelajaran] = useState([
-    {
-      id: 1,
-      tahun: '2024/2025',
-      semester: 'Genap',
-      tempatPembagian: 'Tangerang',
-      tanggalPembagian: 'Senin, 16 Juni 2025'
-    }
-  ]);
+// Format tanggal ke "Senin, 16 Juni 2025"
+const formatTanggalIndonesia = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
+  const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][date.getDay()];
+  const tanggal = date.getDate();
+  const bulan = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ][date.getMonth()];
+  const tahun = date.getFullYear();
+  return `${hari}, ${tanggal} ${bulan} ${tahun}`;
+};
 
-  const [formTahun, setFormTahun] = useState({
+export default function DataTahunAjaranPage() {
+  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showTambah, setShowTambah] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
+  // Form state
+  const [formData, setFormData] = useState({
     tahun1: '2024',
     tahun2: '2025',
-    semester: 'Genap',
-    tempatPembagian: 'Tangerang',
-    tanggalPembagian: '06/16/2025'
+    semester: 'Ganjil' as 'Ganjil' | 'Genap',
+    tanggal_pembagian_rapor: '2025-06-16'
   });
 
-  const handleSimpan = () => {
-    const updatedData = tahunPelajaran.map(item => ({
-      ...item,
-      tahun: `${formTahun.tahun1}/${formTahun.tahun2}`,
-      semester: formTahun.semester,
-      tempatPembagian: formTahun.tempatPembagian,
-      tanggalPembagian: formTahun.tanggalPembagian
-    }));
-    setTahunPelajaran(updatedData);
-    setShowEditModal(false);
-    alert('Data berhasil disimpan!');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // === Fetch data ===
+  const fetchTahunAjaran = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Silakan login terlebih dahulu');
+        return;
+      }
+      const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTahunAjaranList(data.data);
+      } else {
+        alert('Gagal memuat data tahun ajaran: ' + (data.message || 'Error tidak diketahui'));
+      }
+    } catch (err) {
+      console.error('Error fetch:', err);
+      alert('Gagal terhubung ke server');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchTahunAjaran();
+  }, []);
+
+  // === Handle form ===
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.tahun1 || !formData.tahun2) {
+      newErrors.tahun = 'Tahun ajaran wajib diisi';
+    }
+    if (!formData.semester) {
+      newErrors.semester = 'Semester wajib dipilih';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitTambah = async () => {
+    if (!validate()) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tahun1: formData.tahun1,
+          tahun2: formData.tahun2,
+          semester: formData.semester,
+          tanggal_pembagian_rapor: formData.tanggal_pembagian_rapor
+        })
+      });
+
+      if (res.ok) {
+        alert("Tahun ajaran berhasil ditambahkan");
+        setShowTambah(false);
+        setFormData({ tahun1: '2024', tahun2: '2025', semester: 'Ganjil', tanggal_pembagian_rapor: '2025-06-16' });
+        fetchTahunAjaran();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menambah tahun ajaran");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  const handleEdit = (item: TahunAjaran) => {
+    const [thn1, thn2] = item.tahun_ajaran.split('/');
+    setEditId(item.id_tahun_ajaran);
+    setFormData({
+      tahun1: thn1 || '2024',
+      tahun2: thn2 || '2025',
+      semester: item.semester,
+      tanggal_pembagian_rapor: item.tanggal_pembagian_rapor
+    });
+    setShowEdit(true);
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!validate()) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/tahun-ajaran/${editId}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tahun1: formData.tahun1,
+          tahun2: formData.tahun2,
+          semester: formData.semester,
+          tanggal_pembagian_rapor: formData.tanggal_pembagian_rapor
+        })
+      });
+
+      if (res.ok) {
+        alert("Data tahun ajaran berhasil diperbarui");
+        setShowEdit(false);
+        setEditId(null);
+        fetchTahunAjaran();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal memperbarui data");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  const handleReset = () => {
+    if (showEdit && editId) {
+      const item = tahunAjaranList.find(t => t.id_tahun_ajaran === editId);
+      if (item) {
+        const [thn1, thn2] = item.tahun_ajaran.split('/');
+        setFormData({
+          tahun1: thn1,
+          tahun2: thn2,
+          semester: item.semester,
+          tanggal_pembagian_rapor: item.tanggal_pembagian_rapor
+        });
+      }
+    } else {
+      setFormData({ tahun1: '2024', tahun2: '2025', semester: 'Ganjil', tanggal_pembagian_rapor: '2025-06-16' });
+    }
+  };
+
+  // === Pagination ===
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = tahunAjaranList.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(tahunAjaranList.length / itemsPerPage);
+
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border rounded">«</button>);
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border rounded ${currentPage === i ? 'bg-blue-500 text-white' : ''}`}>{i}</button>);
+    } else {
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : ''}`}>1</button>);
+      if (currentPage > 3) pages.push(<span className="px-2">...</span>);
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border rounded ${currentPage === i ? 'bg-blue-500 text-white' : ''}`}>{i}</button>);
+      if (currentPage < totalPages - 2) pages.push(<span className="px-2">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : ''}`}>{totalPages}</button>);
+    }
+    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border rounded">»</button>);
+    return pages;
+  };
+
+  // === Render Form ===
+  const renderForm = (isEdit: boolean) => (
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
+      <div className="w-full max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Data Tahun Ajaran</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {isEdit ? 'Edit Tahun Ajaran' : 'Tambah Tahun Ajaran'}
+            </h2>
+            <button
+              onClick={() => isEdit ? setShowEdit(false) : setShowTambah(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Tahun Ajaran <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  name="tahun1"
+                  value={formData.tahun1}
+                  onChange={handleInputChange}
+                  className="w-24 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="2024"
+                />
+                <span className="text-xl font-bold">/</span>
+                <input
+                  type="text"
+                  name="tahun2"
+                  value={formData.tahun2}
+                  onChange={handleInputChange}
+                  className="w-24 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="2025"
+                />
+              </div>
+              {errors.tahun && <p className="text-red-500 text-xs mt-1">{errors.tahun}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Semester <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="semester"
+                value={formData.semester}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Ganjil">Ganjil</option>
+                <option value="Genap">Genap</option>
+              </select>
+              {errors.semester && <p className="text-red-500 text-xs mt-1">{errors.semester}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Tanggal Pembagian Rapor
+              </label>
+              <input
+                type="date"
+                name="tanggal_pembagian_rapor"
+                value={formData.tanggal_pembagian_rapor}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="mt-6 sm:mt-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <button
+                onClick={() => isEdit ? setShowEdit(false) : setShowTambah(false)}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleReset}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Reset
+              </button>
+              <button
+                onClick={isEdit ? handleSubmitEdit : handleSubmitTambah}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                {isEdit ? 'Update' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (showTambah) return renderForm(false);
+  if (showEdit) return renderForm(true);
 
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Tahun Pelajaran</h1>
-        
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Tahun Ajaran</h1>
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          {/* Tombol & Info */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div className="text-sm text-gray-600">
+              Menampilkan {startIndex + 1} - {Math.min(endIndex, tahunAjaranList.length)} dari {tahunAjaranList.length} data
+            </div>
+            <button
+              onClick={() => setShowTambah(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+            >
+              <Plus size={20} />
+              Tambah Tahun Ajaran
+            </button>
+          </div>
+
+          {/* Tabel */}
+          <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
+            <table className="w-full min-w-[600px] table-auto text-sm">
               <thead>
-                <tr className="bg-gray-700 text-white">
-                  <th className="px-6 py-4 text-left font-semibold">No.</th>
-                  <th className="px-6 py-4 text-left font-semibold">Tahun Pelajaran</th>
-                  <th className="px-6 py-4 text-left font-semibold">Semester</th>
-                  <th className="px-6 py-4 text-left font-semibold">Tempat Pembagian Raport</th>
-                  <th className="px-6 py-4 text-left font-semibold">Tanggal Pembagian Raport</th>
-                  <th className="px-6 py-4 text-left font-semibold">Aksi</th>
+                <tr>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Tahun Ajaran</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Semester</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Tanggal Pembagian Rapor</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {tahunPelajaran.map((item, index) => (
-                  <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4">{index + 1}</td>
-                    <td className="px-6 py-4">{item.tahun}</td>
-                    <td className="px-6 py-4">{item.semester}</td>
-                    <td className="px-6 py-4">{item.tempatPembagian}</td>
-                    <td className="px-6 py-4">{item.tanggalPembagian}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => setShowEditModal(true)}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded flex items-center gap-1 transition"
-                      >
-                        <Pencil size={16} />
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                ) : currentData.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data tahun ajaran</td></tr>
+                ) : (
+                  currentData.map((item, index) => (
+                    <tr key={item.id_tahun_ajaran} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                      <td className="px-4 py-3 text-center">{startIndex + index + 1}</td>
+                      <td className="px-4 py-3">{item.tahun_ajaran}</td>
+                      <td className="px-4 py-3">{item.semester}</td>
+                      <td className="px-4 py-3">{formatTanggalIndonesia(item.tanggal_pembagian_rapor)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          item.status === 'aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {item.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
+                        >
+                          <Pencil size={14} />
+                          <span className="hidden sm:inline">Edit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-          <div className="mt-4 text-sm text-gray-600">
-            Menampilkan 1 - 1 dari 1 data
-          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+              <div className="text-sm text-gray-600">
+                Menampilkan {startIndex + 1} - {Math.min(endIndex, tahunAjaranList.length)} dari {tahunAjaranList.length} data
+              </div>
+              <div className="flex gap-1">{renderPagination()}</div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Modal Edit Tahun Pelajaran */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Edit Data Tapel</h2>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-white hover:text-gray-200"
-              >
-                <div className="bg-white text-blue-600 rounded-full w-6 h-6 flex items-center justify-center font-bold text-sm">
-                  i
-                </div>
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tahun Pelajaran <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    value={formTahun.tahun1}
-                    onChange={(e) => setFormTahun({...formTahun, tahun1: e.target.value})}
-                    className="border border-gray-300 rounded px-4 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="2024"
-                  />
-                  <span className="text-2xl font-bold">/</span>
-                  <input
-                    type="text"
-                    value={formTahun.tahun2}
-                    onChange={(e) => setFormTahun({...formTahun, tahun2: e.target.value})}
-                    className="border border-gray-300 rounded px-4 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="2025"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Semester <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formTahun.semester}
-                  onChange={(e) => setFormTahun({...formTahun, semester: e.target.value})}
-                  className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Genap">Genap</option>
-                  <option value="Ganjil">Ganjil</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tempat Pembagian Raport
-                </label>
-                <input
-                  type="text"
-                  value={formTahun.tempatPembagian}
-                  onChange={(e) => setFormTahun({...formTahun, tempatPembagian: e.target.value})}
-                  className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tangerang"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tanggal Pembagian Raport
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formTahun.tanggalPembagian}
-                    onChange={(e) => setFormTahun({...formTahun, tanggalPembagian: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="06/16/2025"
-                  />
-                  <Calendar className="absolute right-3 top-2.5 text-gray-400" size={20} />
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4" />
-                  <span className="text-sm">Saya yakin sudah mengisi dengan benar</span>
-                </label>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSimpan}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition"
-                >
-                  Simpan
-                </button>
-                <button
-                  onClick={() => {
-                    setFormTahun({
-                      tahun1: '2024',
-                      tahun2: '2025',
-                      semester: 'Genap',
-                      tempatPembagian: 'Tangerang',
-                      tanggalPembagian: '06/16/2025'
-                    });
-                  }}
-                  className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2 rounded transition"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
-
-export default DataTahunPelajaran;
+}

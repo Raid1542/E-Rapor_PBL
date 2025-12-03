@@ -3,6 +3,7 @@ const userModel = require('../models/userModel');
 const guruModel = require('../models/guruModel');
 const sekolahModel = require('../models/sekolahModel');
 const siswaModel = require('../models/siswaModel');
+const tahunAjaranModel = require('../models/tahunAjaranModel');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
@@ -465,11 +466,78 @@ const importSiswa = async (req, res) => {
     }
 };
 
-// ============== FITUR LAIN ==============
+// ============== TAHUN AJARAN ==============
+const getTahunAjaran = async (req, res) => {
+    try {
+        // Ambil SEMUA data tahun ajaran (untuk ditampilkan di tabel)
+        const data = await tahunAjaranModel.getAllTahunAjaran();
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error('Error get tahun ajaran:', err);
+        res.status(500).json({ message: 'Gagal mengambil data tahun ajaran' });
+    }
+};
+
+// 🔸 Baru: Tambah Tahun Ajaran Baru (dan nonaktifkan yang lama)
+const tambahTahunAjaran = async (req, res) => {
+    try {
+        const { tahun1, tahun2, semester, tanggal_pembagian_rapor } = req.body;
+
+        if (!tahun1 || !tahun2 || !semester) {
+            return res.status(400).json({ message: 'Tahun dan semester wajib diisi' });
+        }
+
+        const tahun_ajaran = `${tahun1}/${tahun2}`;
+        const success = await tahunAjaranModel.createTahunAjaran({
+            tahun_ajaran,
+            semester,
+            tanggal_pembagian_rapor
+        });
+
+        if (!success) {
+            return res.status(500).json({ message: 'Gagal membuat tahun ajaran baru' });
+        }
+
+        res.status(201).json({ message: 'Tahun ajaran berhasil ditambahkan' });
+    } catch (err) {
+        console.error('Error tambah tahun ajaran:', err);
+        res.status(500).json({ message: 'Gagal menambah tahun ajaran' });
+    }
+};
+
+// 🔸 Perbarui: Ganti nama dari editTahunAjaran → updateTahunAjaran
+const updateTahunAjaran = async (req, res) => {
+    try {
+        const { id } = req.params; // Ambil ID dari URL
+        const { tahun1, tahun2, semester, tanggal_pembagian_rapor } = req.body;
+
+        if (!tahun1 || !tahun2 || !semester) {
+            return res.status(400).json({ message: 'Tahun dan semester wajib diisi' });
+        }
+
+        const tahun_ajaran = `${tahun1}/${tahun2}`;
+        const success = await tahunAjaranModel.updateTahunAjaranById(id, {
+            tahun_ajaran,
+            semester,
+            tanggal_pembagian_rapor
+        });
+
+        if (!success) {
+            return res.status(404).json({ message: 'Tahun ajaran tidak ditemukan' });
+        }
+
+        res.json({ message: 'Data tahun ajaran berhasil diperbarui' });
+    } catch (err) {
+        console.error('Error update tahun ajaran:', err);
+        res.status(500).json({ message: 'Gagal memperbarui data tahun ajaran' });
+    }
+};
+
+
+
 const aturKelas = (req, res) => res.json({ message: 'Fitur belum tersedia' });
 const kelolaEkskul = (req, res) => res.json({ message: 'Fitur belum tersedia' });
 const lihatRapor = (req, res) => res.json({ message: 'Fitur belum tersedia' });
-const aturTahunAjaran = (req, res) => res.json({ message: 'Fitur belum tersedia' });
 const aturMataPelajaran = (req, res) => res.json({ message: 'Fitur belum tersedia' });
 
 module.exports = {
@@ -491,9 +559,11 @@ module.exports = {
     tambahSiswa,
     editSiswa,
     importSiswa,
+    getTahunAjaran,
+    tambahTahunAjaran,
+    updateTahunAjaran,
     aturKelas,
     kelolaEkskul,
     lihatRapor,
-    aturTahunAjaran,
     aturMataPelajaran
 };
