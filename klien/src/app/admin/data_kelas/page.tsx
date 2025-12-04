@@ -1,134 +1,248 @@
-"use client";
+'use client';
 
-import { useState } from 'react';
-import { Pencil, Trash2, X, Plus, Filter } from 'lucide-react';
+import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
+import { Pencil, Plus, Search, Filter, X, Trash2 } from 'lucide-react';
 
-const dummyKelas = [
-  { id: 1, idKelas: 1, namaKelas: 'Kelas 1', waliKelas: 'Maman Walas, S.Kom', tahunPelajaran: '2024/2025 - Genap', tingkat: 1, jumlahSiswa: 29 },
-  { id: 2, idKelas: 2, namaKelas: 'Kelas 2', waliKelas: 'Calista Nasyiah', tahunPelajaran: '2024/2025 - Genap', tingkat: 2, jumlahSiswa: 41 },
-  { id: 3, idKelas: 3, namaKelas: 'Kelas 3', waliKelas: 'Fitria Mayasari', tahunPelajaran: '2024/2025 - Genap', tingkat: 3, jumlahSiswa: 33 },
-  { id: 4, idKelas: 4, namaKelas: 'Kelas 4', waliKelas: 'Jane Anggraini', tahunPelajaran: '2024/2025 - Genap', tingkat: 4, jumlahSiswa: 41 },
-  { id: 5, idKelas: 5, namaKelas: 'Kelas 5', waliKelas: 'Lili Ella Maryati', tahunPelajaran: '2024/2025 - Genap', tingkat: 5, jumlahSiswa: 28 },
-  { id: 6, idKelas: 6, namaKelas: 'Kelas 6', waliKelas: 'Karman Kawaca Kurniawan S.Pd', tahunPelajaran: '2024/2025 - Genap', tingkat: 6, jumlahSiswa: 29 },
-  { id: 7, idKelas: 7, namaKelas: 'Kelas 1A', waliKelas: 'Ahmad Santoso, S.Pd', tahunPelajaran: '2024/2025 - Genap', tingkat: 1, jumlahSiswa: 25 },
-  { id: 8, idKelas: 8, namaKelas: 'Kelas 2A', waliKelas: 'Siti Nurhaliza, M.Pd', tahunPelajaran: '2024/2025 - Genap', tingkat: 2, jumlahSiswa: 30 },
-  { id: 9, idKelas: 9, namaKelas: 'Kelas 3A', waliKelas: 'Budi Santoso, S.Pd', tahunPelajaran: '2024/2025 - Genap', tingkat: 3, jumlahSiswa: 28 },
-  { id: 10, idKelas: 10, namaKelas: 'Kelas 4A', waliKelas: 'Dewi Lestari, M.Pd', tahunPelajaran: '2024/2025 - Genap', tingkat: 4, jumlahSiswa: 32 },
-];
+interface Kelas {
+  id: number;
+  nama_kelas: string;
+  fase: string;
+  wali_kelas: string;
+  jumlah_siswa: number;
+}
 
-const dummyWaliKelas = [
-  'Maman Walas, S.Kom',
-  'Calista Nasyiah',
-  'Fitria Mayasari',
-  'Jane Anggraini',
-  'Lili Ella Maryati',
-  'Karman Kawaca Kurniawan S.Pd',
-  'Ahmad Santoso, S.Pd',
-  'Siti Nurhaliza, M.Pd',
-  'Budi Santoso, S.Pd',
-  'Dewi Lestari, M.Pd',
-];
-
-const tahunPelajaranOptions = [
-  '2024/2025 - Genap',
-  '2024/2025 - Ganjil',
-  '2023/2024 - Genap',
-  '2023/2024 - Ganjil',
-];
+interface FormData {
+  nama_kelas: string;
+  fase: string;
+  wali_kelas_id: string; // ID guru yang dipilih
+  confirmData: boolean;
+}
 
 export default function DataKelasPage() {
+  const [kelasList, setKelasList] = useState<Kelas[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showTambah, setShowTambah] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [selectedKelas, setSelectedKelas] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterTingkat, setFilterTingkat] = useState('');
 
-  const [formData, setFormData] = useState({
-    namaKelas: '',
-    waliKelas: '',
-    tahunPelajaran: '',
-    tingkat: '',
+  // Daftar guru kelas untuk dropdown
+  const [guruKelasList, setGuruKelasList] = useState<{ id_guru: number; nama: string }[]>([]);
+  const [loadingGuru, setLoadingGuru] = useState(true);
+
+  const [formData, setFormData] = useState<FormData>({
+    nama_kelas: '',
+    fase: '',
+    wali_kelas_id: '',
     confirmData: false
   });
 
-  const handleTambahKelas = () => {
-    setSelectedKelas(null);
-    setFormData({
-      namaKelas: '',
-      waliKelas: '',
-      tahunPelajaran: '',
-      tingkat: '',
-      confirmData: false
-    });
-    setShowTambah(true);
-  };
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleEdit = (kelas) => {
-    setSelectedKelas(kelas);
-    setFormData({
-      namaKelas: kelas.namaKelas,
-      waliKelas: kelas.waliKelas,
-      tahunPelajaran: kelas.tahunPelajaran,
-      tingkat: kelas.tingkat.toString(),
-      confirmData: false
-    });
-    setShowTambah(true);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data kelas ini?')) {
-      console.log('Hapus kelas:', id);
+  // === Fetch Data Kelas ===
+  const fetchKelas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Silakan login terlebih dahulu');
+        return;
+      }
+      const res = await fetch("http://localhost:5000/api/admin/kelas", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setKelasList(data.data);
+      } else {
+        alert('Gagal memuat data kelas: ' + (data.message || 'Error tidak diketahui'));
+      }
+    } catch (err) {
+      console.error('Error fetch kelas:', err);
+      alert('Gagal terhubung ke server');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+  // === Fetch Daftar Guru Kelas (hanya yang punya role "guru kelas") ===
+  const fetchGuruKelas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch("http://localhost:5000/api/admin/guru-kelas", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGuruKelasList(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetch guru kelas:', err);
+    } finally {
+      setLoadingGuru(false);
+    }
   };
 
-  const handleSubmit = () => {
-    if (!formData.confirmData) {
-      alert('Mohon centang konfirmasi data sebelum menyimpan');
+  useEffect(() => {
+    fetchKelas();
+    fetchGuruKelas();
+  }, []);
+
+  const handleEdit = (kelas: Kelas) => {
+    setEditId(kelas.id);
+    // Cari ID guru berdasarkan nama (ini tidak ideal, tapi untuk MVP bisa pakai nama sementara)
+    // Di versi lanjut, kirim `wali_kelas_id` dari backend
+    setFormData({
+      nama_kelas: kelas.nama_kelas,
+      fase: kelas.fase,
+      wali_kelas_id: '', // 🔸 Asumsi: tidak bisa edit wali kelas langsung di form ini
+      confirmData: false
+    });
+    setShowEdit(true);
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.nama_kelas.trim()) newErrors.nama_kelas = 'Nama kelas wajib diisi';
+    if (!formData.fase.trim()) newErrors.fase = 'Fase wajib diisi';
+    if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data sebelum menyimpan';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitTambah = async () => {
+    if (!validate()) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis. Silakan login ulang.');
       return;
     }
-    console.log('Submit data:', formData);
-    setFormData({
-      namaKelas: '',
-      waliKelas: '',
-      tahunPelajaran: '',
-      tingkat: '',
-      confirmData: false
-    });
-    setShowTambah(false);
-    setSelectedKelas(null);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/kelas", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nama_kelas: formData.nama_kelas,
+          fase: formData.fase
+        })
+      });
+
+      if (res.ok) {
+        const newKelas = await res.json();
+
+        // Jika wali kelas dipilih, simpan ke guru_kelas
+        if (formData.wali_kelas_id) {
+          await fetch(`http://localhost:5000/api/admin/kelas/${newKelas.id}/guru`, {
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ guru_id: Number(formData.wali_kelas_id) })
+          });
+        }
+
+        alert("Kelas berhasil ditambahkan");
+        setShowTambah(false);
+        fetchKelas();
+        handleReset();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menambah kelas");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!validate() || editId === null) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nama_kelas: formData.nama_kelas,
+          fase: formData.fase
+        })
+      });
+
+      if (res.ok) {
+        alert("Data kelas berhasil diperbarui");
+        setShowEdit(false);
+        setEditId(null);
+        fetchKelas();
+        handleReset();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal memperbarui data kelas");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus kelas ini?')) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/kelas/${id}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert("Kelas berhasil dihapus");
+        fetchKelas();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Gagal menghapus kelas");
+      }
+    } catch (err) {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   const handleReset = () => {
     setFormData({
-      namaKelas: '',
-      waliKelas: '',
-      tahunPelajaran: '',
-      tingkat: '',
+      nama_kelas: '',
+      fase: '',
+      wali_kelas_id: '',
       confirmData: false
     });
+    setErrors({});
   };
 
-  const handleFilter = () => {
-    setShowFilter(false);
-    setCurrentPage(1);
-  };
-
-  const filteredKelas = dummyKelas.filter(kelas => {
-    const matchSearch = kelas.namaKelas.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       kelas.waliKelas.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchFilter = filterTingkat === '' || kelas.tingkat.toString() === filterTingkat;
-    return matchSearch && matchFilter;
-  });
+  // === Filter & Pencarian ===
+  const filteredKelas = kelasList.filter(kelas =>
+    kelas.nama_kelas.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    kelas.fase.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    kelas.wali_kelas.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const totalPages = Math.ceil(filteredKelas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -136,404 +250,272 @@ export default function DataKelasPage() {
   const currentKelas = filteredKelas.slice(startIndex, endIndex);
 
   const renderPagination = () => {
-    const pages = [];
+    const pages: ReactNode[] = [];
     const maxVisible = 5;
-
     if (currentPage > 1) {
       pages.push(
-        <button
-          key="prev"
-          onClick={() => setCurrentPage(currentPage - 1)}
-          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
-        >
-          «
-        </button>
+        <button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>
       );
     }
-
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(
           <button
             key={i}
             onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}
           >
             {i}
           </button>
         );
       }
     } else {
-      pages.push(
-        <button
-          key={1}
-          onClick={() => setCurrentPage(1)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
-        >
-          1
-        </button>
-      );
-
-      if (currentPage > 3) {
-        pages.push(
-          <span key="dots1" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
-      }
-
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
-
       for (let i = start; i <= end; i++) {
-        pages.push(
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i)}
-            className={`px-3 py-1 border border-gray-300 rounded transition ${
-              currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-            }`}
-          >
-            {i}
-          </button>
-        );
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
-
-      if (currentPage < totalPages - 2) {
-        pages.push(
-          <span key="dots2" className="px-2 text-gray-600">
-            ...
-          </span>
-        );
-      }
-
-      pages.push(
-        <button
-          key={totalPages}
-          onClick={() => setCurrentPage(totalPages)}
-          className={`px-3 py-1 border border-gray-300 rounded transition ${
-            currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
-        >
-          {totalPages}
-        </button>
-      );
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
-
     if (currentPage < totalPages) {
-      pages.push(
-        <button
-          key="next"
-          onClick={() => setCurrentPage(currentPage + 1)}
-          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
-        >
-          »
-        </button>
-      );
+      pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
     }
-
     return pages;
   };
 
-  if (showTambah) {
-    return (
-      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Kelas</h1>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {selectedKelas ? 'Edit Data Kelas' : 'Tambah Data Kelas'}
-              </h2>
+  // === Render Form Tambah/Edit ===
+  const renderForm = (isEdit: boolean) => (
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
+      <div className="w-full max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Data Kelas</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {isEdit ? 'Edit Data Kelas' : 'Tambah Data Kelas'}
+            </h2>
+            <button
+              onClick={() => {
+                isEdit ? setShowEdit(false) : setShowTambah(false);
+                handleReset();
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            {/* Nama Kelas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nama Kelas <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nama_kelas"
+                value={formData.nama_kelas}
+                onChange={handleInputChange}
+                placeholder="Contoh: Kelas 1 A"
+                className={`w-full border ${errors.nama_kelas ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {errors.nama_kelas && <p className="text-red-500 text-xs mt-1">{errors.nama_kelas}</p>}
+            </div>
+            {/* Fase */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Fase <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="fase"
+                value={formData.fase}
+                onChange={handleInputChange}
+                placeholder="Contoh: A, B, C"
+                className={`w-full border ${errors.fase ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {errors.fase && <p className="text-red-500 text-xs mt-1">{errors.fase}</p>}
+            </div>
+            {/* Wali Kelas (Hanya di Tambah, tidak di edit) */}
+            {!isEdit && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Wali Kelas
+                </label>
+                <select
+                  name="wali_kelas_id"
+                  value={formData.wali_kelas_id}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Pilih Wali Kelas --</option>
+                  {guruKelasList.map(guru => (
+                    <option key={guru.id_guru} value={guru.id_guru}>
+                      {guru.nama}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          {/* Konfirmasi */}
+          <div className="mt-6">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="confirmData"
+                checked={formData.confirmData}
+                onChange={handleInputChange}
+                className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                Saya yakin data yang diisi sudah benar
+              </span>
+            </label>
+            {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
+          </div>
+          <div className="mt-6 sm:mt-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
                 onClick={() => {
-                  setShowTambah(false);
-                  setSelectedKelas(null);
+                  isEdit ? setShowEdit(false) : setShowTambah(false);
+                  handleReset();
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
               >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Nama Kelas <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="namaKelas"
-                  value={formData.namaKelas}
-                  onChange={handleInputChange}
-                  placeholder="Ketik Nama Kelas"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div></div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Wali Kelas</label>
-                <select
-                  name="waliKelas"
-                  value={formData.waliKelas}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                >
-                  <option value="">-- Pilih --</option>
-                  {dummyWaliKelas.map((wali, idx) => (
-                    <option key={idx} value={wali}>{wali}</option>
-                  ))}
-                </select>
-              </div>
-              <div></div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Tahun Pelajaran <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="tahunPelajaran"
-                  value={formData.tahunPelajaran}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                >
-                  <option value="">-- Pilih --</option>
-                  {tahunPelajaranOptions.map((tahun, idx) => (
-                    <option key={idx} value={tahun}>{tahun}</option>
-                  ))}
-                </select>
-              </div>
-              <div></div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Tingkat <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="tingkat"
-                  value={formData.tingkat}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                >
-                  <option value="">-- Pilih --</option>
-                  {[1, 2, 3, 4, 5, 6].map((tingkat) => (
-                    <option key={tingkat} value={tingkat}>{tingkat}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="confirmData"
-                  checked={formData.confirmData}
-                  onChange={handleInputChange}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">Saya yakin sudah mengisi dengan benar</span>
-              </label>
-            </div>
-
-            <div className="mt-8 flex gap-3">
-              <button
-                onClick={handleSubmit}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition"
-              >
-                Simpan
+                Batal
               </button>
               <button
                 onClick={handleReset}
-                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2 rounded transition"
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
               >
                 Reset
               </button>
               <button
-                onClick={() => {
-                  setShowTambah(false);
-                  setSelectedKelas(null);
-                }}
-                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2 rounded transition"
+                onClick={isEdit ? handleSubmitEdit : handleSubmitTambah}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
               >
-                Batal
+                {isEdit ? 'Update' : 'Simpan'}
               </button>
             </div>
           </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (showTambah) return renderForm(false);
+  if (showEdit) return renderForm(true);
 
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Kelas</h1>
-
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
-              <button
-                onClick={handleTambahKelas}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-              >
-                <Plus size={20} />
-                Tambah Kelas
-              </button>
-            </div>
+          {/* Baris Tombol & Pencarian */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <button
-              onClick={() => setShowFilter(true)}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              onClick={() => setShowTambah(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
             >
-              <Filter size={20} />
-              Filter Data
+              <Plus size={20} />
+              Tambah Kelas
             </button>
-          </div>
-
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700">Tampilkan</span>
-              <select
-                value={itemsPerPage}
+            <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Search className="w-4 h-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Cari nama kelas, fase, atau wali kelas..."
+                value={searchQuery}
                 onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
+                  setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="border border-gray-300 rounded px-3 py-1"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-gray-700">data</span>
+                className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                  className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Cari..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 rounded px-4 py-2 w-64"
-            />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          {/* Tabel Data */}
+          <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
+            <table className="w-full min-w-[600px] table-auto text-sm">
               <thead>
-                <tr className="bg-gray-700 text-white">
-                  <th className="px-4 py-3 text-left">No.</th>
-                  <th className="px-4 py-3 text-left">ID Kelas</th>
-                  <th className="px-4 py-3 text-left">Nama Kelas</th>
-                  <th className="px-4 py-3 text-left">Wali Kelas</th>
-                  <th className="px-4 py-3 text-left">Tingkat</th>
-                  <th className="px-4 py-3 text-left">Jumlah Siswa</th>
-                  <th className="px-4 py-3 text-left">Aksi</th>
+                <tr>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama Kelas</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Wali Kelas</th>
+                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Fase</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Jumlah Siswa</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {currentKelas.map((kelas, index) => (
-                  <tr
-                    key={kelas.id}
-                    className="border-b border-gray-200 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-3">{startIndex + index + 1}</td>
-                    <td className="px-4 py-3">{kelas.idKelas}</td>
-                    <td className="px-4 py-3">{kelas.namaKelas}</td>
-                    <td className="px-4 py-3">{kelas.waliKelas}</td>
-                    <td className="px-4 py-3">{kelas.tingkat}</td>
-                    <td className="px-4 py-3">{kelas.jumlahSiswa}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(kelas)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1 rounded flex items-center gap-1 transition"
-                        >
-                          <Pencil size={16} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(kelas.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1 transition"
-                        >
-                          <Trash2 size={16} />
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                   </tr>
-                ))}
+                ) : currentKelas.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data kelas</td>
+                  </tr>
+                ) : (
+                  currentKelas.map((kelas, index) => (
+                    <tr key={kelas.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                      <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                      <td className="px-4 py-3 align-middle font-medium">{kelas.nama_kelas}</td>
+                      <td className="px-4 py-3 align-middle">{kelas.wali_kelas || '-'}</td>
+                      <td className="px-4 py-3 align-middle font-mono">{kelas.fase}</td>
+                      <td className="px-4 py-3 text-center align-middle">{kelas.jumlah_siswa}</td>
+                      <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
+                        <div className="flex justify-center gap-1 sm:gap-2">
+                          <button
+                            onClick={() => handleEdit(kelas)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                          >
+                            <Pencil size={16} />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(kelas.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                          >
+                            <Trash2 size={16} />
+                            <span className="hidden sm:inline">Hapus</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-600">
-              Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredKelas.length)} dari {filteredKelas.length} data
-            </div>
-            <div className="flex gap-1">{renderPagination()}</div>
-          </div>
-        </div>
-      </div>
-
-      {showFilter && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
-            <div className="bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-lg">
-              <h2 className="text-xl font-semibold">Filter Data</h2>
-              <button
-                onClick={() => setShowFilter(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tingkat Kelas</label>
-                  <select
-                    value={filterTingkat}
-                    onChange={(e) => setFilterTingkat(e.target.value)}
-                    className="w-full border border-gray-300 rounded px-4 py-2"
-                  >
-                    <option value="">-- Semua Tingkat --</option>
-                    {[1, 2, 3, 4, 5, 6].map((tingkat) => (
-                      <option key={tingkat} value={tingkat}>Tingkat {tingkat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={handleFilter}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded transition"
-                  >
-                    Terapkan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFilterTingkat('');
-                      setShowFilter(false);
-                    }}
-                    className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2 rounded transition"
-                  >
-                    Reset
-                  </button>
-                </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+              <div className="text-sm text-gray-600">
+                Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredKelas.length)} dari {filteredKelas.length} data
+              </div>
+              <div className="flex gap-1 flex-wrap justify-center">
+                {renderPagination()}
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
