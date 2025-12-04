@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { ChevronRight, Users, UserCircle, Award, School, BookOpen } from 'lucide-react';
+import { ChevronRight, Users, UserCircle, Award, School, Book } from 'lucide-react';
 import { UserData } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Cek apakah user sudah login
@@ -32,6 +34,11 @@ export default function AdminDashboardPage() {
     
     setLoading(false);
   }, []);
+
+  // Fungsi untuk navigasi ke halaman yang sesuai
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
 
   if (loading) {
     return (
@@ -73,7 +80,10 @@ export default function AdminDashboardPage() {
               <Users className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_guru')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -90,7 +100,10 @@ export default function AdminDashboardPage() {
               <Users className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_siswa')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -107,7 +120,10 @@ export default function AdminDashboardPage() {
               <UserCircle className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_admin')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -124,7 +140,10 @@ export default function AdminDashboardPage() {
               <Award className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_ekstrakurikuler')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -141,7 +160,10 @@ export default function AdminDashboardPage() {
               <School className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_kelas')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -155,10 +177,13 @@ export default function AdminDashboardPage() {
               <p className="text-3xl font-bold text-gray-900">15</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
-              <BookOpen className="w-8 h-8 text-orange-600" />
+              <Book className="w-8 h-8 text-orange-600" />
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition">
+          <button 
+            onClick={() => handleNavigation('/admin/data_mata_pelajaran')}
+            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+          >
             <span className="text-sm font-medium">Lihat detail</span>
             <ChevronRight className="w-4 h-4" />
           </button>

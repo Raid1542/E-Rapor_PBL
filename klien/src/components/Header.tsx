@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 // Types
 interface UserData {
   id: number;
-  nama_lengkap: string
+  nama_lengkap: string;
   email_sekolah: string;
   role: string;
 }
@@ -19,14 +19,6 @@ interface HeaderProps {
 
 export default function Header({ user, profileOpen, setProfileOpen }: HeaderProps) {
   const router = useRouter();
-
-  // Default user jika tidak ada
-  const currentUser: UserData = {
-    nama_lengkap: user?.nama_lengkap || 'Admin User',
-    email_sekolah: user?.email_sekolah || 'admin@sditulilalbab.sch.id',
-    role: user?.role || 'admin',
-    id: user?.id || 0
-  };
 
   const handleLogout = () => {
     // Hapus data session/token
@@ -47,9 +39,14 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
     // Tutup dropdown
     setProfileOpen(false);
     
-    // Redirect ke halaman profil
-    router.push('/profil');
+    // Redirect ke halaman profil admin
+    router.push('/admin/profil');
   };
+
+  // Jika user tidak ada, jangan render header
+  if (!user) {
+    return null;
+  }
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -65,8 +62,8 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
               className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
             >
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{currentUser.nama_lengkap}</p>
-                <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
+                <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
+                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
               </div>
               <UserCircle className="w-8 h-8 text-gray-600" />
               <ChevronDown className="w-4 h-4 text-gray-600" />
@@ -76,10 +73,10 @@ export default function Header({ user, profileOpen, setProfileOpen }: HeaderProp
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
-                  <p className="font-semibold text-gray-900">{currentUser.nama_lengkap}</p>
-                  <p className="text-sm text-gray-500">{currentUser.email_sekolah}</p>
+                  <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
+                  <p className="text-sm text-gray-500">{user.email_sekolah}</p>
                   <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                    {currentUser.role.toUpperCase()}
+                    {user.role.toUpperCase()}
                   </span>
                 </div>
                 <div className="p-2">

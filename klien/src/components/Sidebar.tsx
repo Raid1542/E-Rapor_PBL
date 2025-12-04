@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, Users, FileText, BookOpen, Award, User, Menu, ChevronDown, ChevronRight } from 'lucide-react';
+import { Home, Users, FileText, BookOpen, Award, Menu, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function ResponsiveSidebar() {
@@ -10,7 +10,7 @@ export default function ResponsiveSidebar() {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [activeMenu, setActiveMenu] = React.useState('Dashboard');
   const [openDropdowns, setOpenDropdowns] = React.useState({
-    pengguna: true,
+    pengguna: false,
     administrasi: false,
     rapor: false
   });
@@ -105,8 +105,8 @@ export default function ResponsiveSidebar() {
   ];
 
   const administrasiSubmenu = [
+    { name: 'Arsip Tahun Ajaran', url: '/admin/arsip_tahun_ajaran' },
     { name: 'Data Sekolah', url: '/admin/data_sekolah' },
-    { name: 'Data Tahun Ajaran', url: '/admin/data_tahun_ajaran' },
     { name: 'Data Siswa', url: '/admin/data_siswa' },
     { name: 'Data Kelas', url: '/admin/data_kelas' },
     { name: 'Data Mata Pelajaran', url: '/admin/data_mata_pelajaran' },
@@ -146,7 +146,7 @@ export default function ResponsiveSidebar() {
                 src={logoUrl}
                 alt="Logo SDIT Ulil Albab"
                 className="w-10 h-10 object-contain"
-                key={logoUrl} // Force re-render saat URL berubah
+                key={logoUrl}
               />
               <div>
                 <h2 className="text-sm font-bold text-gray-900">SDIT Ulil Albab</h2>
@@ -189,6 +189,19 @@ export default function ResponsiveSidebar() {
         {!isExpanded && (
           <div className="border-t border-gray-300 my-4"></div>
         )}
+
+        {/* Tahun Ajaran - dipindahkan ke atas */}
+        <button
+          onClick={() => handleNavigation('Tahun Ajaran', '/admin/data_tahun_ajaran')}
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Tahun Ajaran'
+              ? 'bg-orange-500 text-white'
+              : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
+            }`}
+          title={!isExpanded ? 'Tahun Ajaran' : ''}
+        >
+          <Calendar className="w-5 h-5 flex-shrink-0" />
+          {isExpanded && <span className="font-medium">Tahun Ajaran</span>}
+        </button>
 
         <div className="mb-2">
           <button
@@ -306,25 +319,6 @@ export default function ResponsiveSidebar() {
             </div>
           )}
         </div>
-
-        {isExpanded && (
-          <h3 className="text-xs font-semibold text-gray-500 mb-3 px-3 mt-4">SAYA</h3>
-        )}
-        {!isExpanded && (
-          <div className="border-t border-gray-300 my-4"></div>
-        )}
-
-        <button
-          onClick={() => handleNavigation('Profil', '/admin/profil')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${activeMenu === 'Profil'
-              ? 'bg-orange-500 text-white'
-              : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
-          title={!isExpanded ? 'Profil' : ''}
-        >
-          <User className="w-5 h-5 flex-shrink-0" />
-          {isExpanded && <span className="font-medium">Profil</span>}
-        </button>
       </div>
 
       <div className="p-4 border-t">
