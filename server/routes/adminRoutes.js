@@ -77,20 +77,19 @@ router.put('/sekolah', adminController.editSekolah);
 router.post('/sekolah/logo', uploadLogo.single('logo'), adminController.uploadLogo);
 
 // --- Atur Kelas & Guru Kelas ---
-router.post('/kelas', adminController.aturKelas);
-
-// --- Ekstrakurikuler ---
-router.post('/ekskul', adminController.kelolaEkskul);
-
-// --- Lihat & Unduh Rapor ---
-router.get('/rapor/:siswaId', adminController.lihatRapor);
+router.get('/kelas', adminController.getKelas);
+router.get('/kelas/:id', adminController.getKelasById);
+router.post('/kelas', adminController.tambahKelas);
+router.put('/kelas/:id', adminController.editKelas);
+router.delete('/kelas/:id', adminController.hapusKelas);
+router.get('/guru-kelas', adminController.getGuruKelasList);
+router.post('/kelas/:id/guru', adminController.setWaliKelas);
 
 // --- Tahun Ajaran & Semester ---
 router.get('/tahun-ajaran', adminController.getTahunAjaran);
 router.post('/tahun-ajaran', adminController.tambahTahunAjaran);
 router.put('/tahun-ajaran/:id', adminController.updateTahunAjaran);
 
-// --- Kurikulum & Mata Pelajaran ---
-router.post('/mata-pelajaran', adminController.aturMataPelajaran);
+
 
 module.exports = router;
