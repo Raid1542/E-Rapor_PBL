@@ -20,8 +20,7 @@ const getAllGuru = async () => {
         GROUP_CONCAT(ur.role) AS roles
     FROM user u
     INNER JOIN guru g ON u.id_user = g.user_id
-    INNER JOIN user_role ur ON u.id_user = ur.id_user
-    WHERE ur.role IN ('guru kelas', 'guru bidang studi')
+    LEFT JOIN user_role ur ON u.id_user = ur.id_user
     GROUP BY u.id_user
     ORDER BY u.nama_lengkap
     `);
@@ -144,42 +143,43 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
         await connection.execute(updateUserQuery, updateUserParams);
 
         // === 2. Update atau insert data guru ===
-        const [guruRows] = await connection.execute('SELECT 1 FROM guru WHERE user_id = ?', [id]);
-        if (guruRows.length > 0) {
-            // Update existing
-            await connection.execute(
-                `UPDATE guru SET 
-                    niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
-                    jenis_kelamin = ?, alamat = ?, no_telepon = ?
-                WHERE user_id = ?`,
-                [
-                    guruData.niy || '',
-                    guruData.nuptk || '',
-                    guruData.tempat_lahir || '',
-                    guruData.tanggal_lahir || '',
-                    guruData.jenis_kelamin || '',
-                    guruData.alamat || '',
-                    guruData.no_telepon || '',
-                    id
-                ]
-            );
-        } else {
-            // Insert baru (jika belum ada profil guru)
-            await connection.execute(
-                `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    userId,
-                    guruData.niy || null,
-                    guruData.nuptk || null,
-                    guruData.tempat_lahir || null,
-                    guruData.tanggal_lahir || null, // ✅ null, bukan ''
-                    guruData.jenis_kelamin || null,
-                    guruData.alamat || null,
-                    guruData.no_telepon || null
-                ]
-            );
-        }
+        // === 2. Update atau insert data guru ===
+const [guruRows] = await connection.execute('SELECT 1 FROM guru WHERE user_id = ?', [id]);
+if (guruRows.length > 0) {
+  // Update existing
+  await connection.execute(
+    `UPDATE guru SET 
+        niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
+        jenis_kelamin = ?, alamat = ?, no_telepon = ?
+    WHERE user_id = ?`,
+    [
+      guruData.niy || null,
+      guruData.nuptk || null,
+      guruData.tempat_lahir || null,
+      guruData.tanggal_lahir || null,
+      guruData.jenis_kelamin || null,
+      guruData.alamat || null,
+      guruData.no_telepon || null,
+      id // ← user_id yang benar
+    ]
+  );
+} else {
+  // Insert baru (jika belum ada profil guru)
+  await connection.execute(
+    `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, // ✅ GANTI DARI userId → id
+      guruData.niy || null,
+      guruData.nuptk || null,
+      guruData.tempat_lahir || null,
+      guruData.tanggal_lahir || null,
+      guruData.jenis_kelamin || null,
+      guruData.alamat || null,
+      guruData.no_telepon || null
+    ]
+  );
+}
 
         // === 3. Update roles (opsional) ===
         if (Array.isArray(roles) && roles.length > 0) {

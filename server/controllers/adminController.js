@@ -125,8 +125,28 @@ const hapusAdmin = async (req, res) => {
 // ============== GURU ==============
 const getGuru = async (req, res) => {
     try {
-        const guruList = await guruModel.getAllGuru();
-        res.json({ success: true, data: guruList });
+        const { tahun_ajaran_id } = req.query;
+        if (!tahun_ajaran_id || isNaN(Number(tahun_ajaran_id))) {
+            return res.status(400).json({ message: 'Parameter tahun_ajaran_id wajib diisi' });
+        }
+        const taId = Number(tahun_ajaran_id);
+
+        const [rows] = await db.execute(`
+      SELECT 
+        g.*,
+        u.id_user,
+        u.nama_lengkap,
+        u.email_sekolah,
+        u.status
+      FROM guru g
+      JOIN user u ON g.user_id = u.id_user
+      LEFT JOIN guru_kelas gk ON g.user_id = gk.user_id AND gk.tahun_ajaran_id = ?
+      LEFT JOIN guru_bidang_studi gbs ON g.user_id = gbs.user_id AND gbs.tahun_ajaran_id = ?
+      GROUP BY u.id_user
+      ORDER BY u.nama_lengkap ASC
+    `, [taId, taId]);
+
+        res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Error get guru:', err);
         res.status(500).json({ message: 'Gagal mengambil data guru' });
@@ -145,42 +165,67 @@ const getGuruById = async (req, res) => {
 };
 
 const tambahGuru = async (req, res) => {
-    const { nama_lengkap, email_sekolah, roles = [], niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon } = req.body;
-    if (!email_sekolah || !nama_lengkap) {
-        return res.status(400).json({ message: 'Email dan nama wajib diisi' });
+  const { nama_lengkap, email_sekolah, roles = [], niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon } = req.body;
+  if (!email_sekolah || !nama_lengkap) {
+    return res.status(400).json({ message: 'Email dan nama wajib diisi' });
+  }
+  if (!Array.isArray(roles)) {
+    return res.status(400).json({ message: 'Roles harus berupa array' });
+  }
+  const normalizedRoles = roles.map(role => typeof role === 'string' ? role.trim().toLowerCase() : '').filter(Boolean);
+  const allowedRoles = ['guru kelas', 'guru bidang studi'];
+  const validRoles = normalizedRoles.filter(role => allowedRoles.includes(role));
+  if (validRoles.length === 0) {
+    return res.status(400).json({ message: 'Pilih minimal satu hak akses yang valid' });
+  }
+
+  try {
+    // ✅ VALIDASI: Cek apakah tahun ajaran aktif
+    const [activeTA] = await db.execute(`
+      SELECT id_tahun_ajaran 
+      FROM tahun_ajaran 
+      WHERE status = 'aktif' 
+      LIMIT 1
+    `);
+    if (activeTA.length === 0) {
+      return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif. Tidak bisa menambah guru.' });
     }
-    if (!Array.isArray(roles)) {
-        return res.status(400).json({ message: 'Roles harus berupa array' });
-    }
-    const normalizedRoles = roles.map(role => typeof role === 'string' ? role.trim().toLowerCase() : '').filter(Boolean);
-    const allowedRoles = ['guru kelas', 'guru bidang studi'];
-    const validRoles = normalizedRoles.filter(role => allowedRoles.includes(role));
-    if (validRoles.length === 0) {
-        return res.status(400).json({ message: 'Pilih minimal satu hak akses yang valid' });
-    }
-    try {
-        const DEFAULT_PASSWORD = process.env.DEFAULT_GURU_PASSWORD || 'sekolah123';
-        const userData = { email_sekolah, password: DEFAULT_PASSWORD, nama_lengkap, status: 'aktif' };
-        const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
-        const userId = await guruModel.createGuru(userData, guruData, validRoles);
-        res.status(201).json({ message: 'Guru berhasil ditambahkan', id: userId });
-    } catch (err) {
-        console.error('Error tambah guru:', err);
-        res.status(500).json({ message: 'Gagal menambah guru' });
-    }
+
+    const DEFAULT_PASSWORD = process.env.DEFAULT_GURU_PASSWORD || 'sekolah123';
+    const userData = { email_sekolah, password: DEFAULT_PASSWORD, nama_lengkap, status: 'aktif' };
+    const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
+    const userId = await guruModel.createGuru(userData, guruData, validRoles);
+    res.status(201).json({ message: 'Guru berhasil ditambahkan', id: userId });
+  } catch (err) {
+    console.error('Error tambah guru:', err);
+    res.status(500).json({ message: 'Gagal menambah guru' });
+  }
 };
 
 const editGuru = async (req, res) => {
-    const { id } = req.params;
-    const { email_sekolah, nama_lengkap, status, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, roles, password } = req.body;
-    try {
-        const userData = { email_sekolah, nama_lengkap, password, status };
-        const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
-        await guruModel.updateGuru(id, userData, guruData, roles);
-        res.json({ message: 'Data guru berhasil diperbarui' });
-    } catch (err) {
-        res.status(500).json({ message: 'Gagal memperbarui data guru' });
+  const { id } = req.params;
+  const { email_sekolah, nama_lengkap, status, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, roles, password } = req.body;
+
+  try {
+    // ✅ VALIDASI: Cek apakah tahun ajaran aktif
+    const [activeTA] = await db.execute(`
+      SELECT id_tahun_ajaran 
+      FROM tahun_ajaran 
+      WHERE status = 'aktif' 
+      LIMIT 1
+    `);
+    if (activeTA.length === 0) {
+      return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif. Tidak bisa mengedit guru.' });
     }
+
+    const userData = { email_sekolah, nama_lengkap, password, status };
+    const guruData = { niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon };
+
+    await guruModel.updateGuru(id, userData, guruData, roles);
+    res.json({ message: 'Data guru berhasil diperbarui' });
+  } catch (err) {
+    res.status(500).json({ message: 'Gagal memperbarui data guru' });
+  }
 };
 
 const importGuru = async (req, res) => {
@@ -462,12 +507,12 @@ const importSiswa = async (req, res) => {
 };
 
 // ============== TAHUN AJARAN ==============
+// adminController.js → getTahunAjaran
 const getTahunAjaran = async (req, res) => {
     try {
-        const data = await tahunAjaranModel.getAllTahunAjaran();
-        res.json({ success: true, data });
+        const [rows] = await db.execute('SELECT id_tahun_ajaran, tahun_ajaran, semester, status FROM tahun_ajaran ORDER BY id_tahun_ajaran DESC');
+        res.json({ success: true, data: rows });
     } catch (err) {
-        console.error('Error get tahun ajaran:', err);
         res.status(500).json({ message: 'Gagal mengambil data tahun ajaran' });
     }
 };
