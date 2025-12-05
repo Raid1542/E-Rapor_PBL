@@ -1,20 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pencil, Plus, Search, Filter, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
 
 interface TahunAjaran {
   id_tahun_ajaran: number;
-  tahun_ajaran: string; // "2024/2025"
+  tahun_ajaran: string;
   semester: 'Ganjil' | 'Genap';
-  tanggal_pembagian_rapor: string; // "2025-06-16"
+  tanggal_pembagian_rapor: string;
   status: 'aktif' | 'nonaktif';
 }
 
-// Format tanggal ke "Senin, 16 Juni 2025"
-const formatTanggalIndonesia = (dateStr: string): string => {
-  const date = new Date(dateStr);
+const formatTanggalIndonesia = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '-';
+  const cleanDate = dateStr.split(' ')[0];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+    return '-';
+  }
+  const [year, month, day] = cleanDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   if (isNaN(date.getTime())) return '-';
+
   const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][date.getDay()];
   const tanggal = date.getDate();
   const bulan = [
@@ -34,7 +40,6 @@ export default function DataTahunAjaranPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Form state
   const [formData, setFormData] = useState({
     tahun1: '2024',
     tahun2: '2025',
@@ -44,7 +49,6 @@ export default function DataTahunAjaranPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // === Fetch data ===
   const fetchTahunAjaran = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -73,7 +77,6 @@ export default function DataTahunAjaranPage() {
     fetchTahunAjaran();
   }, []);
 
-  // === Handle form ===
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -86,6 +89,9 @@ export default function DataTahunAjaranPage() {
     }
     if (!formData.semester) {
       newErrors.semester = 'Semester wajib dipilih';
+    }
+    if (!formData.tanggal_pembagian_rapor) {
+      newErrors.tanggal = 'Tanggal pembagian rapor wajib diisi';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -135,7 +141,7 @@ export default function DataTahunAjaranPage() {
       tahun1: thn1 || '2024',
       tahun2: thn2 || '2025',
       semester: item.semester,
-      tanggal_pembagian_rapor: item.tanggal_pembagian_rapor
+      tanggal_pembagian_rapor: item.tanggal_pembagian_rapor || '2025-06-16'
     });
     setShowEdit(true);
   };
@@ -183,10 +189,10 @@ export default function DataTahunAjaranPage() {
       if (item) {
         const [thn1, thn2] = item.tahun_ajaran.split('/');
         setFormData({
-          tahun1: thn1,
-          tahun2: thn2,
+          tahun1: thn1 || '2024',
+          tahun2: thn2 || '2025',
           semester: item.semester,
-          tanggal_pembagian_rapor: item.tanggal_pembagian_rapor
+          tanggal_pembagian_rapor: item.tanggal_pembagian_rapor || '2025-06-16'
         });
       }
     } else {
@@ -219,7 +225,6 @@ export default function DataTahunAjaranPage() {
     return pages;
   };
 
-  // === Render Form ===
   const renderForm = (isEdit: boolean) => (
     <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
@@ -288,6 +293,7 @@ export default function DataTahunAjaranPage() {
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {errors.tanggal && <p className="text-red-500 text-xs mt-1">{errors.tanggal}</p>}
             </div>
           </div>
           <div className="mt-6 sm:mt-8">
@@ -325,7 +331,6 @@ export default function DataTahunAjaranPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Tahun Ajaran</h1>
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          {/* Tombol & Info */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="text-sm text-gray-600">
               Menampilkan {startIndex + 1} - {Math.min(endIndex, tahunAjaranList.length)} dari {tahunAjaranList.length} data
@@ -339,7 +344,6 @@ export default function DataTahunAjaranPage() {
             </button>
           </div>
 
-          {/* Tabel */}
           <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
             <table className="w-full min-w-[600px] table-auto text-sm">
               <thead>
@@ -360,25 +364,25 @@ export default function DataTahunAjaranPage() {
                 ) : (
                   currentData.map((item, index) => (
                     <tr key={item.id_tahun_ajaran} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                      <td className="px-4 py-3 text-center">{startIndex + index + 1}</td>
-                      <td className="px-4 py-3">{item.tahun_ajaran}</td>
+                      <td className="px-4 py-3 text-center font-medium">{startIndex + index + 1}</td>
+                      <td className="px-4 py-3 font-medium">{item.tahun_ajaran}</td>
                       <td className="px-4 py-3">{item.semester}</td>
                       <td className="px-4 py-3">{formatTanggalIndonesia(item.tanggal_pembagian_rapor)}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          item.status === 'aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {item.status.toUpperCase()}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
-                        >
-                          <Pencil size={14} />
-                          <span className="hidden sm:inline">Edit</span>
-                        </button>
+                        {item.status === 'aktif' ? (
+                          <div className="flex justify-center">
+                            <button onClick={() => handleEdit(item)} className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm">
+                              <Pencil size={14} /><span className="hidden sm:inline">Edit</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -387,7 +391,6 @@ export default function DataTahunAjaranPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
               <div className="text-sm text-gray-600">

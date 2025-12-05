@@ -57,7 +57,7 @@ const getAdminList = async () => {
     FROM user u
     LEFT JOIN guru g ON u.id_user = g.user_id
     WHERE u.id_user IN (
-        SELECT id_user FROM user_role WHERE role = 'Admin'
+        SELECT id_user FROM user_role WHERE role = 'admin'
     )
     ORDER BY u.id_user
   `);
@@ -94,7 +94,7 @@ const createAdmin = async (userData, connection = db) => {
 
     // 2. Insert role
     await connection.execute(
-        'INSERT INTO user_role (id_user, role) VALUES (?, "Admin")',
+        'INSERT INTO user_role (id_user, role) VALUES (?, "admin")',
         [id_user]
     );
 

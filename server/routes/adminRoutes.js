@@ -53,18 +53,18 @@ router.use(authenticate, authorize('admin'));
 const cekTahunAjaranAktif = require('../middleware/cekTahunAjaranAktif');
 
 // --- Data Guru ---
-router.post('/guru/import', cekTahunAjaranAktif, uploadExcel.single('file'), adminController.importGuru);
-router.get('/guru', cekTahunAjaranAktif, adminController.getGuru);
-router.get('/guru/:id', cekTahunAjaranAktif, adminController.getGuruById);
-router.post('/guru', cekTahunAjaranAktif, adminController.tambahGuru);
-router.put('/guru/:id', cekTahunAjaranAktif, adminController.editGuru);
+router.post('/guru/import', uploadExcel.single('file'), adminController.importGuru);
+router.get('/guru', adminController.getGuru);
+router.get('/guru/:id', adminController.getGuruById);
+router.post('/guru', adminController.tambahGuru);
+router.put('/guru/:id', adminController.editGuru);
 
 // --- Data Siswa ---
 router.post('/siswa/import', uploadExcel.single('file'), adminController.importSiswa);
 router.get('/siswa', adminController.getSiswa);
 router.get('/siswa/:id', adminController.getSiswaById);
-router.post('/siswa', adminController.tambahSiswa);
-router.put('/siswa/:id', adminController.editSiswa);
+router.post('/siswa', authenticate, authorize('admin'), cekTahunAjaranAktif, adminController.tambahSiswa);
+router.put('/siswa/:id', authenticate, authorize('admin'), cekTahunAjaranAktif, adminController.editSiswa);
 
 // --- Data Admin ---
 router.get('/admin', adminController.getAdmin);

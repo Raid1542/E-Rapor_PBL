@@ -1,7 +1,6 @@
 'use client';
-
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, Upload, X, Plus, Search, Filter, Lock } from 'lucide-react';
+import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
 
 interface Guru {
   id: number;
@@ -16,13 +15,6 @@ interface Guru {
   no_telepon?: string;
   statusGuru?: string;
   roles?: string[];
-}
-
-interface TahunAjaran {
-  id_tahun_ajaran: number;
-  tahun_ajaran: string;
-  semester: string;
-  status: string; // 'aktif' atau 'nonaktif'
 }
 
 interface FormDataType {
@@ -40,7 +32,6 @@ interface FormDataType {
   confirmData: boolean;
 }
 
-// Format tanggal → "1 Januari 2016"
 const formatTanggalIndonesia = (dateStr?: string | null): string => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
@@ -81,60 +72,48 @@ export default function DataGuruPage() {
   const [detailClosing, setDetailClosing] = useState(false);
   const [importClosing, setImportClosing] = useState(false);
   const [filterClosing, setFilterClosing] = useState(false);
-
-  // === Tahun Ajaran ===
-  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
-  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState<number | null>(null);
-  const [selectedTahunAjaranStatus, setSelectedTahunAjaranStatus] = useState<string | null>(null);
-  const [loadingTA, setLoadingTA] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
 
   // === Filter ===
-  const [showFilter, setShowFilter] = useState(false);
   const [filterValues, setFilterValues] = useState({
     role: '',
     jenisKelamin: '',
     status: ''
   });
 
-  // === Fetch Tahun Ajaran ===
-  const fetchTahunAjaran = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTahunAjaranList(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetch tahun ajaran:', err);
-    } finally {
-      setLoadingTA(false);
-    }
-  };
+  // === Temporary filter for modal (agar X bisa cancel) ===
+  const [tempFilterValues, setTempFilterValues] = useState(filterValues);
 
-  // === Fetch Guru berdasarkan Tahun Ajaran ===
-  const fetchGuru = async (taId: number) => {
+  // === Fetch Guru ===
+  const fetchGuru = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         alert('Silakan login terlebih dahulu');
         return;
       }
-      const res = await fetch(`http://localhost:5000/api/admin/guru?tahun_ajaran_id=${taId}`, {
+      const res = await fetch("http://localhost:5000/api/admin/guru", {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       if (res.ok) {
+        const validRoles = ['guru kelas', 'guru bidang studi'];
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => {
-            // Normalisasi status ke lowercase
+            // Normalisasi status
             let normalizedStatus = 'aktif';
             if (typeof g.status === 'string') {
               normalizedStatus = g.status.trim().toLowerCase();
               if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
+            }
+
+            // Normalisasi roles: pastikan jadi array dan hanya ambil role valid
+            let roles: string[] = [];
+            if (g.roles) {
+              const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
+              roles = rawRoles
+                .map((r: any) => String(r).toLowerCase().trim())
+                .filter((r: string) => validRoles.includes(r));
             }
 
             return {
@@ -148,8 +127,8 @@ export default function DataGuruPage() {
               jenisKelamin: g.jenis_kelamin || '',
               alamat: g.alamat,
               no_telepon: g.no_telepon || '',
-              statusGuru: normalizedStatus, // ← selalu 'aktif' atau 'nonaktif'
-              roles: g.roles || [], // ← langsung ambil roles (bukan g.role)
+              statusGuru: normalizedStatus,
+              roles: roles,
             };
           })
           : [];
@@ -166,24 +145,8 @@ export default function DataGuruPage() {
   };
 
   useEffect(() => {
-    fetchTahunAjaran();
+    fetchGuru();
   }, []);
-
-  const handlePilihTahunAjaran = (e: ChangeEvent<HTMLSelectElement>) => {
-    const taId = Number(e.target.value);
-    if (taId) {
-      const selectedTA = tahunAjaranList.find(ta => ta.id_tahun_ajaran === taId);
-      setSelectedTahunAjaran(taId);
-      setSelectedTahunAjaranStatus(selectedTA?.status || null);
-      setLoading(true);
-      fetchGuru(taId);
-    } else {
-      setSelectedTahunAjaran(null);
-      setSelectedTahunAjaranStatus(null);
-      setGuruList([]);
-      setLoading(false);
-    }
-  };
 
   // === Form & Validasi ===
   const [formData, setFormData] = useState<FormDataType>({
@@ -209,10 +172,6 @@ export default function DataGuruPage() {
   };
 
   const handleEdit = (guru: Guru) => {
-    if (selectedTahunAjaranStatus !== 'aktif') {
-      alert('Tahun ajaran ini tidak aktif. Tidak bisa mengedit data.');
-      return;
-    }
     setEditId(guru.id);
     setFormData({
       nama: guru.nama || '',
@@ -268,10 +227,6 @@ export default function DataGuruPage() {
   };
 
   const handleSubmitTambah = async () => {
-    if (!selectedTahunAjaran || selectedTahunAjaranStatus !== 'aktif') {
-      alert('Harap pilih tahun ajaran aktif terlebih dahulu.');
-      return;
-    }
     if (!validate(false)) return;
     const token = localStorage.getItem('token');
     if (!token) {
@@ -301,7 +256,7 @@ export default function DataGuruPage() {
       if (res.ok) {
         alert("Data guru berhasil ditambahkan");
         setShowTambah(false);
-        fetchGuru(selectedTahunAjaran);
+        fetchGuru();
         handleReset();
       } else {
         const err = await res.json();
@@ -313,10 +268,6 @@ export default function DataGuruPage() {
   };
 
   const handleSubmitEdit = async () => {
-    if (!selectedTahunAjaran || selectedTahunAjaranStatus !== 'aktif') {
-      alert('Tahun ajaran tidak aktif. Tidak bisa mengedit data.');
-      return;
-    }
     const originalData = guruList.find(g => g.id === editId);
     if (!originalData) return;
     const normalize = (str: string | null | undefined): string => (str || '').trim().toLowerCase();
@@ -337,6 +288,7 @@ export default function DataGuruPage() {
       alert("Tidak ada perubahan data.");
       return;
     }
+
     if (!validate(true)) return;
     const token = localStorage.getItem('token');
     if (!token) {
@@ -368,7 +320,7 @@ export default function DataGuruPage() {
         alert("Data guru berhasil diperbarui");
         setShowEdit(false);
         setEditId(null);
-        fetchGuru(selectedTahunAjaran);
+        fetchGuru();
         handleReset();
       } else {
         const err = await res.json();
@@ -398,10 +350,6 @@ export default function DataGuruPage() {
   };
 
   const handleImportExcel = async () => {
-    if (!selectedTahunAjaran || selectedTahunAjaranStatus !== 'aktif') {
-      alert('Harap pilih tahun ajaran aktif terlebih dahulu.');
-      return;
-    }
     if (!importFile) {
       alert('Pilih file Excel dulu.');
       return;
@@ -420,7 +368,7 @@ export default function DataGuruPage() {
         alert(`Berhasil import ${result.total} data guru!`);
         setShowImport(false);
         setImportFile(null);
-        fetchGuru(selectedTahunAjaran);
+        fetchGuru();
       } else {
         alert('Gagal: ' + (result.message || 'Gagal import data guru'));
       }
@@ -440,12 +388,16 @@ export default function DataGuruPage() {
       guru.nuptk?.includes(query) ||
       guru.tempat_lahir?.toLowerCase().includes(query) ||
       guru.no_telepon?.includes(query);
+
     const matchesRole = !filterValues.role ||
       (guru.roles && guru.roles.includes(filterValues.role));
+
     const matchesJenisKelamin = !filterValues.jenisKelamin ||
       (guru.jenisKelamin?.toLowerCase() === filterValues.jenisKelamin.toLowerCase());
+
     const matchesStatus = !filterValues.status ||
       (guru.statusGuru?.toLowerCase() === filterValues.status.toLowerCase());
+
     return matchesSearch && matchesRole && matchesJenisKelamin && matchesStatus;
   });
 
@@ -478,11 +430,24 @@ export default function DataGuruPage() {
   };
 
   const resetFilter = () => {
-    setFilterValues({
-      role: '',
-      jenisKelamin: '',
-      status: ''
-    });
+    const empty = { role: '', jenisKelamin: '', status: '' };
+    setFilterValues(empty);
+    setTempFilterValues(empty);
+  };
+
+  // === MODAL FILTER HANDLING ===
+  const openFilterModal = () => {
+    setTempFilterValues(filterValues);
+    setShowFilter(true);
+  };
+
+  const applyFilter = () => {
+    setFilterValues(tempFilterValues);
+    setFilterClosing(true);
+    setTimeout(() => {
+      setShowFilter(false);
+      setFilterClosing(false);
+    }, 200);
   };
 
   const closeFilterModal = () => {
@@ -593,212 +558,160 @@ export default function DataGuruPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Guru</h1>
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          {/* Dropdown Tahun Ajaran */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tahun Ajaran</label>
-            <select
-              value={selectedTahunAjaran || ''}
-              onChange={handlePilihTahunAjaran}
-              className="w-full md:w-auto border border-gray-300 rounded px-3 py-2"
-              disabled={loadingTA}
-            >
-              <option value="">-- Pilih Tahun Ajaran --</option>
-              {tahunAjaranList.map(ta => (
-                <option key={ta.id_tahun_ajaran} value={ta.id_tahun_ajaran}>
-                  {ta.tahun_ajaran} ({ta.semester}) {ta.status === 'nonaktif' && '🔒'}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Pesan jika TA nonaktif */}
-          {selectedTahunAjaran && selectedTahunAjaranStatus === 'nonaktif' && (
-            <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded">
-              <p className="text-sm text-blue-700 flex items-center gap-1">
-                <Lock size={16} /> Tahun ajaran ini sudah berakhir. Hanya bisa melihat data.
-              </p>
-            </div>
-          )}
-
-          {/* Tampilan data guru */}
-          {selectedTahunAjaran ? (
-            <>
-              {/* Tombol Aksi */}
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                {/* Tombol Tambah Guru hanya muncul jika TA aktif */}
-                {selectedTahunAjaranStatus === 'aktif' && (
-                  <button onClick={() => setShowTambah(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <Plus size={20} /> Tambah Guru
+          {/* Tombol Aksi */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <button onClick={() => setShowTambah(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              <Plus size={20} /> Tambah Guru
+            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {/* Tampilkan per halaman */}
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-gray-700 text-sm">Tampilkan</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-gray-700 text-sm">data</span>
+              </div>
+              {/* Pencarian */}
+              <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Pencarian"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-4 h-4" />
                   </button>
                 )}
-
-                {/* Kontrol Pencarian, Filter, dan Pagination - SELALU TERSEDIA */}
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                  {/* Tampilkan per halaman - SELALU TERSEDIA */}
-                  <div className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-gray-700 text-sm">Tampilkan</span>
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                      className="border border-gray-300 rounded px-3 py-1 text-sm"
-                    >
-                      <option value={10}>10</option>
-                      <option value={25}>25</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
-                    <span className="text-gray-700 text-sm">data</span>
-                  </div>
-
-                  {/* Pencarian - SELALU TERSEDIA */}
-                  <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <Search className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Pencarian"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery('');
-                          setCurrentPage(1);
-                        }}
-                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filter - SELALU TERSEDIA */}
-                  <button
-                    onClick={() => setShowFilter(true)}
-                    className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  >
-                    <Filter size={20} /> Filter Guru
-                  </button>
-
-                  {/* Import hanya muncul jika TA aktif */}
-                  {selectedTahunAjaranStatus === 'aktif' && (
-                    <button
-                      onClick={() => setShowImport(true)}
-                      className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2"
-                    >
-                      <Upload size={20} /> Import Guru
-                    </button>
-                  )}
-                </div>
               </div>
-
-              {/* Tabel Data */}
-              <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
-                <table className="w-full min-w-[600px] table-auto text-sm">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Jenis Kelamin</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIY</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NUPTK</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Status</th>
-                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                          Memuat data...
-                        </td>
-                      </tr>
-                    ) : currentGuru.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                          Tidak ada data guru
-                        </td>
-                      </tr>
-                    ) : (
-                      currentGuru.map((guru, index) => (
-                        <tr
-                          key={guru.id}
-                          className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
-                        >
-                          <td className="px-4 py-3 text-center align-middle font-medium">
-                            {startIndex + index + 1}
-                          </td>
-                          <td className="px-4 py-3 align-middle font-medium">{guru.nama}</td>
-                          <td className="px-4 py-3 text-center align-middle">
-                            {formatGender(guru.jenisKelamin)}
-                          </td>
-                          <td className="px-4 py-3 text-center align-middle">{guru.niy || '-'}</td>
-                          <td className="px-4 py-3 text-center align-middle">{guru.nuptk || '-'}</td>
-                          <td className="px-4 py-3 text-center align-middle">
-                            <span
-                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guru.statusGuru === 'aktif'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-red-100 text-red-700'
-                                }`}
-                            >
-                              {guru.statusGuru?.toUpperCase() || 'AKTIF'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
-                            <div className="flex justify-center gap-1 sm:gap-2">
-                              <button
-                                onClick={() => handleDetail(guru)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
-                              >
-                                <Eye size={16} />{' '}
-                                <span className="hidden sm:inline">Detail</span>
-                              </button>
-                              {selectedTahunAjaranStatus === 'aktif' && (
-                                <button
-                                  onClick={() => handleEdit(guru)}
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
-                                >
-                                  <Pencil size={16} />{' '}
-                                  <span className="hidden sm:inline">Edit</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination - SELALU TERSEDIA */}
-              <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
-                <div className="text-sm text-gray-600">
-                  Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredGuru.length)} dari{' '}
-                  {filteredGuru.length} data
-                </div>
-                <div className="flex gap-1 flex-wrap justify-center">
-                  {renderPagination()}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-              <p className="text-sm text-yellow-700">
-                Harap pilih tahun ajaran terlebih dahulu untuk melihat data guru.
-              </p>
+              {/* Filter — GANTI onClick ke openFilterModal */}
+              <button
+                onClick={openFilterModal}
+                className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Filter size={20} /> Filter Guru
+              </button>
+              {/* Import */}
+              <button
+                onClick={() => setShowImport(true)}
+                className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Upload size={20} /> Import Guru
+              </button>
             </div>
-          )}
+          </div>
+          {/* Tabel Data */}
+          <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
+            <table className="w-full min-w-[600px] table-auto text-sm">
+              <thead>
+                <tr>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Jenis Kelamin</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIY</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NUPTK</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      Memuat data...
+                    </td>
+                  </tr>
+                ) : currentGuru.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      Tidak ada data guru
+                    </td>
+                  </tr>
+                ) : (
+                  currentGuru.map((guru, index) => (
+                    <tr
+                      key={guru.id}
+                      className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
+                    >
+                      <td className="px-4 py-3 text-center align-middle font-medium">
+                        {startIndex + index + 1}
+                      </td>
+                      <td className="px-4 py-3 align-middle font-medium">{guru.nama}</td>
+                      <td className="px-4 py-3 text-center align-middle">
+                        {formatGender(guru.jenisKelamin)}
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle">{guru.niy || '-'}</td>
+                      <td className="px-4 py-3 text-center align-middle">{guru.nuptk || '-'}</td>
+                      <td className="px-4 py-3 text-center align-middle">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guru.statusGuru === 'aktif'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                            }`}
+                        >
+                          {guru.statusGuru?.toUpperCase() || 'AKTIF'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
+                        <div className="flex justify-center gap-1 sm:gap-2">
+                          <button
+                            onClick={() => handleDetail(guru)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
+                          >
+                            <Eye size={16} />{' '}
+                            <span className="hidden sm:inline">Detail</span>
+                          </button>
+                          <button
+                            onClick={() => handleEdit(guru)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
+                          >
+                            <Pencil size={16} />{' '}
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination */}
+          <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+            <div className="text-sm text-gray-600">
+              Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredGuru.length)} dari{' '}
+              {filteredGuru.length} data
+            </div>
+            <div className="flex gap-1 flex-wrap justify-center">
+              {renderPagination()}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -952,21 +865,19 @@ export default function DataGuruPage() {
                 >
                   Tutup
                 </button>
-                {selectedTahunAjaranStatus === 'aktif' && (
-                  <button
-                    onClick={() => {
-                      handleEdit(selectedGuru);
-                      setDetailClosing(true);
-                      setTimeout(() => {
-                        setShowDetail(false);
-                        setDetailClosing(false);
-                      }, 200);
-                    }}
-                    className="px-4 sm:px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded transition text-xs sm:text-sm font-medium"
-                  >
-                    Edit
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    handleEdit(selectedGuru);
+                    setDetailClosing(true);
+                    setTimeout(() => {
+                      setShowDetail(false);
+                      setDetailClosing(false);
+                    }, 200);
+                  }}
+                  className="px-4 sm:px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded transition text-xs sm:text-sm font-medium"
+                >
+                  Edit
+                </button>
               </div>
             </div>
           </div>
@@ -1100,8 +1011,8 @@ export default function DataGuruPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                 <select
-                  value={filterValues.role}
-                  onChange={(e) => setFilterValues((prev) => ({ ...prev, role: e.target.value }))}
+                  value={tempFilterValues.role}
+                  onChange={(e) => setTempFilterValues((prev) => ({ ...prev, role: e.target.value }))}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 >
                   <option value="">Semua Role</option>
@@ -1112,9 +1023,9 @@ export default function DataGuruPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
                 <select
-                  value={filterValues.jenisKelamin}
+                  value={tempFilterValues.jenisKelamin}
                   onChange={(e) =>
-                    setFilterValues((prev) => ({ ...prev, jenisKelamin: e.target.value }))
+                    setTempFilterValues((prev) => ({ ...prev, jenisKelamin: e.target.value }))
                   }
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 >
@@ -1126,8 +1037,8 @@ export default function DataGuruPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
-                  value={filterValues.status}
-                  onChange={(e) => setFilterValues((prev) => ({ ...prev, status: e.target.value }))}
+                  value={tempFilterValues.status}
+                  onChange={(e) => setTempFilterValues((prev) => ({ ...prev, status: e.target.value }))}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 >
                   <option value="">Semua Status</option>
@@ -1143,13 +1054,7 @@ export default function DataGuruPage() {
                   Reset
                 </button>
                 <button
-                  onClick={() => {
-                    setFilterClosing(true);
-                    setTimeout(() => {
-                      setShowFilter(false);
-                      setFilterClosing(false);
-                    }, 200);
-                  }}
+                  onClick={applyFilter}
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition text-sm"
                 >
                   Terapkan
