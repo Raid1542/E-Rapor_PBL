@@ -200,11 +200,21 @@ export default function DataTahunAjaranPage() {
     }
   };
 
-  // === Pagination ===
+  // === Sorting & Pagination ===
+  // Urutkan data: Aktif dulu, lalu Nonaktif
+  const sortedData = [...tahunAjaranList].sort((a, b) => {
+    if (a.status === b.status) {
+      // Untuk status yang sama, urutkan berdasarkan ID terbaru (desc)
+      return b.id_tahun_ajaran - a.id_tahun_ajaran;
+    }
+    // Data 'aktif' selalu muncul di atas
+    return a.status === 'aktif' ? -1 : 1;
+  });
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = tahunAjaranList.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(tahunAjaranList.length / itemsPerPage);
+  const currentData = sortedData.slice(startIndex, endIndex); // 🔥 Gunakan sortedData di sini
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage); // 🔥 Dan di sini
 
   const renderPagination = () => {
     const pages = [];
@@ -333,7 +343,8 @@ export default function DataTahunAjaranPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="text-sm text-gray-600">
-              Menampilkan {startIndex + 1} - {Math.min(endIndex, tahunAjaranList.length)} dari {tahunAjaranList.length} data
+              {/* 🔥 Gunakan sortedData untuk menghitung jumlah data */}
+              Menampilkan {startIndex + 1} - {Math.min(endIndex, sortedData.length)} dari {sortedData.length} data
             </div>
             <button
               onClick={() => setShowTambah(true)}
@@ -394,7 +405,8 @@ export default function DataTahunAjaranPage() {
           {totalPages > 1 && (
             <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
               <div className="text-sm text-gray-600">
-                Menampilkan {startIndex + 1} - {Math.min(endIndex, tahunAjaranList.length)} dari {tahunAjaranList.length} data
+                {/* 🔥 Gunakan sortedData untuk menghitung jumlah data */}
+                Menampilkan {startIndex + 1} - {Math.min(endIndex, sortedData.length)} dari {sortedData.length} data
               </div>
               <div className="flex gap-1">{renderPagination()}</div>
             </div>

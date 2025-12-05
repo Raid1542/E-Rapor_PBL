@@ -613,7 +613,7 @@ export default function DataGuruPage() {
               {/* Filter — GANTI onClick ke openFilterModal */}
               <button
                 onClick={openFilterModal}
-                className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
               >
                 <Filter size={20} /> Filter Guru
               </button>

@@ -19,7 +19,7 @@ interface Siswa {
 interface TahunAjaran {
   id: number;
   tahun_ajaran: string;
-  semester: string; // 'ganjil' | 'genap'
+  semester: string;
   is_aktif: boolean;
 }
 
@@ -52,10 +52,18 @@ export default function DataSiswaPage() {
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importClosing, setImportClosing] = useState(false);
-
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
   const [selectedTahunAjaranAktif, setSelectedTahunAjaranAktif] = useState<boolean>(false);
+
+  const kelasList = [
+    { id: 1, nama: '1A' }, { id: 2, nama: '1B' }, { id: 3, nama: '1C' }, { id: 4, nama: '1D' }, { id: 5, nama: '1E' }, { id: 6, nama: '1F' },
+    { id: 7, nama: '2A' }, { id: 8, nama: '2B' }, { id: 9, nama: '2C' }, { id: 10, nama: '2D' }, { id: 11, nama: '2E' }, { id: 12, nama: '2F' },
+    { id: 13, nama: '3A' }, { id: 14, nama: '3B' }, { id: 15, nama: '3C' }, { id: 16, nama: '3D' }, { id: 17, nama: '3E' }, { id: 18, nama: '3F' },
+    { id: 19, nama: '4A' }, { id: 20, nama: '4B' }, { id: 21, nama: '4C' }, { id: 22, nama: '4D' }, { id: 23, nama: '4E' }, { id: 24, nama: '4F' },
+    { id: 25, nama: '5A' }, { id: 26, nama: '5B' }, { id: 27, nama: '5C' }, { id: 28, nama: '5D' }, { id: 29, nama: '5E' }, { id: 30, nama: '5F' },
+    { id: 31, nama: '6A' }, { id: 32, nama: '6B' }, { id: 33, nama: '6C' }, { id: 34, nama: '6D' }, { id: 35, nama: '6E' }, { id: 36, nama: '6F' }
+  ];
 
   // === Helper: Format Tanggal Indonesia ===
   const formatTanggalIndo = (dateString: string | null): string => {
@@ -192,7 +200,7 @@ export default function DataSiswaPage() {
     setEditId(siswa.id);
     setFormData({
       nama: siswa.nama,
-      kelas: siswa.kelas || '',
+      kelas: String(kelasList.find(k => k.nama === siswa.kelas)?.id || ''),
       nis: siswa.nis,
       nisn: siswa.nisn,
       tempatLahir: siswa.tempatLahir || '',
@@ -215,10 +223,11 @@ export default function DataSiswaPage() {
     }
   };
 
-  const getFaseFromKelas = (kelas: string): string => {
-    if (kelas.startsWith('1') || kelas.startsWith('2')) return 'A';
-    if (kelas.startsWith('3') || kelas.startsWith('4')) return 'B';
-    if (kelas.startsWith('5') || kelas.startsWith('6')) return 'C';
+  const getFaseFromKelas = (kelasId: string): string => {
+    const id = Number(kelasId);
+    if (id >= 1 && id <= 12) return 'A';
+    if (id >= 13 && id <= 24) return 'B';
+    if (id >= 25 && id <= 36) return 'C';
     return '';
   };
 
@@ -226,6 +235,9 @@ export default function DataSiswaPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.nama?.trim()) newErrors.nama = 'Nama wajib diisi';
     if (!formData.kelas) newErrors.kelas = 'Pilih kelas';
+    if (!kelasList.some(k => k.id === Number(formData.kelas))) {
+      newErrors.kelas = 'Kelas tidak valid';
+    }
     if (!formData.nis) newErrors.nis = 'NIS wajib diisi';
     if (!formData.nisn) newErrors.nisn = 'NISN wajib diisi';
     if (!formData.jenisKelamin) newErrors.jenisKelamin = 'Pilih jenis kelamin';
@@ -256,7 +268,8 @@ export default function DataSiswaPage() {
           tanggal_lahir: formData.tanggalLahir,
           jenis_kelamin: formData.jenisKelamin,
           alamat: formData.alamat,
-          kelas_id: formData.kelas,
+          kelas_id: Number(formData.kelas),
+          tahun_ajaran_id: selectedTahunAjaranId,
         })
       });
       if (res.ok) {
@@ -278,7 +291,7 @@ export default function DataSiswaPage() {
     if (!originalData) return;
     const hasChanged =
       formData.nama !== originalData.nama ||
-      formData.kelas !== originalData.kelas ||
+      formData.kelas !== String(kelasList.find(k => k.nama === originalData.kelas)?.id) ||
       formData.nis !== originalData.nis ||
       formData.nisn !== originalData.nisn ||
       formData.tempatLahir !== (originalData.tempatLahir || '') ||
@@ -311,8 +324,9 @@ export default function DataSiswaPage() {
           tanggal_lahir: formData.tanggalLahir,
           jenis_kelamin: formData.jenisKelamin,
           alamat: formData.alamat,
-          kelas_id: formData.kelas,
-          status: formData.statusSiswa
+          kelas_id: Number(formData.kelas),
+          status: formData.statusSiswa,
+          tahun_ajaran_id: selectedTahunAjaranId,
         })
       });
       if (res.ok) {
@@ -352,14 +366,14 @@ export default function DataSiswaPage() {
       alert('Silakan pilih file Excel terlebih dahulu');
       return;
     }
-    const formData = new FormData();
-    formData.append('file', importFile);
+    const formDataExcel = new FormData();
+    formDataExcel.append('file', importFile);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5000/api/admin/siswa/import', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
+        body: formDataExcel
       });
       const result = await res.json();
       if (res.ok) {
@@ -464,13 +478,13 @@ export default function DataSiswaPage() {
               </label>
               <select
                 name="kelas"
-                value={formData.kelas || ''}
+                value={formData.kelas}
                 onChange={handleInputChange}
                 className={`w-full border ${errors.kelas ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
               >
                 <option value="">-- Pilih --</option>
-                {['1A', '1B', '1C', '1D', '1E', '1F', '2A', '2B', '2C', '2D', '2E', '2F', '3A', '3B', '3C', '3D', '3E', '3F', '4A', '4B', '4C', '4D', '4E', '4F', '5A', '5B', '5C', '5D', '5E', '5F', '6A', '6B', '6C', '6D', '6E', '6F'].map(kls => (
-                  <option key={kls} value={kls}>Kelas {kls}</option>
+                {kelasList.map(kls => (
+                  <option key={kls.id} value={kls.id}>Kelas {kls.nama}</option> 
                 ))}
               </select>
               {errors.kelas && <p className="text-red-500 text-xs mt-1">{errors.kelas}</p>}
@@ -653,98 +667,106 @@ export default function DataSiswaPage() {
                 const semesterDisplay = ta.semester === 'ganjil' ? 'Ganjil' : 'Genap';
                 return (
                   <option key={ta.id} value={ta.id}>
-                    {ta.tahun_ajaran} {ta.is_aktif ? "(Aktif)" : ""}
+                    {ta.tahun_ajaran} {semesterDisplay} {ta.is_aktif ? "(Aktif)" : ""}
                   </option>
                 );
               })}
             </select>
           </div>
 
-          {/* Konten Kondisional */}
           {selectedTahunAjaranId === null ? (
-            <div className="mt-8 text-center py-8 bg-yellow-100 border border-dashed border-gray-300 rounded-lg">
+            <div className="mt-8 text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
               <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
               <p className="text-gray-500 mt-2">Data siswa akan ditampilkan setelah Anda memilih tahun ajaran yang diinginkan.</p>
             </div>
           ) : (
             <>
-              {/* Fitur yang hanya muncul jika AKTIF */}
-              {selectedTahunAjaranAktif && (
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                  <button
-                    onClick={() => setShowTambah(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
-                  >
-                    <Plus size={20} />
-                    Tambah Siswa
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowImport(true);
-                      setImportClosing(false);
-                    }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
-                  >
-                    <Upload size={20} />
-                    Import Siswa
-                  </button>
-                </div>
-              )}
-
-              {/* Fitur view-only: selalu muncul jika sudah pilih tahun ajaran */}
-              <div className="flex flex-wrap items-center gap-3 w-full mb-4">
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="text-gray-700 text-sm">Tampilkan</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="border border-gray-300 rounded px-3 py-1 text-sm"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                  <span className="text-gray-700 text-sm">data</span>
-                </div>
-                <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Search className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Pencarian"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
-                  />
-                  {searchQuery && (
+              {/* ✅ LAYOUT BARU SESUAI PERMINTAAN ✅ */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                {/* KIRI: Tombol Tambah Siswa */}
+                <div>
+                  {selectedTahunAjaranAktif && (
                     <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                      className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                      onClick={() => setShowTambah(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
                     >
-                      <X className="w-4 h-4" />
+                      <Plus size={20} />
+                      Tambah Siswa
                     </button>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    setOpenedFilterValues({ ...filterValues });
-                    setShowFilter(true);
-                    setFilterClosing(false);
-                  }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
-                >
-                  <Filter size={20} />
-                  Filter Siswa
-                </button>
+
+                {/* KANAN: Pencarian + Filter + Import (Import paling kanan) */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Tampilkan X data */}
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-gray-700 text-sm">Tampilkan</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="border border-gray-300 rounded px-3 py-1 text-sm"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span className="text-gray-700 text-sm">data</span>
+                  </div>
+
+                  {/* Pencarian */}
+                  <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Search className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Pencarian"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter & Import (Import paling kanan) */}
+                  {selectedTahunAjaranAktif && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setOpenedFilterValues({ ...filterValues });
+                          setShowFilter(true);
+                          setFilterClosing(false);
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+                      >
+                        <Filter size={20} />
+                        Filter Siswa
+                      </button>
+                      <button
+                        onClick={() => setShowImport(true)}
+                        className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+                      >
+                        <Upload size={20} />
+                        Import Siswa
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Tabel Data */}
@@ -768,11 +790,11 @@ export default function DataSiswaPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={selectedTahunAjaranAktif ? 7 : 7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                       </tr>
                     ) : currentSiswa.length === 0 ? (
                       <tr>
-                        <td colSpan={selectedTahunAjaranAktif ? 7 : 7} className="px-4 py-8 text-center text-gray-500">Tidak ada data siswa</td>
+                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data siswa</td>
                       </tr>
                     ) : (
                       currentSiswa.map((siswa, index) => (
@@ -1096,15 +1118,18 @@ export default function DataSiswaPage() {
             </div>
             <div className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Kelas <span className="text-red-500">*</span>
+                </label>
                 <select
+                  name="kelas"
                   value={filterValues.kelas}
                   onChange={(e) => setFilterValues(prev => ({ ...prev, kelas: e.target.value }))}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 >
                   <option value="">Semua Kelas</option>
-                  {['1A', '1B', '1C', '1D', '1E', '1F', '2A', '2B', '2C', '2D', '2E', '2F', '3A', '3B', '3C', '3D', '3E', '3F', '4A', '4B', '4C', '4D', '4E', '4F', '5A', '5B', '5C', '5D', '5E', '5F', '6A', '6B', '6C', '6D', '6E', '6F'].map(kls => (
-                    <option key={kls} value={kls}>Kelas {kls}</option>
+                  {kelasList.map(kls => (
+                    <option key={kls.id} value={kls.nama}>Kelas {kls.nama}</option>
                   ))}
                 </select>
               </div>

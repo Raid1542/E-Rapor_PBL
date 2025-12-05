@@ -48,35 +48,33 @@ const adminController = require('../controllers/adminController');
 const router = express.Router();
 
 // Middleware: hanya admin
-router.use(authenticate, authorize('admin'));
-
-const cekTahunAjaranAktif = require('../middleware/cekTahunAjaranAktif');
+const adminOnly = [authenticate, authorize('admin')];
+const adminOnlyWithTahunAjaran = [...adminOnly, require('../middleware/cekTahunAjaranAktif')];
 
 // --- Data Guru ---
-router.post('/guru/import', uploadExcel.single('file'), adminController.importGuru);
-router.get('/guru', adminController.getGuru);
-router.get('/guru/:id', adminController.getGuruById);
-router.post('/guru', adminController.tambahGuru);
-router.put('/guru/:id', adminController.editGuru);
+router.post('/guru/import', adminOnly, uploadExcel.single('file'), adminController.importGuru);
+router.get('/guru', adminOnly, adminController.getGuru);
+router.get('/guru/:id', adminOnly, adminController.getGuruById);
+router.post('/guru', adminOnly, adminController.tambahGuru);
+router.put('/guru/:id', adminOnly, adminController.editGuru);
 
 // --- Data Siswa ---
-router.post('/siswa/import', uploadExcel.single('file'), adminController.importSiswa);
-router.get('/siswa', adminController.getSiswa);
-router.get('/siswa/:id', adminController.getSiswaById);
-router.post('/siswa', authenticate, authorize('admin'), cekTahunAjaranAktif, adminController.tambahSiswa);
-router.put('/siswa/:id', authenticate, authorize('admin'), cekTahunAjaranAktif, adminController.editSiswa);
-
+router.post('/siswa/import', adminOnlyWithTahunAjaran, uploadExcel.single('file'), adminController.importSiswa);
+router.get('/siswa', adminOnly, adminController.getSiswa);
+router.get('/siswa/:id', adminOnly, adminController.getSiswaById);
+router.post('/siswa', adminOnlyWithTahunAjaran, adminController.tambahSiswa);
+router.put('/siswa/:id', adminOnlyWithTahunAjaran, adminController.editSiswa);
 // --- Data Admin ---
-router.get('/admin', adminController.getAdmin);
-router.get('/admin/:id', adminController.getAdminById);
-router.post('/admin', adminController.tambahAdmin);
-router.put('/admin/:id', adminController.editAdmin);
-router.delete('/admin/:id', adminController.hapusAdmin);
+router.get('/admin', adminOnly, adminController.getAdmin);
+router.get('/admin/:id', adminOnly, adminController.getAdminById);
+router.post('/admin', adminOnly, adminController.tambahAdmin);
+router.put('/admin/:id', adminOnly, adminController.editAdmin);
+router.delete('/admin/:id', adminOnly, adminController.hapusAdmin);
 
 // --- Data Sekolah ---
-router.get('/sekolah', adminController.getSekolah);
-router.put('/sekolah', adminController.editSekolah);
-router.post('/sekolah/logo', uploadLogo.single('logo'), adminController.uploadLogo);
+router.get('/sekolah', adminOnly, adminController.getSekolah);
+router.put('/sekolah', adminOnly, adminController.editSekolah);
+router.post('/sekolah/logo', adminOnly, uploadLogo.single('logo'), adminController.uploadLogo);
 
 // --- Atur Kelas & Guru Kelas ---
 router.get('/kelas', adminController.getKelas);
@@ -88,10 +86,9 @@ router.get('/guru-kelas', adminController.getGuruKelasList);
 router.post('/kelas/:id/guru', adminController.setWaliKelas);
 
 // --- Tahun Ajaran & Semester ---
-router.get('/tahun-ajaran', adminController.getTahunAjaran);
-router.post('/tahun-ajaran', adminController.tambahTahunAjaran);
-router.put('/tahun-ajaran/:id', adminController.updateTahunAjaran);
-
+router.get('/tahun-ajaran', adminOnly, adminController.getTahunAjaran);
+router.post('/tahun-ajaran', adminOnly, adminController.tambahTahunAjaran);
+router.put('/tahun-ajaran/:id', adminOnly, adminController.updateTahunAjaran);
 
 
 module.exports = router;
