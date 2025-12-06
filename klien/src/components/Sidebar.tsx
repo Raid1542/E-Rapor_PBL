@@ -105,7 +105,6 @@ export default function ResponsiveSidebar() {
   ];
 
   const administrasiSubmenu = [
-    { name: 'Arsip Tahun Ajaran', url: '/admin/arsip_tahun_ajaran' },
     { name: 'Data Sekolah', url: '/admin/data_sekolah' },
     { name: 'Data Siswa', url: '/admin/data_siswa' },
     { name: 'Data Kelas', url: '/admin/data_kelas' },
