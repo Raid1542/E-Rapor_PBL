@@ -3,6 +3,7 @@ const userModel = require('../models/userModel');
 const guruModel = require('../models/guruModel');
 const sekolahModel = require('../models/sekolahModel');
 const tahunAjaranModel = require('../models/tahunAjaranModel');
+const siswaModel = require('../models/siswaModel');
 const kelasModel = require('../models/kelasModel');
 const path = require('path');
 const fs = require('fs');
@@ -123,33 +124,30 @@ const hapusAdmin = async (req, res) => {
 
 // ============== GURU ==============
 
-
 const getGuru = async (req, res) => {
     try {
-        // ✅ Ambil hanya user yang punya role 'guru kelas' atau 'guru bidang studi'
         const [rows] = await db.execute(`
-      SELECT 
-        u.id_user,
-        u.nama_lengkap,
-        u.email_sekolah,
-        u.status,
-        g.id_guru,
-        g.niy,
-        g.nuptk,
-        g.tempat_lahir,
-        g.tanggal_lahir,
-        g.jenis_kelamin,
-        g.alamat,
-        g.no_telepon,
-        ur.role
-      FROM user u
-      INNER JOIN guru g ON u.id_user = g.user_id
-      INNER JOIN user_role ur ON u.id_user = ur.id_user
-      WHERE ur.role IN ('guru kelas', 'guru bidang studi')  -- ✅ FILTER UTAMA
-      ORDER BY u.nama_lengkap ASC, ur.role ASC
-    `);
+            SELECT 
+                u.id_user,
+                u.nama_lengkap,
+                u.email_sekolah,
+                u.status,
+                g.id_guru,
+                g.niy,
+                g.nuptk,
+                g.tempat_lahir,
+                g.tanggal_lahir,
+                g.jenis_kelamin,
+                g.alamat,
+                g.no_telepon,
+                ur.role
+            FROM user u
+            INNER JOIN guru g ON u.id_user = g.user_id
+            INNER JOIN user_role ur ON u.id_user = ur.id_user
+            WHERE ur.role IN ('guru kelas', 'guru bidang studi')
+            ORDER BY u.nama_lengkap ASC, ur.role ASC
+        `);
 
-        // Kelompokkan role berdasarkan id_user
         const guruMap = new Map();
         for (const row of rows) {
             const {
@@ -184,7 +182,6 @@ const getGuru = async (req, res) => {
                     roles: []
                 });
             }
-
             if (role && !guruMap.get(id_user).roles.includes(role)) {
                 guruMap.get(id_user).roles.push(role);
             }
@@ -198,7 +195,6 @@ const getGuru = async (req, res) => {
     }
 };
 
-
 const getGuruById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -210,7 +206,6 @@ const getGuruById = async (req, res) => {
         res.status(500).json({ message: 'Gagal mengambil detail guru' });
     }
 };
-
 
 const tambahGuru = async (req, res) => {
     const { nama_lengkap, email_sekolah, roles = [], niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon } = req.body;
@@ -239,7 +234,6 @@ const tambahGuru = async (req, res) => {
     }
 };
 
-
 const editGuru = async (req, res) => {
     const { id } = req.params;
     const { email_sekolah, nama_lengkap, status, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, roles, password } = req.body;
@@ -254,7 +248,6 @@ const editGuru = async (req, res) => {
         res.status(500).json({ message: 'Gagal memperbarui data guru' });
     }
 };
-
 
 const importGuru = async (req, res) => {
     const connection = await db.getConnection();
@@ -320,6 +313,7 @@ const importGuru = async (req, res) => {
 };
 
 // ============== SEKOLAH ==============
+
 const getSekolah = async (req, res) => {
     try {
         const sekolah = await sekolahModel.getSekolah();
@@ -374,17 +368,13 @@ const uploadLogo = async (req, res) => {
 };
 
 // ============== SISWA ==============
-const siswaModel = require('../models/siswaModel');
 
-// Ambil daftar siswa berdasarkan tahun ajaran
 const getSiswa = async (req, res) => {
     try {
         const { tahun_ajaran_id } = req.query;
         if (!tahun_ajaran_id) {
             return res.status(400).json({ message: 'Tahun ajaran wajib dipilih' });
         }
-
-        // Pastikan tahun ajaran valid (opsional: cek di DB)
         const siswaList = await siswaModel.getSiswaByTahunAjaran(tahun_ajaran_id);
         res.json({ success: true, data: siswaList });
     } catch (err) {
@@ -393,11 +383,17 @@ const getSiswa = async (req, res) => {
     }
 };
 
-// Ambil detail siswa berdasarkan ID
 const getSiswaById = async (req, res) => {
     try {
         const { id } = req.params;
-        const siswa = await siswaModel.getSiswaById(id);
+        const [activeTA] = await db.execute(`
+            SELECT id_tahun_ajaran 
+            FROM tahun_ajaran 
+            WHERE status = 'aktif' 
+            LIMIT 1
+        `);
+        const taId = activeTA[0]?.id_tahun_ajaran;
+        const siswa = await siswaModel.getSiswaById(id, taId);
         if (!siswa) return res.status(404).json({ message: 'Siswa tidak ditemukan' });
         res.json({ success: true, data: siswa });
     } catch (err) {
@@ -406,7 +402,6 @@ const getSiswaById = async (req, res) => {
     }
 };
 
-// Tambah siswa baru
 const tambahSiswa = async (req, res) => {
     try {
         const {
@@ -421,20 +416,17 @@ const tambahSiswa = async (req, res) => {
             tahun_ajaran_id
         } = req.body;
 
-        // ✅ Validasi: hanya boleh di tahun ajaran AKTIF (dari middleware)
         if (tahun_ajaran_id != req.tahunAjaranAktifId) {
             return res.status(403).json({
                 message: 'Operasi hanya diperbolehkan di tahun ajaran aktif.'
             });
         }
 
-        // ✅ Validasi kelas_id harus integer
         const parsedKelasId = Number(kelas_id);
         if (isNaN(parsedKelasId) || parsedKelasId <= 0) {
             return res.status(400).json({ message: 'kelas_id tidak valid' });
         }
 
-        // Simpan ke model
         const siswaId = await siswaModel.createSiswa({
             nis,
             nisn,
@@ -454,7 +446,6 @@ const tambahSiswa = async (req, res) => {
     }
 };
 
-// Edit data siswa
 const editSiswa = async (req, res) => {
     try {
         const { id } = req.params;
@@ -470,22 +461,20 @@ const editSiswa = async (req, res) => {
             status
         } = req.body;
 
-        // ✅ Pastikan siswa ada dan terdaftar di tahun ajaran aktif
-        const [siswaRows] = await db.execute(`
-      SELECT sk.tahun_ajaran_id 
-      FROM siswa s
-      JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
-      WHERE s.id_siswa = ?
-    `, [id]);
-
-        if (siswaRows.length === 0) {
-            return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+        const tahunAjaranId = req.tahunAjaranAktifId;
+        if (!tahunAjaranId) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
         }
 
-        if (siswaRows[0].tahun_ajaran_id != req.tahunAjaranAktifId) {
-            return res.status(403).json({
-                message: 'Edit data siswa hanya diperbolehkan di tahun ajaran aktif.'
-            });
+        const [siswaRows] = await db.execute(`
+            SELECT sk.tahun_ajaran_id 
+            FROM siswa s
+            JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+            WHERE s.id_siswa = ? AND sk.tahun_ajaran_id = ?
+        `, [id, tahunAjaranId]);
+
+        if (siswaRows.length === 0) {
+            return res.status(404).json({ message: 'Siswa tidak ditemukan di tahun ajaran aktif' });
         }
 
         const parsedKelasId = Number(kelas_id);
@@ -503,7 +492,7 @@ const editSiswa = async (req, res) => {
             alamat: alamat || null,
             kelas_id: parsedKelasId,
             status: status || 'aktif'
-        });
+        }, tahunAjaranId);
 
         if (!updated) {
             return res.status(404).json({ message: 'Gagal memperbarui data siswa' });
@@ -516,7 +505,6 @@ const editSiswa = async (req, res) => {
     }
 };
 
-// Impor siswa dari Excel
 const importSiswa = async (req, res) => {
     const connection = await db.getConnection();
     try {
@@ -528,7 +516,6 @@ const importSiswa = async (req, res) => {
 
         if (data.length === 0) throw new Error('File Excel kosong');
 
-        // Ambil tahun ajaran aktif dari middleware
         const tahunAjaranId = req.tahunAjaranAktifId;
         if (!tahunAjaranId) {
             throw new Error('Tidak ada tahun ajaran aktif');
@@ -554,7 +541,6 @@ const importSiswa = async (req, res) => {
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal_lahir)) tanggal_lahir = null;
             }
 
-            // Konversi kelas_id string → id_kelas integer
             const [kelasRows] = await connection.execute(
                 'SELECT id_kelas FROM kelas WHERE nama_kelas = ?',
                 [String(row.kelas_id).trim()]
@@ -591,6 +577,7 @@ const importSiswa = async (req, res) => {
 };
 
 // ============== TAHUN AJARAN ==============
+
 const getTahunAjaran = async (req, res) => {
     try {
         const data = await tahunAjaranModel.getAllTahunAjaran();
@@ -639,38 +626,34 @@ const updateTahunAjaran = async (req, res) => {
 };
 
 // ============== KELAS ==============
+
 const getKelas = async (req, res) => {
     try {
-        const [activeTA] = await db.execute(`
-            SELECT id_tahun_ajaran 
-            FROM tahun_ajaran 
-            WHERE status = 'aktif' 
-            LIMIT 1
-        `);
-        const taId = activeTA[0]?.id_tahun_ajaran;
-        if (!taId) {
-            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        // ✅ Ambil tahun_ajaran_id dari query, bukan hanya aktif
+        const { tahun_ajaran_id } = req.query;
+        if (!tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Tahun ajaran wajib dipilih' });
         }
 
-        // ✅ Perbaikan: langsung JOIN ke user via user_id (tanpa tabel guru)
         const [rows] = await db.execute(`
-    SELECT 
-        k.id_kelas AS id,
-        k.nama_kelas,
-        k.fase,
-        COALESCE(u.nama_lengkap, '-') AS wali_kelas,
-        COALESCE(gk.user_id, NULL) AS wali_kelas_user_id,  -- ✅ Tambahkan ini
-        COUNT(sk.id_siswa) AS jumlah_siswa
-    FROM kelas k
-    LEFT JOIN guru_kelas gk 
-        ON k.id_kelas = gk.kelas_id AND gk.tahun_ajaran_id = ?
-    LEFT JOIN user u 
-        ON gk.user_id = u.id_user
-    LEFT JOIN siswa_kelas sk 
-        ON k.id_kelas = sk.kelas_id AND sk.tahun_ajaran_id = ?
-    GROUP BY k.id_kelas, k.nama_kelas, k.fase, u.nama_lengkap, gk.user_k
-    ORDER BY k.id_kelas ASC
-`, [taId, taId]);
+            SELECT 
+                k.id_kelas AS id,
+                k.nama_kelas,
+                k.fase,
+                COALESCE(u.nama_lengkap, '-') AS wali_kelas,
+                COUNT(sk.siswa_id) AS jumlah_siswa
+            FROM kelas k
+            INNER JOIN (
+                SELECT DISTINCT kelas_id FROM guru_kelas WHERE tahun_ajaran_id = ?
+                UNION
+                SELECT DISTINCT kelas_id FROM siswa_kelas WHERE tahun_ajaran_id = ?
+            ) active_classes ON k.id_kelas = active_classes.kelas_id
+            LEFT JOIN guru_kelas gk ON k.id_kelas = gk.kelas_id AND gk.tahun_ajaran_id = ?
+            LEFT JOIN user u ON gk.user_id = u.id_user
+            LEFT JOIN siswa_kelas sk ON k.id_kelas = sk.kelas_id AND sk.tahun_ajaran_id = ?
+            GROUP BY k.id_kelas, k.nama_kelas, k.fase, u.nama_lengkap
+            ORDER BY k.nama_kelas ASC
+        `, [tahun_ajaran_id, tahun_ajaran_id, tahun_ajaran_id, tahun_ajaran_id]);
 
         res.json({ success: true, data: rows });
     } catch (err) {
@@ -691,6 +674,23 @@ const getKelasById = async (req, res) => {
     }
 };
 
+const getKelasForDropdown = async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT 
+                id_kelas AS id,
+                nama_kelas AS nama,
+                fase
+            FROM kelas
+            ORDER BY nama_kelas ASC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Error get kelas for dropdown:', err);
+        res.status(500).json({ message: 'Gagal mengambil daftar kelas' });
+    }
+};
+
 const tambahKelas = async (req, res) => {
     try {
         const { nama_kelas, fase } = req.body;
@@ -698,9 +698,9 @@ const tambahKelas = async (req, res) => {
             return res.status(400).json({ message: 'Nama kelas dan fase wajib diisi' });
         }
         const existing = await kelasModel.getAll();
-        const isDuplicate = existing.some(k => k.fase === fase);
+        const isDuplicate = existing.some(k => k.nama_kelas === nama_kelas);
         if (isDuplicate) {
-            return res.status(400).json({ message: `Fase "${fase}" sudah digunakan` });
+            return res.status(400).json({ message: `Kelas dengan nama "${nama_kelas}" sudah ada` });
         }
         const id = await kelasModel.create({ nama_kelas, fase });
         res.status(201).json({ message: 'Kelas berhasil ditambahkan', id });
@@ -720,9 +720,9 @@ const editKelas = async (req, res) => {
         const existingKelas = await kelasModel.getById(id);
         if (!existingKelas) return res.status(404).json({ message: 'Kelas tidak ditemukan' });
         const allKelas = await kelasModel.getAll();
-        const isDuplicate = allKelas.some(k => k.fase === fase && k.id_kelas !== Number(id));
+        const isDuplicate = allKelas.some(k => k.nama_kelas === nama_kelas && k.id_kelas !== Number(id));
         if (isDuplicate) {
-            return res.status(400).json({ message: `Fase "${fase}" sudah digunakan oleh kelas lain` });
+            return res.status(400).json({ message: `Nama kelas "${nama_kelas}" sudah digunakan` });
         }
         const success = await kelasModel.update(id, { nama_kelas, fase });
         if (!success) return res.status(404).json({ message: 'Gagal memperbarui kelas' });
@@ -733,21 +733,8 @@ const editKelas = async (req, res) => {
     }
 };
 
-const hapusKelas = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const kelas = await kelasModel.getById(id);
-        if (!kelas) return res.status(404).json({ message: 'Kelas tidak ditemukan' });
-        const success = await kelasModel.remove(id);
-        if (!success) return res.status(404).json({ message: 'Gagal menghapus kelas' });
-        res.json({ message: 'Kelas berhasil dihapus' });
-    } catch (err) {
-        console.error('Error hapus kelas:', err);
-        res.status(500).json({ message: 'Gagal menghapus kelas' });
-    }
-};
+// ============== GURU KELAS ==============
 
-// ✅ Perbaikan: kirim user_id, bukan id_guru
 const getGuruKelasList = async (req, res) => {
     try {
         const [rows] = await db.execute(`
@@ -767,11 +754,10 @@ const getGuruKelasList = async (req, res) => {
     }
 };
 
-// ✅ Perbaikan: simpan user_id ke guru_kelas
 const setWaliKelas = async (req, res) => {
     try {
         const { id } = req.params;
-        const { user_id } = req.body; // ✅ terima user_id
+        const { user_id } = req.body;
 
         if (!user_id) {
             return res.status(400).json({ message: 'User ID wajib diisi' });
@@ -788,13 +774,11 @@ const setWaliKelas = async (req, res) => {
             return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
         }
 
-        // Hapus lama
         await db.execute(`
             DELETE FROM guru_kelas 
             WHERE kelas_id = ? AND tahun_ajaran_id = ?
         `, [id, taId]);
 
-        // Simpan user_id langsung
         await db.execute(`
             INSERT INTO guru_kelas (user_id, kelas_id, tahun_ajaran_id) 
             VALUES (?, ?, ?)
@@ -813,6 +797,6 @@ module.exports = {
     getSekolah, editSekolah, uploadLogo,
     getSiswa, getSiswaById, tambahSiswa, editSiswa, importSiswa,
     getTahunAjaran, tambahTahunAjaran, updateTahunAjaran,
-    getKelas, getKelasById, tambahKelas, editKelas, hapusKelas,
+    getKelas, getKelasById, tambahKelas, editKelas, getKelasForDropdown,
     getGuruKelasList, setWaliKelas
 };

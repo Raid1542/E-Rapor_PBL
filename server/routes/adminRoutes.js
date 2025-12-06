@@ -77,13 +77,14 @@ router.put('/sekolah', adminOnly, adminController.editSekolah);
 router.post('/sekolah/logo', adminOnly, uploadLogo.single('logo'), adminController.uploadLogo);
 
 // --- Atur Kelas & Guru Kelas ---
-router.get('/kelas', adminController.getKelas);
-router.get('/kelas/:id', adminController.getKelasById);
-router.post('/kelas', adminController.tambahKelas);
-router.put('/kelas/:id', adminController.editKelas);
-router.delete('/kelas/:id', adminController.hapusKelas);
-router.get('/guru-kelas', adminController.getGuruKelasList);
-router.post('/kelas/:id/guru', adminController.setWaliKelas);
+router.get('/kelas', adminOnly, adminController.getKelas);
+router.get('/kelas/:id', adminOnly, adminController.getKelasById);
+router.post('/kelas', adminOnlyWithTahunAjaran, adminController.tambahKelas);
+router.put('/kelas/:id', adminOnlyWithTahunAjaran, adminController.editKelas);
+router.get('/dropdown', adminOnly, adminController.getKelasForDropdown);
+// Daftar guru yang bisa jadi wali kelas
+router.get('/guru-kelas', adminOnly, adminController.getGuruKelasList);
+router.post('/kelas/:id/guru', adminOnlyWithTahunAjaran, adminController.setWaliKelas);
 
 // --- Tahun Ajaran & Semester ---
 router.get('/tahun-ajaran', adminOnly, adminController.getTahunAjaran);

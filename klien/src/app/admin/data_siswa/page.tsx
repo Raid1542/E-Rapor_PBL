@@ -23,6 +23,12 @@ interface TahunAjaran {
   is_aktif: boolean;
 }
 
+interface Kelas {
+  id: number;
+  nama: string;
+  fase: string;
+}
+
 interface FormDataType {
   nama: string;
   kelas: string;
@@ -55,15 +61,8 @@ export default function DataSiswaPage() {
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
   const [selectedTahunAjaranAktif, setSelectedTahunAjaranAktif] = useState<boolean>(false);
-
-  const kelasList = [
-    { id: 1, nama: '1A' }, { id: 2, nama: '1B' }, { id: 3, nama: '1C' }, { id: 4, nama: '1D' }, { id: 5, nama: '1E' }, { id: 6, nama: '1F' },
-    { id: 7, nama: '2A' }, { id: 8, nama: '2B' }, { id: 9, nama: '2C' }, { id: 10, nama: '2D' }, { id: 11, nama: '2E' }, { id: 12, nama: '2F' },
-    { id: 13, nama: '3A' }, { id: 14, nama: '3B' }, { id: 15, nama: '3C' }, { id: 16, nama: '3D' }, { id: 17, nama: '3E' }, { id: 18, nama: '3F' },
-    { id: 19, nama: '4A' }, { id: 20, nama: '4B' }, { id: 21, nama: '4C' }, { id: 22, nama: '4D' }, { id: 23, nama: '4E' }, { id: 24, nama: '4F' },
-    { id: 25, nama: '5A' }, { id: 26, nama: '5B' }, { id: 27, nama: '5C' }, { id: 28, nama: '5D' }, { id: 29, nama: '5E' }, { id: 30, nama: '5F' },
-    { id: 31, nama: '6A' }, { id: 32, nama: '6B' }, { id: 33, nama: '6C' }, { id: 34, nama: '6D' }, { id: 35, nama: '6E' }, { id: 36, nama: '6F' }
-  ];
+  const [kelasList, setKelasList] = useState<{ id: number; nama: string; fase: string }[]>([]);
+  const [kelasLoading, setKelasLoading] = useState(true);
 
   // === Helper: Format Tanggal Indonesia ===
   const formatTanggalIndo = (dateString: string | null): string => {
@@ -90,13 +89,11 @@ export default function DataSiswaPage() {
     jenisKelamin: '',
     status: ''
   });
-
   const resetFilter = () => {
     setFilterValues({ kelas: '', jenisKelamin: '', status: '' });
     setSearchQuery('');
     setCurrentPage(1);
   };
-
   const closeFilterModal = () => {
     setFilterClosing(true);
     setTimeout(() => {
@@ -132,6 +129,35 @@ export default function DataSiswaPage() {
       alert('Gagal terhubung ke server');
     }
   };
+
+  // ✅ BARU: Fetch daftar kelas dari API
+ const fetchKelasDropdown = async () => {
+    setKelasLoading(true); // ✅ Mulai loading
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setKelasLoading(false);
+            return;
+        }
+        const res = await fetch("http://localhost:5000/api/admin/dropdown", {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            setKelasList(data.data);
+        }
+    } catch (err) {
+        console.error('Error fetch kelas dropdown:', err);
+    } finally {
+        setKelasLoading(false); // ✅ Selesai loading
+    }
+};
+
+// Panggil di useEffect
+useEffect(() => {
+    fetchTahunAjaran();
+    fetchKelasDropdown(); // ✅ Tambahkan ini
+}, []);
 
   // === Fetch Data Siswa ===
   const fetchSiswa = async (tahunAjaranId: number) => {
@@ -171,10 +197,6 @@ export default function DataSiswaPage() {
     }
   };
 
-  useEffect(() => {
-    fetchTahunAjaran();
-  }, []);
-
   // === Form & Validation ===
   const [formData, setFormData] = useState<FormDataType>({
     nama: '',
@@ -198,16 +220,18 @@ export default function DataSiswaPage() {
 
   const handleEdit = (siswa: Siswa) => {
     setEditId(siswa.id);
+    // ✅ Cari kelas_id berdasarkan nama_kelas
+    const kelasItem = kelasList.find(k => k.nama === siswa.kelas);
     setFormData({
       nama: siswa.nama,
-      kelas: String(kelasList.find(k => k.nama === siswa.kelas)?.id || ''),
+      kelas: kelasItem ? String(kelasItem.id) : '',
       nis: siswa.nis,
       nisn: siswa.nisn,
       tempatLahir: siswa.tempatLahir || '',
       tanggalLahir: siswa.tanggalLahir || '',
       jenisKelamin: siswa.jenisKelamin,
       alamat: siswa.alamat || '',
-      fase: siswa.fase || '',
+      fase: kelasItem?.fase || siswa.fase || '',
       statusSiswa: siswa.statusSiswa || 'aktif',
       confirmData: false
     });
@@ -215,21 +239,20 @@ export default function DataSiswaPage() {
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (name === 'kelas') {
-      const fase = getFaseFromKelas(value);
-      setFormData(prev => ({ ...prev, fase }));
+  const { name, value } = e.target;
+  setFormData(prev => ({ ...prev, [name]: value }));
+  if (name === 'kelas') {
+    // Cari kelas berdasarkan ID (karena value = kls.id)
+    const selectedKelas = kelasList.find(k => k.id === Number(value));
+    if (selectedKelas) {
+      // Jika ditemukan, ambil fasenya
+      setFormData(prev => ({ ...prev, fase: selectedKelas.fase }));
+    } else {
+      // Jika tidak ditemukan, kosongkan fase
+      setFormData(prev => ({ ...prev, fase: '' }));
     }
-  };
-
-  const getFaseFromKelas = (kelasId: string): string => {
-    const id = Number(kelasId);
-    if (id >= 1 && id <= 12) return 'A';
-    if (id >= 13 && id <= 24) return 'B';
-    if (id >= 25 && id <= 36) return 'C';
-    return '';
-  };
+  }
+};
 
   const validate = (isEdit: boolean): boolean => {
     const newErrors: Record<string, string> = {};
@@ -291,7 +314,7 @@ export default function DataSiswaPage() {
     if (!originalData) return;
     const hasChanged =
       formData.nama !== originalData.nama ||
-      formData.kelas !== String(kelasList.find(k => k.nama === originalData.kelas)?.id) ||
+      formData.kelas !== String(kelasList.find(k => k.nama === originalData.kelas)?.id || '') ||
       formData.nis !== originalData.nis ||
       formData.nisn !== originalData.nisn ||
       formData.tempatLahir !== (originalData.tempatLahir || '') ||
@@ -307,6 +330,10 @@ export default function DataSiswaPage() {
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Sesi login telah habis. Silakan login ulang.');
+      return;
+    }
+    if (selectedTahunAjaranId === null) {
+      alert('Terjadi kesalahan: Tahun ajaran tidak dipilih.');
       return;
     }
     try {
@@ -484,7 +511,7 @@ export default function DataSiswaPage() {
               >
                 <option value="">-- Pilih --</option>
                 {kelasList.map(kls => (
-                  <option key={kls.id} value={kls.id}>Kelas {kls.nama}</option> 
+                  <option key={kls.id} value={kls.nama}>Kelas {kls.nama}</option> 
                 ))}
               </select>
               {errors.kelas && <p className="text-red-500 text-xs mt-1">{errors.kelas}</p>}
@@ -630,8 +657,11 @@ export default function DataSiswaPage() {
     </div>
   );
 
+  if ((showTambah || showEdit) && kelasLoading) {
+    return <div className="flex-1 p-6">loading kelas...</div>
+  }
   if (showTambah) return renderForm(false);
-  if (showEdit) return renderForm(true);
+  if (showEdit && kelasList.length > 0) return renderForm(true);
 
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
@@ -673,17 +703,13 @@ export default function DataSiswaPage() {
               })}
             </select>
           </div>
-
           {selectedTahunAjaranId === null ? (
-            <div className="mt-8 text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+            <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
               <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
-              <p className="text-gray-500 mt-2">Data siswa akan ditampilkan setelah Anda memilih tahun ajaran yang diinginkan.</p>
             </div>
           ) : (
             <>
-              {/* ✅ LAYOUT BARU SESUAI PERMINTAAN ✅ */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                {/* KIRI: Tombol Tambah Siswa */}
                 <div>
                   {selectedTahunAjaranAktif && (
                     <button
@@ -695,10 +721,7 @@ export default function DataSiswaPage() {
                     </button>
                   )}
                 </div>
-
-                {/* KANAN: Pencarian + Filter + Import (Import paling kanan) */}
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Tampilkan X data */}
                   <div className="flex items-center gap-2 whitespace-nowrap">
                     <span className="text-gray-700 text-sm">Tampilkan</span>
                     <select
@@ -716,8 +739,6 @@ export default function DataSiswaPage() {
                     </select>
                     <span className="text-gray-700 text-sm">data</span>
                   </div>
-
-                  {/* Pencarian */}
                   <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <Search className="w-4 h-4 text-gray-400" />
@@ -742,8 +763,6 @@ export default function DataSiswaPage() {
                       </button>
                     )}
                   </div>
-
-                  {/* Filter & Import (Import paling kanan) */}
                   {selectedTahunAjaranAktif && (
                     <>
                       <button
@@ -768,8 +787,6 @@ export default function DataSiswaPage() {
                   )}
                 </div>
               </div>
-
-              {/* Tabel Data */}
               <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                 <table className="w-full min-w-[600px] table-auto text-sm">
                   <thead>
@@ -844,8 +861,6 @@ export default function DataSiswaPage() {
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination */}
               {filteredSiswa.length > 0 && (
                 <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
                   <div className="text-sm text-gray-600">
@@ -861,7 +876,9 @@ export default function DataSiswaPage() {
         </div>
       </div>
 
-      {/* === MODAL === */}
+      {/* Modal Detail, Import, Filter — tetap sama seperti sebelumnya */}
+      {/* ... (kode modal tetap dipertahankan, tidak diubah) ... */}
+      
       {/* Modal Detail */}
       {showDetail && selectedSiswa && (
         <div

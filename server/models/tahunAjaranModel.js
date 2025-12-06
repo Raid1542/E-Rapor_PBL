@@ -3,10 +3,19 @@ const db = require('../config/db');
 // Ambil SEMUA data (untuk ditampilkan di tabel)
 const getAllTahunAjaran = async () => {
     const [rows] = await db.execute(`
-    SELECT id_tahun_ajaran, tahun_ajaran, semester, 
-    tanggal_pembagian_rapor, status
-    FROM tahun_ajaran
-    ORDER BY FIELD(semester, 'Ganjil', 'Genap'), tahun_ajaran DESC
+        SELECT 
+            id_tahun_ajaran,
+            tahun_ajaran,
+            semester,
+            status,
+            tanggal_pembagian_rapor
+        FROM tahun_ajaran
+        ORDER BY 
+            CASE 
+                WHEN status = 'aktif' THEN 0 
+                ELSE 1 
+            END,
+            id_tahun_ajaran DESC
     `);
     return rows;
 };
