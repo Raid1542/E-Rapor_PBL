@@ -5,6 +5,7 @@ const sekolahModel = require('../models/sekolahModel');
 const tahunAjaranModel = require('../models/tahunAjaranModel');
 const siswaModel = require('../models/siswaModel');
 const kelasModel = require('../models/kelasModel');
+const mapelModel = require('../models/mapelModel');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
@@ -791,6 +792,196 @@ const setWaliKelas = async (req, res) => {
     }
 };
 
+// ============== MATA PELAJARAN ==============
+
+const getMataPelajaran = async (req, res) => {
+    try {
+        const { tahun_ajaran_id } = req.query;
+        if (!tahun_ajaran_id || isNaN(Number(tahun_ajaran_id))) {
+            return res.status(400).json({ message: 'tahun_ajaran_id wajib diisi dan harus angka' });
+        }
+
+        const rows = await mapelModel.getAllByTahunAjaran(Number(tahun_ajaran_id));
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Error get mata pelajaran:', err);
+        res.status(500).json({ message: 'Gagal mengambil data mata pelajaran' });
+    }
+};
+
+const getMataPelajaranById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idNum = Number(id);
+        if (isNaN(idNum)) {
+            return res.status(400).json({ message: 'ID tidak valid' });
+        }
+
+        const rows = await mapelModel.getById(idNum);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Mata pelajaran tidak ditemukan' });
+        }
+        res.json({ success: true, data: rows[0] });
+    } catch (err) {
+        console.error('Error get mata pelajaran by ID:', err);
+        res.status(500).json({ message: 'Gagal mengambil detail mata pelajaran' });
+    }
+};
+
+const tambahMataPelajaran = async (req, res) => {
+    try {
+        console.log('=== EDIT MATA PELAJARAN ===');
+        console.log('Req Body:', req.body);
+        console.log('Req Params:', req.params);
+
+        const { id } = req.params;
+        const idNum = Number(id);
+        if (isNaN(idNum)) {
+            return res.status(400).json({ message: 'ID tidak valid' });
+        }
+
+
+        const { kode_mapel, nama_mapel, jenis, kurikulum, tahun_ajaran_id } = req.body;
+
+        if (!kode_mapel || !nama_mapel || !jenis || !kurikulum || !tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Semua field wajib diisi' });
+        }
+
+        const allowedJenis = ['wajib', 'bidang studi'];
+        if (!allowedJenis.includes(jenis)) {
+            return res.status(400).json({ message: 'Jenis tidak valid' });
+        }
+
+        const taId = Number(tahun_ajaran_id);
+        if (isNaN(taId)) {
+            return res.status(400).json({ message: 'tahun_ajaran_id harus angka' });
+        }
+
+        const taValid = await mapelModel.isTahunAjaranValid(taId);
+        if (!taValid) {
+            return res.status(400).json({ message: 'Tahun ajaran tidak valid' });
+        }
+
+        const isDuplicate = await mapelModel.isKodeMapelExist(kode_mapel.trim().toUpperCase(), taId);
+        if (isDuplicate) {
+            return res.status(400).json({ message: 'Kode mapel sudah digunakan di tahun ajaran ini' });
+        }
+
+        // ✅ TANPA DESTRUCTURING
+        const result = await mapelModel.create({
+            kode_mapel: kode_mapel.trim().toUpperCase(),
+            nama_mapel: nama_mapel.trim(),
+            jenis,
+            kurikulum: kurikulum.trim(),
+            tahun_ajaran_id: taId
+        });
+
+        res.status(201).json({
+            message: 'Mata pelajaran berhasil ditambahkan',
+            id: result.insertId
+        });
+
+    } catch (err) {
+        console.error('Error tambah mata pelajaran:', err);
+        res.status(500).json({ message: 'Gagal menambah mata pelajaran' });
+    }
+};
+
+const editMataPelajaran = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idNum = Number(id);
+
+        if (isNaN(idNum)) {
+            return res.status(400).json({ message: 'ID tidak valid' });
+        }
+
+        const { kode_mapel, nama_mapel, jenis, kurikulum } = req.body;
+
+        // ✅ Trim semua input
+        const trimmedKodeMapel = (kode_mapel || '').toString().trim();
+        const trimmedNamaMapel = (nama_mapel || '').toString().trim();
+        const trimmedJenis = (jenis || '').toString().trim();
+        const trimmedKurikulum = (kurikulum || '').toString().trim();
+
+        // ✅ Validasi field wajib
+        if (!trimmedKodeMapel || !trimmedNamaMapel || !trimmedJenis || !trimmedKurikulum) {
+            return res.status(400).json({ message: 'Semua field wajib diisi' });
+        }
+
+        // ✅ Validasi jenis
+        const allowedJenis = ['wajib', 'bidang studi'];
+        if (!allowedJenis.includes(trimmedJenis)) {
+            return res.status(400).json({ message: 'Jenis tidak valid. Harus "wajib" atau "bidang studi".' });
+        }
+
+        // ✅ Ambil data lama untuk dapatkan tahun_ajaran_id
+        const [oldMapel] = await db.execute(
+            'SELECT tahun_ajaran_id FROM mata_pelajaran WHERE id_mata_pelajaran = ?',
+            [idNum]
+        );
+
+        if (oldMapel.length === 0) {
+            return res.status(404).json({ message: 'Mata pelajaran tidak ditemukan' });
+        }
+
+        const taId = oldMapel[0].tahun_ajaran_id;
+
+        // ✅ Cek duplikat (abaikan ID saat ini)
+        const isDuplicate = await mapelModel.isKodeMapelExist(trimmedKodeMapel.toUpperCase(), taId, idNum);
+        if (isDuplicate) {
+            return res.status(400).json({ message: 'Kode mapel sudah digunakan di tahun ajaran ini' });
+        }
+
+        // ✅ Update data
+        const result = await mapelModel.update(idNum, {
+            kode_mapel: trimmedKodeMapel.toUpperCase(),
+            nama_mapel: trimmedNamaMapel,
+            jenis: trimmedJenis,
+            kurikulum: trimmedKurikulum,
+            tahun_ajaran_id: taId  // ✅ Gunakan tahun_ajaran_id dari data lama
+        });
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Mata pelajaran tidak ditemukan' });
+        }
+
+        res.json({ message: 'Data mata pelajaran berhasil diperbarui' });
+    } catch (err) {
+        console.error('Error edit mata pelajaran:', err);
+        res.status(500).json({ message: 'Gagal memperbarui data mata pelajaran' });
+    }
+};
+
+const hapusMataPelajaran = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idNum = Number(id);
+        if (isNaN(idNum)) {
+            return res.status(400).json({ message: 'ID tidak valid' });
+        }
+
+        // Cek apakah masih dipakai di tabel nilai
+        const [nilaiRows] = await db.execute(
+            'SELECT id_nilai FROM nilai WHERE mapel_id = ? LIMIT 1',
+            [idNum]
+        );
+        if (nilaiRows.length > 0) {
+            return res.status(400).json({ message: 'Tidak bisa dihapus: mata pelajaran ini sudah digunakan di data nilai' });
+        }
+
+        const result = await mapelModel.delete(idNum);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Mata pelajaran tidak ditemukan' });
+        }
+
+        res.json({ message: 'Mata pelajaran berhasil dihapus' });
+    } catch (err) {
+        console.error('Error hapus mata pelajaran:', err);
+        res.status(500).json({ message: 'Gagal menghapus mata pelajaran' });
+    }
+};
+
 module.exports = {
     getAdmin, getAdminById, tambahAdmin, editAdmin, hapusAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
@@ -798,5 +989,6 @@ module.exports = {
     getSiswa, getSiswaById, tambahSiswa, editSiswa, importSiswa,
     getTahunAjaran, tambahTahunAjaran, updateTahunAjaran,
     getKelas, getKelasById, tambahKelas, editKelas, getKelasForDropdown,
-    getGuruKelasList, setWaliKelas
+    getGuruKelasList, setWaliKelas,
+    getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran
 };

@@ -347,7 +347,7 @@ export default function DataKelasPage() {
           {/* Dropdown Tahun Ajaran */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Pilih Tahun Ajaran
+              Tahun Ajaran
             </label>
             <select
               value={selectedTahunAjaranId ?? ''}
@@ -457,14 +457,18 @@ export default function DataKelasPage() {
                           <td className="px-4 py-3 text-center align-middle">{kelas.fase}</td>
                           <td className="px-4 py-3 text-center align-middle">{kelas.jumlah_siswa}</td>
                           <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
-                            <button
-                              onClick={() => handleEdit(kelas)}
-                              className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
-                            >
-                              <Pencil size={16} />
-                              Edit
-                            </button>
-                          </td>
+  {selectedTahunAjaranAktif ? (
+    <button
+      onClick={() => handleEdit(kelas)}
+      className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
+    >
+      <Pencil size={16} />
+      Edit
+    </button>
+  ) : (
+    <span className="text-gray-400 text-sm">-</span>
+  )}
+</td>
                         </tr>
                       ))
                     )}

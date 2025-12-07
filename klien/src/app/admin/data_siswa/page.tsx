@@ -131,33 +131,33 @@ export default function DataSiswaPage() {
   };
 
   // ✅ BARU: Fetch daftar kelas dari API
- const fetchKelasDropdown = async () => {
+  const fetchKelasDropdown = async () => {
     setKelasLoading(true); // ✅ Mulai loading
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setKelasLoading(false);
-            return;
-        }
-        const res = await fetch("http://localhost:5000/api/admin/dropdown", {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-            setKelasList(data.data);
-        }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setKelasLoading(false);
+        return;
+      }
+      const res = await fetch("http://localhost:5000/api/admin/dropdown", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setKelasList(data.data);
+      }
     } catch (err) {
-        console.error('Error fetch kelas dropdown:', err);
+      console.error('Error fetch kelas dropdown:', err);
     } finally {
-        setKelasLoading(false); // ✅ Selesai loading
+      setKelasLoading(false); // ✅ Selesai loading
     }
-};
+  };
 
-// Panggil di useEffect
-useEffect(() => {
+  // Panggil di useEffect
+  useEffect(() => {
     fetchTahunAjaran();
     fetchKelasDropdown(); // ✅ Tambahkan ini
-}, []);
+  }, []);
 
   // === Fetch Data Siswa ===
   const fetchSiswa = async (tahunAjaranId: number) => {
@@ -239,20 +239,14 @@ useEffect(() => {
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-  const { name, value } = e.target;
-  setFormData(prev => ({ ...prev, [name]: value }));
-  if (name === 'kelas') {
-    // Cari kelas berdasarkan ID (karena value = kls.id)
-    const selectedKelas = kelasList.find(k => k.id === Number(value));
-    if (selectedKelas) {
-      // Jika ditemukan, ambil fasenya
-      setFormData(prev => ({ ...prev, fase: selectedKelas.fase }));
-    } else {
-      // Jika tidak ditemukan, kosongkan fase
-      setFormData(prev => ({ ...prev, fase: '' }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'kelas') {
+      // ✅ Ambil fase dari kelasList berdasarkan ID
+      const selectedKelas = kelasList.find(k => k.id === Number(value));
+      setFormData(prev => ({ ...prev, fase: selectedKelas?.fase || '' }));
     }
-  }
-};
+  };
 
   const validate = (isEdit: boolean): boolean => {
     const newErrors: Record<string, string> = {};
@@ -511,7 +505,7 @@ useEffect(() => {
               >
                 <option value="">-- Pilih --</option>
                 {kelasList.map(kls => (
-                  <option key={kls.id} value={kls.nama}>Kelas {kls.nama}</option> 
+                  <option key={kls.id} value={kls.id}>{kls.nama}</option>
                 ))}
               </select>
               {errors.kelas && <p className="text-red-500 text-xs mt-1">{errors.kelas}</p>}
@@ -671,7 +665,7 @@ useEffect(() => {
           {/* Dropdown Tahun Ajaran */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Pilih Tahun Ajaran
+              Tahun Ajaran
             </label>
             <select
               value={selectedTahunAjaranId ?? ''}
@@ -876,9 +870,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Modal Detail, Import, Filter — tetap sama seperti sebelumnya */}
-      {/* ... (kode modal tetap dipertahankan, tidak diubah) ... */}
-      
       {/* Modal Detail */}
       {showDetail && selectedSiswa && (
         <div

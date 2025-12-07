@@ -91,5 +91,12 @@ router.get('/tahun-ajaran', adminOnly, adminController.getTahunAjaran);
 router.post('/tahun-ajaran', adminOnly, adminController.tambahTahunAjaran);
 router.put('/tahun-ajaran/:id', adminOnly, adminController.updateTahunAjaran);
 
+// --- Mata Pelajaran ---
+router.get('/mata-pelajaran', adminOnly, adminController.getMataPelajaran);
+router.get('/mata-pelajaran/:id', adminOnly, adminController.getMataPelajaranById);
+router.post('/mata-pelajaran', adminOnly, adminController.tambahMataPelajaran);
+router.put('/mata-pelajaran/:id', adminOnly, adminController.editMataPelajaran);
+router.delete('/mata-pelajaran/:id', adminOnly, adminController.hapusMataPelajaran);
+
 
 module.exports = router;
