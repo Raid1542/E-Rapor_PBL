@@ -271,7 +271,7 @@ export default function DataKelasPage() {
                 name="nama_kelas"
                 value={formData.nama_kelas}
                 onChange={handleInputChange}
-                placeholder="Contoh: 1A, 1G, 2B, dst"
+                placeholder="Contoh: 1 A"
                 className={`w-full border ${errors.nama_kelas ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
               />
               {errors.nama_kelas && <p className="text-red-500 text-xs mt-1">{errors.nama_kelas}</p>}
@@ -285,7 +285,7 @@ export default function DataKelasPage() {
                 name="fase"
                 value={formData.fase}
                 onChange={handleInputChange}
-                placeholder="Contoh: A, B, C"
+                placeholder="Contoh: A"
                 className={`w-full border ${errors.fase ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
               />
               {errors.fase && <p className="text-red-500 text-xs mt-1">{errors.fase}</p>}

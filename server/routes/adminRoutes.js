@@ -105,9 +105,9 @@ router.put('/pembelajaran/:id', adminOnly, adminController.editPembelajaran);
 router.delete('/pembelajaran/:id', adminOnly, adminController.hapusPembelajaran);
 
 // --- Dropdown untuk form (opsional tapi disarankan) ---
-router.get('/pembelajaran/dropdown/guru', adminOnly, adminController.getGuruBidangStudiForDropdown);
-router.get('/pembelajaran/dropdown/mapel', adminOnly, adminController.getMapelForDropdown);
-router.get('/pembelajaran/dropdown/tahun-ajaran', adminOnly, adminController.getTahunAjaranForDropdown);
+router.get('/dropdown/guru', adminOnly, adminController.getGuruBidangStudiForDropdown);
+router.get('/dropdown/mapel', adminOnly, adminController.getMapelForDropdown);
+router.get('/dropdown/tahun-ajaran', adminOnly, adminController.getTahunAjaranForDropdown);
 
 
 module.exports = router;

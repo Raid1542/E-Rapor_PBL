@@ -6,6 +6,7 @@ const tahunAjaranModel = require('../models/tahunAjaranModel');
 const siswaModel = require('../models/siswaModel');
 const kelasModel = require('../models/kelasModel');
 const mapelModel = require('../models/mapelModel');
+const pembelajaranModel = require('../models/pembelajaranModel');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
@@ -830,16 +831,9 @@ const getMataPelajaranById = async (req, res) => {
 
 const tambahMataPelajaran = async (req, res) => {
     try {
-        console.log('=== EDIT MATA PELAJARAN ===');
+        console.log('=== Tambah Mata Pelajaran ===');
         console.log('Req Body:', req.body);
         console.log('Req Params:', req.params);
-
-        const { id } = req.params;
-        const idNum = Number(id);
-        if (isNaN(idNum)) {
-            return res.status(400).json({ message: 'ID tidak valid' });
-        }
-
 
         const { kode_mapel, nama_mapel, jenis, kurikulum, tahun_ajaran_id } = req.body;
 
@@ -939,7 +933,7 @@ const editMataPelajaran = async (req, res) => {
             nama_mapel: trimmedNamaMapel,
             jenis: trimmedJenis,
             kurikulum: trimmedKurikulum,
-            tahun_ajaran_id: taId  
+            tahun_ajaran_id: taId
         });
 
         if (result.affectedRows === 0) {
@@ -1135,13 +1129,8 @@ const hapusPembelajaran = async (req, res) => {
 
 const getGuruBidangStudiForDropdown = async (req, res) => {
     try {
-        pembelajaranModel.getGuruBidangStudiList((err, results) => {
-            if (err) {
-                console.error('Error get guru bidang studi dropdown:', err);
-                return res.status(500).json({ message: 'Gagal mengambil daftar guru bidang studi' });
-            }
-            res.json({ success: true, data: results });
-        });
+        const results = await pembelajaranModel.getGuruBidangStudiList();
+        res.json({ success: true, data: results });
     } catch (err) {
         console.error('Error get guru bidang studi dropdown:', err);
         res.status(500).json({ message: 'Gagal mengambil daftar guru bidang studi' });

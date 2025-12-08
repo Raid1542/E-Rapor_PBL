@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, Trash2, Plus, Search, Upload, X, Filter } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, X } from 'lucide-react';
 
 // ====== TYPES ======
 interface Pembelajaran {
@@ -92,7 +92,7 @@ export default function DataPembelajaranPage() {
     setGuruLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch("http://localhost:5000/api/admin/pembelajaran/dropdown/guru", {
+      const res = await fetch("http://localhost:5000/api/admin/dropdown/guru", {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -110,7 +110,7 @@ export default function DataPembelajaranPage() {
     setMapelLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/pembelajaran/dropdown/mapel?tahun_ajaran_id=${taId}`, {
+      const res = await fetch(`http://localhost:5000/api/admin/dropdown/mapel?tahun_ajaran_id=${taId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -175,12 +175,13 @@ export default function DataPembelajaranPage() {
     fetchKelasDropdown();
   }, []);
 
+  // ✅ PANGGIL DROPDOWN GURU & MAPEL SAAT MODAL DIBUKA ATAU TAHUN AJARAN BERUBAH
   useEffect(() => {
-    if (selectedTahunAjaranId) {
+    if ((showTambah || showEdit) && selectedTahunAjaranId) {
+      fetchGuruDropdown();
       fetchMapelDropdown(selectedTahunAjaranId);
-      fetchData(selectedTahunAjaranId);
     }
-  }, [selectedTahunAjaranId]);
+  }, [showTambah, showEdit, selectedTahunAjaranId]);
 
   // ====== EVENT HANDLERS ======
   const handleInputChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -306,8 +307,9 @@ export default function DataPembelajaranPage() {
                 value={formData.guru_id}
                 onChange={handleInputChange}
                 className={`w-full border ${errors.guru_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2`}
+                disabled={guruLoading}
               >
-                <option value="">-- Pilih --</option>
+                <option value="">-- {guruLoading ? 'Memuat...' : 'Pilih'} --</option>
                 {guruList.map(g => (
                   <option key={g.id} value={g.id}>{g.nama}</option>
                 ))}
@@ -322,8 +324,9 @@ export default function DataPembelajaranPage() {
                 value={formData.mapel_id}
                 onChange={handleInputChange}
                 className={`w-full border ${errors.mapel_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2`}
+                disabled={mapelLoading}
               >
-                <option value="">-- Pilih --</option>
+                <option value="">-- {mapelLoading ? 'Memuat...' : 'Pilih'} --</option>
                 {mapelList.map(m => (
                   <option key={m.id} value={m.id}>{m.nama}</option>
                 ))}
@@ -390,7 +393,7 @@ export default function DataPembelajaranPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Pembelajaran</h1>
 
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          {/* Dropdown Tahun Ajaran - Versi yang disesuaikan */}
+          {/* Dropdown Tahun Ajaran */}
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2">Tahun Ajaran</label>
             <select
@@ -412,7 +415,6 @@ export default function DataPembelajaranPage() {
             </select>
           </div>
 
-          {/* Pesan "Silakan pilih Tahun Ajaran terlebih dahulu" - Versi yang disesuaikan */}
           {selectedTahunAjaranId === null ? (
             <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
               <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
@@ -474,9 +476,9 @@ export default function DataPembelajaranPage() {
                                   onClick={() => {
                                     setEditId(item.id);
                                     setFormData({
-                                      guru_id: item.nama_guru ? String(item.id) : '',
-                                      mapel_id: item.nama_mapel ? String(item.id) : '',
-                                      kelas_id: item.nama_kelas ? String(item.id) : '',
+                                      guru_id: String(item.id),
+                                      mapel_id: String(item.id),
+                                      kelas_id: String(item.id),
                                       confirmData: false
                                     });
                                     setShowEdit(true);
