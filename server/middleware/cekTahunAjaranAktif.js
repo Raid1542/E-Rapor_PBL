@@ -1,20 +1,12 @@
 const db = require('../config/db');
 
-const cekTahunAjaranAktif = async (req, res, next) => {
-    try {
-        const [rows] = await db.execute(
-            'SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = "aktif" LIMIT 1'
-        );
-        if (!rows[0]) {
-            return res.status(400).json({
-                message: 'Harap atur tahun ajaran terlebih dahulu di menu "Data Tahun Ajaran"'
-            });
-        }
-        req.tahunAjaranId = rows[0].id_tahun_ajaran; // simpan untuk dipakai di controller
-        next();
-    } catch (err) {
-        res.status(500).json({ message: 'Gagal memeriksa tahun ajaran' });
+module.exports = async (req, res, next) => {
+    const [rows] = await db.execute(
+        "SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1"
+    );
+    if (rows.length === 0) {
+        return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
     }
+    req.tahunAjaranAktifId = rows[0].id_tahun_ajaran; // ✅ Ini yang dibaca di controller
+    next();
 };
-
-module.exports = cekTahunAjaranAktif;

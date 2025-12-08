@@ -1,52 +1,67 @@
 const db = require('../config/db');
 
-// Ambil semua siswa — JOIN dengan kelas untuk dapatkan nama_kelas dan fase
-const getAllSiswa = async () => {
+// ─── AMBIL SEMUA DATA SISWA BERDASARKAN TAHUN AJARAN ────────────────────────
+const getSiswaByTahunAjaran = async (tahunAjaranId) => {
     const [rows] = await db.execute(`
         SELECT 
             s.id_siswa AS id,
+            s.nama_lengkap AS nama,
             s.nis,
             s.nisn,
-            s.nama_lengkap AS nama,
-            k.nama_kelas AS kelas,
-            k.fase,
             s.tempat_lahir,
             s.tanggal_lahir,
             s.jenis_kelamin,
             s.alamat,
+            k.nama_kelas AS kelas,
+            k.fase,
             s.status
         FROM siswa s
-        LEFT JOIN kelas k ON s.kelas_id = k.id_kelas
+        INNER JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+        INNER JOIN kelas k ON sk.kelas_id = k.id_kelas
+        WHERE sk.tahun_ajaran_id = ?
         ORDER BY s.nama_lengkap ASC
-    `);
+    `, [tahunAjaranId]);
+
     return rows;
 };
 
-// Ambil siswa by ID — juga JOIN kelas
-const getSiswaById = async (id) => {
-    const [rows] = await db.execute(`
+// ─── AMBIL SISWA BERDASARKAN ID ─────────────────────────────────────────────
+const getSiswaById = async (id, tahunAjaranId = null) => {
+    let query = `
         SELECT 
             s.id_siswa AS id,
+            s.nama_lengkap AS nama,
             s.nis,
             s.nisn,
-            s.nama_lengkap AS nama,
-            k.nama_kelas AS kelas,
-            k.fase,
             s.tempat_lahir,
             s.tanggal_lahir,
             s.jenis_kelamin,
             s.alamat,
-            s.status
+            k.nama_kelas AS kelas,
+            k.fase,
+            s.status,
+            sk.kelas_id,
+            sk.tahun_ajaran_id
         FROM siswa s
-        LEFT JOIN kelas k ON s.kelas_id = k.id_kelas
-        WHERE s.id_siswa = ?
-    `, [id]);
+        INNER JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+        INNER JOIN kelas k ON sk.kelas_id = k.id_kelas
+    `;
+    const params = [id];
+
+    if (tahunAjaranId) {
+        query += ` WHERE s.id_siswa = ? AND sk.tahun_ajaran_id = ?`;
+        params.push(tahunAjaranId);
+    } else {
+        query += ` WHERE s.id_siswa = ?`;
+    }
+
+    const [rows] = await db.execute(query, params);
     return rows[0] || null;
 };
 
-// Tambah siswa baru
-const createSiswa = async (siswaData, connection = null) => {
-    const useConnection = connection || db;
+// ─── TAMBAH SISWA BARU (HANYA KE TABEL `siswa`, TANPA `kelas_id`) ───────────
+const createSiswa = async (siswaData, tahunAjaranId, connection = null) => {
+    const useConn = connection || db;
     const {
         nis,
         nisn,
@@ -55,33 +70,41 @@ const createSiswa = async (siswaData, connection = null) => {
         tanggal_lahir,
         jenis_kelamin,
         alamat,
-        kelas_id,
         status = 'aktif'
+        // ⚠️ kelas_id TIDAK dikirim ke tabel `siswa`
     } = siswaData;
 
-    const [result] = await useConnection.execute(`
+    // ✅ HAPUS kelas_id dari sini!
+    const [result] = await useConn.execute(`
         INSERT INTO siswa (
             nis, nisn, nama_lengkap, tempat_lahir, tanggal_lahir,
-            jenis_kelamin, alamat, kelas_id, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            jenis_kelamin, alamat, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
         nis,
         nisn,
         nama_lengkap,
-        tempat_lahir || '',
+        tempat_lahir || null,
         tanggal_lahir || null,
-        jenis_kelamin || '',
-        alamat || '',
-        kelas_id,
+        jenis_kelamin,
+        alamat || null,
         status
     ]);
 
-    return result.insertId;
+    const siswaId = result.insertId;
+
+    // ✅ Tapi tetap simpan ke `siswa_kelas`
+    await useConn.execute(`
+        INSERT INTO siswa_kelas (siswa_id, kelas_id, tahun_ajaran_id)
+        VALUES (?, ?, ?)
+    `, [siswaId, siswaData.kelas_id, tahunAjaranId]);
+
+    return siswaId;
 };
 
-// Update siswa
-const updateSiswa = async (id, siswaData, connection = null) => {
-    const useConnection = connection || db;
+// ─── UPDATE DATA SISWA (TANPA `kelas_id`) ───────────────────────────────────
+const updateSiswa = async (id, siswaData, tahunAjaranId, connection = null) => {
+    const useConn = connection || db;
     const {
         nis,
         nisn,
@@ -90,11 +113,12 @@ const updateSiswa = async (id, siswaData, connection = null) => {
         tanggal_lahir,
         jenis_kelamin,
         alamat,
-        kelas_id,
-        status
+        status = 'aktif'
+        // ⚠️ kelas_id TIDAK di-update di tabel `siswa`
     } = siswaData;
 
-    const [result] = await useConnection.execute(`
+    // ✅ UPDATE TANPA kelas_id
+    await useConn.execute(`
         UPDATE siswa SET
             nis = ?,
             nisn = ?,
@@ -103,33 +127,50 @@ const updateSiswa = async (id, siswaData, connection = null) => {
             tanggal_lahir = ?,
             jenis_kelamin = ?,
             alamat = ?,
-            kelas_id = ?,
             status = ?
         WHERE id_siswa = ?
     `, [
         nis,
         nisn,
         nama_lengkap,
-        tempat_lahir || '',
+        tempat_lahir || null,
         tanggal_lahir || null,
-        jenis_kelamin || '',
-        alamat || '',
-        kelas_id,
-        status || 'aktif',
+        jenis_kelamin,
+        alamat || null,
+        status,
         id
     ]);
 
-    return result.affectedRows > 0;
+    // ✅ Update hanya di `siswa_kelas`
+    const [existing] = await useConn.execute(
+        `SELECT 1 FROM siswa_kelas WHERE siswa_id = ? AND tahun_ajaran_id = ?`,
+        [id, tahunAjaranId]
+    );
+
+    if (existing.length > 0) {
+        await useConn.execute(
+            `UPDATE siswa_kelas SET kelas_id = ? WHERE siswa_id = ? AND tahun_ajaran_id = ?`,
+            [siswaData.kelas_id, id, tahunAjaranId]
+        );
+    } else {
+        await useConn.execute(
+            `INSERT INTO siswa_kelas (siswa_id, kelas_id, tahun_ajaran_id) VALUES (?, ?, ?)`,
+            [id, siswaData.kelas_id, tahunAjaranId]
+        );
+    }
+
+    return true;
 };
 
-// Hapus siswa
+// ─── HAPUS SISWA ────────────────────────────────────────────────────────────
 const deleteSiswa = async (id) => {
+    await db.execute('DELETE FROM siswa_kelas WHERE siswa_id = ?', [id]);
     const [result] = await db.execute('DELETE FROM siswa WHERE id_siswa = ?', [id]);
     return result.affectedRows > 0;
 };
 
 module.exports = {
-    getAllSiswa,
+    getSiswaByTahunAjaran,
     getSiswaById,
     createSiswa,
     updateSiswa,
