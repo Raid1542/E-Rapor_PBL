@@ -98,5 +98,16 @@ router.post('/mata-pelajaran', adminOnly, adminController.tambahMataPelajaran);
 router.put('/mata-pelajaran/:id', adminOnly, adminController.editMataPelajaran);
 router.delete('/mata-pelajaran/:id', adminOnly, adminController.hapusMataPelajaran);
 
+// --- Data Pembelajaran (Guru Bidang Studi) ---
+router.get('/pembelajaran', adminOnly, adminController.getPembelajaran);
+router.post('/pembelajaran', adminOnly, adminController.tambahPembelajaran);
+router.put('/pembelajaran/:id', adminOnly, adminController.editPembelajaran);
+router.delete('/pembelajaran/:id', adminOnly, adminController.hapusPembelajaran);
+
+// --- Dropdown untuk form (opsional tapi disarankan) ---
+router.get('/pembelajaran/dropdown/guru', adminOnly, adminController.getGuruBidangStudiForDropdown);
+router.get('/pembelajaran/dropdown/mapel', adminOnly, adminController.getMapelForDropdown);
+router.get('/pembelajaran/dropdown/tahun-ajaran', adminOnly, adminController.getTahunAjaranForDropdown);
+
 
 module.exports = router;
