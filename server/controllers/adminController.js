@@ -939,7 +939,7 @@ const editMataPelajaran = async (req, res) => {
             nama_mapel: trimmedNamaMapel,
             jenis: trimmedJenis,
             kurikulum: trimmedKurikulum,
-            tahun_ajaran_id: taId  // ✅ Gunakan tahun_ajaran_id dari data lama
+            tahun_ajaran_id: taId  
         });
 
         if (result.affectedRows === 0) {
