@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Pencil, Plus, Search, Filter, X, Trash2, Upload } from 'lucide-react';
+import { useState, useEffect, ChangeEvent, ReactNode, FormEvent } from 'react';
+import { Pencil, Plus, Search, Filter, X, Trash2, Download, Upload } from 'lucide-react';
 
 interface Ekstrakurikuler {
   id: number;
@@ -30,13 +30,13 @@ interface ApiResponse<T> {
 
 export default function DataEkstrakurikulerPage() {
   const [ekskulList, setEkskulList] = useState<Ekstrakurikuler[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showTambah, setShowTambah] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showTambah, setShowTambah] = useState<boolean>(false);
+  const [showEdit, setShowEdit] = useState<boolean>(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Tahun Ajaran
   const [tahunAjaranList, setTahunAjaranList] = useState<string[]>([]);
@@ -50,7 +50,7 @@ export default function DataEkstrakurikulerPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // === Modal States (hanya untuk Filter & Import) ===
+  // === Modal States ===
   const [showFilter, setShowFilter] = useState(false);
   const [filterClosing, setFilterClosing] = useState(false);
   const [filterValues, setFilterValues] = useState({
@@ -64,7 +64,7 @@ export default function DataEkstrakurikulerPage() {
   const [importClosing, setImportClosing] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
 
-  // === Fetch Tahun Ajaran ===
+  // === Fetch Daftar Tahun Ajaran ===
   const fetchTahunAjaranList = async (): Promise<void> => {
     try {
       const token = localStorage.getItem('token');
@@ -79,12 +79,13 @@ export default function DataEkstrakurikulerPage() {
       }
     } catch (err) {
       console.error('Error fetch tahun ajaran:', err);
+      // Fallback jika API belum ada
       setTahunAjaranList(['2025/2026 (Aktif)', '2024/2025', '2023/2024']);
       setTahunAjaranAktif('2025/2026 (Aktif)');
     }
   };
 
-  // === Fetch Ekstrakurikuler ===
+  // === Fetch Data Ekstrakurikuler ===
   const fetchEkskul = async (): Promise<void> => {
     try {
       const token = localStorage.getItem('token');
@@ -130,7 +131,7 @@ export default function DataEkstrakurikulerPage() {
     setShowEdit(true);
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>): void => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
@@ -261,8 +262,12 @@ export default function DataEkstrakurikulerPage() {
     setErrors({});
   };
 
+  const handleExport = (): void => {
+    alert('Fitur ekspor akan segera tersedia');
+  };
+
   // === Filter & Pencarian ===
-  const filteredEkskul = ekskulList.filter(ekskul => {
+  const filteredEkskul: Ekstrakurikuler[] = ekskulList.filter(ekskul => {
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch = !query ||
       ekskul.nama_ekstrakurikuler.toLowerCase().includes(query) ||
@@ -272,10 +277,10 @@ export default function DataEkstrakurikulerPage() {
     return matchesSearch && matchesPembina;
   });
 
-  const totalPages = Math.ceil(filteredEkskul.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentEkskul = filteredEkskul.slice(startIndex, endIndex);
+  const totalPages: number = Math.ceil(filteredEkskul.length / itemsPerPage);
+  const startIndex: number = (currentPage - 1) * itemsPerPage;
+  const endIndex: number = startIndex + itemsPerPage;
+  const currentEkskul: Ekstrakurikuler[] = filteredEkskul.slice(startIndex, endIndex);
 
   // === Modal Handlers ===
   const resetFilter = () => {
@@ -330,19 +335,33 @@ export default function DataEkstrakurikulerPage() {
     }
   };
 
-  // === ✅ Render Form Full Page (seperti DataKelasPage) ===
-  const renderForm = (isEdit: boolean): JSX.Element => (
-    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
-      <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
-          Data Ekstrakurikuler
-        </h1>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">
+  // === Render Modal Form ===
+  const renderModal = (isEdit: boolean): JSX.Element => (
+    <div
+      className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${isEdit ? (showEdit && !showEdit ? 'opacity-0' : 'opacity-100') : (showTambah && !showTambah ? 'opacity-0' : 'opacity-100')}`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          if (isEdit) {
+            setShowEdit(false);
+            handleReset();
+          } else {
+            setShowTambah(false);
+            handleReset();
+          }
+        }
+      }}
+    >
+      <div className="absolute inset-0 bg-gray-900/70"></div>
+      <div
+        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${isEdit ? (showEdit ? 'opacity-100 scale-100' : 'opacity-0 scale-95') : (showTambah ? 'opacity-100 scale-100' : 'opacity-0 scale-95')}`}
+      >
+        <form onSubmit={(e) => { e.preventDefault(); if (isEdit) handleSubmitEdit(); else handleSubmitTambah(); }}>
+          <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">
               {isEdit ? 'Edit Data Ekstrakurikuler' : 'Tambah Data Ekstrakurikuler'}
             </h2>
             <button
+              type="button"
               onClick={() => {
                 if (isEdit) {
                   setShowEdit(false);
@@ -352,15 +371,32 @@ export default function DataEkstrakurikulerPage() {
                 handleReset();
               }}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Tutup modal"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
+          <div className="p-4 sm:p-6 space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 flex items-start justify-between">
+              <span><span className="text-red-500 font-bold">*</span> adalah kolom yang wajib diisi!</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) parent.classList.add('hidden');
+                }}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            {/* Nama Ekstrakurikuler */}
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-sm text-gray-800">
+              Harap centang kotak konfirmasi sebelum melanjutkan!
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nama Ekstrakurikuler <span className="text-red-500">*</span>
               </label>
               <input
@@ -369,16 +405,15 @@ export default function DataEkstrakurikulerPage() {
                 value={formData.nama_ekstrakurikuler}
                 onChange={handleInputChange}
                 placeholder="Contoh: Pramuka"
-                className={`w-full border ${errors.nama_ekstrakurikuler ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`w-full border ${errors.nama_ekstrakurikuler ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 text-sm`}
               />
               {errors.nama_ekstrakurikuler && (
                 <p className="text-red-500 text-xs mt-1">{errors.nama_ekstrakurikuler}</p>
               )}
             </div>
 
-            {/* Pembina */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Pembina
               </label>
               <input
@@ -386,79 +421,65 @@ export default function DataEkstrakurikulerPage() {
                 name="pembina"
                 value={formData.pembina}
                 onChange={handleInputChange}
-                placeholder="Nama pembina ekstrakurikuler"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nama pembina"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
               />
             </div>
 
-            {/* Info Tahun Ajaran (Read-only) */}
-            <div className="md:col-span-2">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">Tahun Pelajaran:</span> {tahunAjaranAktif}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  *Tahun pelajaran mengikuti pilihan tahun ajaran di atas
-                </p>
-              </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+              <p className="text-gray-700">
+                <span className="font-medium">Tahun Pelajaran:</span> {tahunAjaranAktif}
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                *Tahun pelajaran mengikuti pilihan tahun ajaran di atas
+              </p>
             </div>
-          </div>
 
-          {/* Konfirmasi */}
-          <div className="mt-6">
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="confirmData"
-                checked={formData.confirmData}
-                onChange={handleInputChange}
-                className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">
-                Saya yakin sudah mengisi dengan benar
-              </span>
-            </label>
-            {errors.confirmData && (
-              <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>
-            )}
-          </div>
+            <div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="confirmData"
+                  checked={formData.confirmData}
+                  onChange={handleInputChange}
+                  className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">
+                  Saya yakin sudah mengisi dengan benar
+                </span>
+              </label>
+              {errors.confirmData && (
+                <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>
+              )}
+            </div>
 
-          {/* Tombol Aksi */}
-          <div className="mt-6 sm:mt-8">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="flex gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => {
                   if (isEdit) setShowEdit(false); else setShowTambah(false);
                   handleReset();
                 }}
-                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-100 transition text-sm"
               >
                 Batal
               </button>
               <button
-                onClick={handleReset}
-                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
+                type="submit"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition text-sm"
               >
-                Reset
-              </button>
-              <button
-                onClick={isEdit ? handleSubmitEdit : handleSubmitTambah}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium transition"
-              >
-                {isEdit ? 'Update' : 'Simpan'}
+                Simpan
               </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
 
-  // ✅ Render form jika mode tambah/edit aktif
-  if (showTambah) return renderForm(false);
-  if (showEdit) return renderForm(true);
+  if (showTambah) return renderModal(false);
+  if (showEdit) return renderModal(true);
 
-  // === Halaman Utama (Tabel) ===
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -476,12 +497,14 @@ export default function DataEkstrakurikulerPage() {
               className="w-full md:w-auto border border-gray-300 rounded px-3 py-2 text-sm"
             >
               {tahunAjaranList.map((tahun) => (
-                <option key={tahun} value={tahun}>{tahun}</option>
+                <option key={tahun} value={tahun}>
+                  {tahun}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* Baris Aksi */}
+          {/* Tombol & Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <button
               onClick={() => setShowTambah(true)}
@@ -640,7 +663,7 @@ export default function DataEkstrakurikulerPage() {
         </div>
       </div>
 
-      {/* === Modal Filter (seperti DataSiswaPage) === */}
+      {/* === Modal Filter === */}
       {showFilter && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${filterClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
@@ -673,6 +696,7 @@ export default function DataEkstrakurikulerPage() {
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 />
               </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={resetFilter}
@@ -698,7 +722,7 @@ export default function DataEkstrakurikulerPage() {
         </div>
       )}
 
-      {/* === Modal Import (seperti DataSiswaPage) === */}
+      {/* === Modal Import === */}
       {showImport && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${importClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}

@@ -573,4 +573,4 @@ const DataMataPelajaran = () => {
   );
 };
 
-export default DataMataPelajaran;~
+export default DataMataPelajaran;
