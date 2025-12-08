@@ -92,6 +92,10 @@ router.get('/tahun-ajaran', adminController.getTahunAjaran);
 router.post('/tahun-ajaran', adminController.tambahTahunAjaran);
 router.put('/tahun-ajaran/:id', adminController.updateTahunAjaran);
 
-
+router.get('/ekstrakurikuler', adminController.getEkstrakurikuler);
+router.get('/ekstrakurikuler/:id', adminController.getEkstrakurikulerById);
+router.post('/ekstrakurikuler', adminController.tambahEkstrakurikuler);
+router.put('/ekstrakurikuler/:id', adminController.editEkstrakurikuler);
+router.delete('/ekstrakurikuler/:id', adminController.hapusEkstrakurikuler);
 
 module.exports = router;
