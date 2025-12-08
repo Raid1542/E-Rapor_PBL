@@ -367,7 +367,7 @@ export default function DataKelasPage() {
                 setLoading(true);
                 fetchKelas(id);
               }}
-              className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-0"
             >
               <option value="">-- Pilih Tahun Ajaran --</option>
               {tahunAjaranList.map(ta => {

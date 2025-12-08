@@ -982,6 +982,203 @@ const hapusMataPelajaran = async (req, res) => {
     }
 };
 
+// ============== DATA PEMBELAJARAN ==============
+
+const getPembelajaran = async (req, res) => {
+    try {
+        pembelajaranModel.getAll((err, results) => {
+            if (err) {
+                console.error('Error get pembelajaran:', err);
+                return res.status(500).json({ message: 'Gagal mengambil data pembelajaran' });
+            }
+            res.json({ success: true, data: results });
+        });
+    } catch (err) {
+        console.error('Error get pembelajaran:', err);
+        res.status(500).json({ message: 'Gagal mengambil data pembelajaran' });
+    }
+};
+
+const tambahPembelajaran = async (req, res) => {
+    try {
+        const { user_id, mapel_id, kelas_id, tahun_ajaran_id } = req.body;
+
+        // Validasi input wajib
+        if (!user_id || !mapel_id || !kelas_id || !tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Semua field wajib diisi' });
+        }
+
+        // Validasi: apakah mata pelajaran valid untuk tahun ajaran ini?
+        const isValidMapel = await new Promise((resolve, reject) => {
+            pembelajaranModel.isValidMapelForTahunAjaran(mapel_id, tahun_ajaran_id, (err, valid) => {
+                if (err) reject(err);
+                else resolve(valid);
+            });
+        });
+
+        if (!isValidMapel) {
+            return res.status(400).json({ message: 'Mata pelajaran tidak valid untuk tahun ajaran yang dipilih' });
+        }
+
+        // Cek duplikasi
+        const isDuplicate = await new Promise((resolve, reject) => {
+            pembelajaranModel.isDuplicate(user_id, mapel_id, kelas_id, tahun_ajaran_id, (err, duplicate) => {
+                if (err) reject(err);
+                else resolve(duplicate);
+            });
+        });
+
+        if (isDuplicate) {
+            return res.status(400).json({ message: 'Penugasan guru untuk mapel ini di kelas dan tahun ajaran tersebut sudah ada' });
+        }
+
+        // Simpan data
+        pembelajaranModel.create({ user_id, mapel_id, kelas_id, tahun_ajaran_id }, (err, result) => {
+            if (err) {
+                console.error('Error tambah pembelajaran:', err);
+                return res.status(500).json({ message: 'Gagal menambah data pembelajaran' });
+            }
+            res.status(201).json({ message: 'Data pembelajaran berhasil ditambahkan', id: result.insertId });
+        });
+    } catch (err) {
+        console.error('Error tambah pembelajaran:', err);
+        res.status(500).json({ message: 'Gagal menambah data pembelajaran' });
+    }
+};
+
+const editPembelajaran = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user_id, mapel_id, kelas_id, tahun_ajaran_id } = req.body;
+
+        if (!user_id || !mapel_id || !kelas_id || !tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Semua field wajib diisi' });
+        }
+
+        // Validasi mata pelajaran untuk tahun ajaran
+        const isValidMapel = await new Promise((resolve, reject) => {
+            pembelajaranModel.isValidMapelForTahunAjaran(mapel_id, tahun_ajaran_id, (err, valid) => {
+                if (err) reject(err);
+                else resolve(valid);
+            });
+        });
+
+        if (!isValidMapel) {
+            return res.status(400).json({ message: 'Mata pelajaran tidak valid untuk tahun ajaran yang dipilih' });
+        }
+
+        // Cek duplikasi (abaikan ID saat ini)
+        const [existing] = await db.execute(
+            'SELECT user_id, mapel_id, kelas_id, tahun_ajaran_id FROM guru_bidang_studi WHERE id_guru_bidang_studi = ?',
+            [id]
+        );
+        if (existing.length === 0) {
+            return res.status(404).json({ message: 'Data pembelajaran tidak ditemukan' });
+        }
+
+        const isSame = (
+            existing[0].user_id == user_id &&
+            existing[0].mapel_id == mapel_id &&
+            existing[0].kelas_id == kelas_id &&
+            existing[0].tahun_ajaran_id == tahun_ajaran_id
+        );
+
+        if (!isSame) {
+            const isDuplicate = await new Promise((resolve, reject) => {
+                pembelajaranModel.isDuplicate(user_id, mapel_id, kelas_id, tahun_ajaran_id, (err, duplicate) => {
+                    if (err) reject(err);
+                    else resolve(duplicate);
+                });
+            });
+
+            if (isDuplicate) {
+                return res.status(400).json({ message: 'Penugasan tersebut sudah ada' });
+            }
+        }
+
+        pembelajaranModel.update(id, { user_id, mapel_id, kelas_id, tahun_ajaran_id }, (err, result) => {
+            if (err) {
+                console.error('Error edit pembelajaran:', err);
+                return res.status(500).json({ message: 'Gagal memperbarui data pembelajaran' });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'Data pembelajaran tidak ditemukan' });
+            }
+            res.json({ message: 'Data pembelajaran berhasil diperbarui' });
+        });
+    } catch (err) {
+        console.error('Error edit pembelajaran:', err);
+        res.status(500).json({ message: 'Gagal memperbarui data pembelajaran' });
+    }
+};
+
+const hapusPembelajaran = async (req, res) => {
+    try {
+        const { id } = req.params;
+        pembelajaranModel.delete(id, (err, result) => {
+            if (err) {
+                console.error('Error hapus pembelajaran:', err);
+                return res.status(500).json({ message: 'Gagal menghapus data pembelajaran' });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'Data pembelajaran tidak ditemukan' });
+            }
+            res.json({ message: 'Data pembelajaran berhasil dihapus' });
+        });
+    } catch (err) {
+        console.error('Error hapus pembelajaran:', err);
+        res.status(500).json({ message: 'Gagal menghapus data pembelajaran' });
+    }
+};
+
+// ============== DROPDOWN UNTUK FORM PEMBELAJARAN ==============
+
+const getGuruBidangStudiForDropdown = async (req, res) => {
+    try {
+        pembelajaranModel.getGuruBidangStudiList((err, results) => {
+            if (err) {
+                console.error('Error get guru bidang studi dropdown:', err);
+                return res.status(500).json({ message: 'Gagal mengambil daftar guru bidang studi' });
+            }
+            res.json({ success: true, data: results });
+        });
+    } catch (err) {
+        console.error('Error get guru bidang studi dropdown:', err);
+        res.status(500).json({ message: 'Gagal mengambil daftar guru bidang studi' });
+    }
+};
+
+const getMapelForDropdown = async (req, res) => {
+    try {
+        const { tahun_ajaran_id } = req.query;
+        if (!tahun_ajaran_id || isNaN(Number(tahun_ajaran_id))) {
+            return res.status(400).json({ message: 'tahun_ajaran_id wajib diisi dan harus angka' });
+        }
+
+        pembelajaranModel.getMapelByTahunAjaran(Number(tahun_ajaran_id), (err, results) => {
+            if (err) {
+                console.error('Error get mapel dropdown:', err);
+                return res.status(500).json({ message: 'Gagal mengambil daftar mata pelajaran' });
+            }
+            res.json({ success: true, data: results });
+        });
+    } catch (err) {
+        console.error('Error get mapel dropdown:', err);
+        res.status(500).json({ message: 'Gagal mengambil daftar mata pelajaran' });
+    }
+};
+
+// Dropdown kelas dan tahun ajaran sudah ada di fungsi lain, bisa reuse
+const getTahunAjaranForDropdown = async (req, res) => {
+    try {
+        const data = await tahunAjaranModel.getAllTahunAjaran();
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error('Error get tahun ajaran dropdown:', err);
+        res.status(500).json({ message: 'Gagal mengambil daftar tahun ajaran' });
+    }
+};
+
 module.exports = {
     getAdmin, getAdminById, tambahAdmin, editAdmin, hapusAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
@@ -990,5 +1187,7 @@ module.exports = {
     getTahunAjaran, tambahTahunAjaran, updateTahunAjaran,
     getKelas, getKelasById, tambahKelas, editKelas, getKelasForDropdown,
     getGuruKelasList, setWaliKelas,
-    getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran
+    getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran,
+    getPembelajaran, tambahPembelajaran, editPembelajaran, hapusPembelajaran,
+    getGuruBidangStudiForDropdown, getMapelForDropdown, getTahunAjaranForDropdown
 };
