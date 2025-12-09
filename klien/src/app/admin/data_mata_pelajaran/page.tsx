@@ -553,16 +553,16 @@ export default function DataMataPelajaranPage() {
                               <div className="flex gap-1 justify-center">
                                 <button
                                   onClick={() => handleEdit(mp)}
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
-                                  <Pencil size={12} />
+                                  <Pencil size={16} />
                                   Edit
                                 </button>
                                 <button
                                   onClick={() => handleDelete(mp.id)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1"
+                                  className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={16} />
                                   Hapus
                                 </button>
                               </div>

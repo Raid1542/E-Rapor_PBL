@@ -1203,6 +1203,232 @@ const hapusPembelajaran = async (req, res) => {
     }
 };
 
+// ============== EKSTRAKURIKULER ==============
+const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
+const pesertaEkskulModel = require('../models/pesertaEkskulModel');
+
+/**
+ * Ambil semua ekstrakurikuler berdasarkan tahun ajaran
+ */
+const getEkskul = async (req, res) => {
+    try {
+        const { tahun_ajaran_id } = req.query;
+        if (!tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Tahun ajaran wajib dipilih' });
+        }
+        const ekskulList = await ekstrakurikulerModel.getAllByTahunAjaran(tahun_ajaran_id);
+        res.json({ success: true, data: ekskulList });
+    } catch (err) {
+        console.error('Error get ekstrakurikuler:', err);
+        res.status(500).json({ message: 'Gagal mengambil data ekstrakurikuler' });
+    }
+};
+
+/**
+ * Tambah ekstrakurikuler + anggota sekaligus
+ */
+const tambahEkskul = async (req, res) => {
+    const connection = await db.getConnection();
+    try {
+        const { nama_ekskul, nama_pembina, keterangan, anggota = [] } = req.body;
+        const tahun_ajaran_id = req.tahunAjaranAktifId;
+        if (!tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        }
+
+        // Validasi input dasar
+        if (!nama_ekskul) {
+            return res.status(400).json({ message: 'Nama ekstrakurikuler wajib diisi' });
+        }
+
+        // Validasi duplikat nama ekskul
+        const isDuplicate = await ekstrakurikulerModel.isNamaEkskulExist(nama_ekskul, tahun_ajaran_id);
+        if (isDuplicate) {
+            return res.status(400).json({ message: `Ekstrakurikuler "${nama_ekskul}" sudah ada di tahun ajaran ini` });
+        }
+
+        await connection.beginTransaction();
+
+        // Simpan data ekstrakurikuler
+        const ekskulId = await ekstrakurikulerModel.create({
+            nama_ekskul,
+            nama_pembina: nama_pembina || null,
+            keterangan: keterangan || null,
+            tahun_ajaran_id
+        }, connection);
+
+        // Simpan anggota (jika ada)
+        for (const item of anggota) {
+            if (!item.siswa_id) {
+                throw new Error('Setiap anggota harus memiliki siswa_id');
+            }
+
+            // Validasi: apakah siswa ini sudah ikut 3 ekskul?
+            const jumlahEkskul = await pesertaEkskulModel.getJumlahEkskulSiswa(item.siswa_id, tahun_ajaran_id, connection);
+            if (jumlahEkskul >= 3) {
+                throw new Error(`Siswa dengan ID ${item.siswa_id} sudah mencapai batas maksimal 3 ekstrakurikuler`);
+            }
+
+            // Simpan anggota
+            await pesertaEkskulModel.addPeserta(
+                item.siswa_id,
+                ekskulId,
+                tahun_ajaran_id,
+                item.deskripsi || null,
+                connection
+            );
+        }
+
+        await connection.commit();
+        res.status(201).json({ message: 'Ekstrakurikuler berhasil ditambahkan', id: ekskulId });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error tambah ekstrakurikuler:', err);
+        res.status(500).json({ message: err.message || 'Gagal menambah ekstrakurikuler' });
+    } finally {
+        connection.release();
+    }
+};
+
+/**
+ * Edit ekstrakurikuler + ganti daftar anggota
+ */
+const editEkskul = async (req, res) => {
+    const connection = await db.getConnection();
+    try {
+        const { id } = req.params;
+        const { nama_ekskul, nama_pembina, keterangan, anggota = [] } = req.body;
+        const tahun_ajaran_id = req.tahunAjaranAktifId;
+        if (!tahun_ajaran_id) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        }
+
+        if (!nama_ekskul) {
+            return res.status(400).json({ message: 'Nama ekstrakurikuler wajib diisi' });
+        }
+
+        // Pastikan ekskul milik tahun ajaran aktif
+        const ekskulLama = await ekstrakurikulerModel.getById(id);
+        if (!ekskulLama || ekskulLama.tahun_ajaran_id !== tahun_ajaran_id) {
+            return res.status(404).json({ message: 'Ekstrakurikuler tidak ditemukan' });
+        }
+
+        // Cek duplikat (kecuali diri sendiri)
+        const isDuplicate = await ekstrakurikulerModel.isNamaEkskulExist(nama_ekskul, tahun_ajaran_id, id);
+        if (isDuplicate) {
+            return res.status(400).json({ message: `Nama "${nama_ekskul}" sudah digunakan di tahun ajaran ini` });
+        }
+
+        await connection.beginTransaction();
+
+        // Update data ekskul
+        const success = await ekstrakurikulerModel.update(id, {
+            nama_ekskul,
+            nama_pembina: nama_pembina || null,
+            keterangan: keterangan || null,
+            tahun_ajaran_id
+        }, connection);
+        if (!success) {
+            throw new Error('Gagal memperbarui data ekstrakurikuler');
+        }
+
+        // Hapus semua anggota lama
+        await connection.execute('DELETE FROM peserta_ekstrakurikuler WHERE ekskul_id = ?', [id]);
+
+        // Tambahkan anggota baru
+        for (const item of anggota) {
+            if (!item.siswa_id) continue;
+
+            const jumlahEkskul = await pesertaEkskulModel.getJumlahEkskulSiswa(item.siswa_id, tahun_ajaran_id, connection);
+            if (jumlahEkskul >= 3) {
+                throw new Error(`Siswa dengan ID ${item.siswa_id} sudah mencapai batas maksimal 3 ekstrakurikuler`);
+            }
+
+            await pesertaEkskulModel.addPeserta(
+                item.siswa_id,
+                id,
+                tahun_ajaran_id,
+                item.deskripsi || null,
+                connection
+            );
+        }
+
+        await connection.commit();
+        res.json({ message: 'Data ekstrakurikuler berhasil diperbarui' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error edit ekstrakurikuler:', err);
+        res.status(500).json({ message: err.message || 'Gagal memperbarui ekstrakurikuler' });
+    } finally {
+        connection.release();
+    }
+};
+
+/**
+ * Hapus ekstrakurikuler
+ */
+const hapusEkskul = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const taId = req.tahunAjaranAktifId;
+        if (!taId) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        }
+
+        const ekskul = await ekstrakurikulerModel.getById(id);
+        if (!ekskul || ekskul.tahun_ajaran_id !== taId) {
+            return res.status(404).json({ message: 'Ekstrakurikuler tidak ditemukan' });
+        }
+
+        const success = await ekstrakurikulerModel.deleteById(id);
+        if (!success) {
+            return res.status(400).json({ message: 'Gagal menghapus ekstrakurikuler' });
+        }
+
+        res.json({ message: 'Ekstrakurikuler berhasil dihapus' });
+    } catch (err) {
+        console.error('Error hapus ekstrakurikuler:', err);
+        res.status(500).json({ message: 'Gagal menghapus ekstrakurikuler' });
+    }
+};
+
+/**
+ * Ambil daftar anggota suatu ekstrakurikuler
+ */
+const getPesertaByEkskul = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const taId = req.tahunAjaranAktifId;
+        if (!taId) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        }
+
+        const anggota = await pesertaEkskulModel.getPesertaByEkskul(id, taId);
+        res.json({ success: true, data: anggota });
+    } catch (err) {
+        console.error('Error get peserta by ekskul:', err);
+        res.status(500).json({ message: 'Gagal mengambil data anggota' });
+    }
+};
+
+/**
+ * Ambil daftar ekstrakurikuler yang diikuti siswa (untuk profil siswa)
+ */
+const getEkskulBySiswa = async (req, res) => {
+    try {
+        const { id } = req.params; // id_siswa
+        const taId = req.tahunAjaranAktifId;
+        if (!taId) {
+            return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
+        }
+
+        const ekskulList = await pesertaEkskulModel.getEkskulBySiswa(id, taId);
+        res.json({ success: true, data: ekskulList });
+    } catch (err) {
+        console.error('Error get ekskul by siswa:', err);
+        res.status(500).json({ message: 'Gagal mengambil data ekstrakurikuler siswa' });
+    }
+};
 
 module.exports = {
     getAdmin, getAdminById, tambahAdmin, editAdmin, hapusAdmin,
@@ -1213,5 +1439,6 @@ module.exports = {
     getKelas, getKelasById, tambahKelas, editKelas, getKelasForDropdown, hapusKelas,
     getWaliKelas, setWaliKelas, getGuruKelasList,
     getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran,
-    getPembelajaran, getDropdownPembelajaran, tambahPembelajaran, editPembelajaran, hapusPembelajaran
+    getPembelajaran, getDropdownPembelajaran, tambahPembelajaran, editPembelajaran, hapusPembelajaran,
+    getEkskul, tambahEkskul, editEkskul, hapusEkskul, getPesertaByEkskul, getEkskulBySiswa
 };

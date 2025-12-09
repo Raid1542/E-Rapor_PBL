@@ -611,14 +611,14 @@ export default function DataKelasPage() {
                               <div className="flex justify-center gap-2">
                                 <button
                                   onClick={() => handleEdit(kelas)}
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
                                   <Pencil size={16} />
                                   Edit
                                 </button>
                                 <button
                                   onClick={() => handleHapus(kelas.id)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
+                                  className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
                                   <Trash2 size={16} />
                                   Hapus

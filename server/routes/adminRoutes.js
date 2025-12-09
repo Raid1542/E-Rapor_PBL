@@ -108,4 +108,20 @@ router.post('/pembelajaran', adminOnlyWithTahunAjaran, adminController.tambahPem
 router.put('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.editPembelajaran);
 router.delete('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.hapusPembelajaran);
 
+// --- EKSTRAKURIKULER ---
+// CRUD Ekstrakurikuler
+router.get('/ekstrakurikuler', adminOnly, adminController.getEkskul);
+router.post('/ekstrakurikuler', adminOnlyWithTahunAjaran, adminController.tambahEkskul);
+router.put('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.editEkskul);
+router.delete('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.hapusEkskul);
+
+// CRUD Peserta Ekstrakurikuler (Anggota)
+/*router.post('/ekstrakurikuler/:id/anggota', adminOnlyWithTahunAjaran, adminController.addPesertaEkskul);
+router.put('/ekstrakurikuler/anggota/:id', adminOnly, adminController.updateDeskripsiPeserta);
+router.delete('/ekstrakurikuler/anggota/:id', adminOnly, adminController.removePesertaEkskul);*/
+
+// Ambil data tambahan
+router.get('/ekstrakurikuler/:id/anggota', adminOnly, adminController.getPesertaByEkskul); // Daftar anggota suatu ekskul
+router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulBySiswa); // Daftar ekskul suatu siswa
+
 module.exports = router;
