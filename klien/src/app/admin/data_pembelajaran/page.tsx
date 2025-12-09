@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Pencil, Trash2, Plus, Search, X } from 'lucide-react';
+import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
 
 // ====== TYPES ======
 interface Pembelajaran {
@@ -8,7 +8,9 @@ interface Pembelajaran {
   nama_mapel: string;
   nama_kelas: string;
   nama_guru: string;
-  tahun_ajaran: string;
+  user_id: number;
+  id_mapel: number;
+  id_kelas: number;
 }
 
 interface TahunAjaran {
@@ -24,9 +26,9 @@ interface DropdownItem {
 }
 
 interface FormDataType {
-  guru_id: string;
-  mapel_id: string;
-  kelas_id: string;
+  user_id: string;
+  id_mapel: string;
+  id_kelas: string;
   confirmData: boolean;
 }
 
@@ -51,94 +53,64 @@ export default function DataPembelajaranPage() {
   const [mapelList, setMapelList] = useState<DropdownItem[]>([]);
   const [kelasList, setKelasList] = useState<DropdownItem[]>([]);
 
-  const [guruLoading, setGuruLoading] = useState(false);
-  const [mapelLoading, setMapelLoading] = useState(false);
-  const [kelasLoading, setKelasLoading] = useState(false);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
 
-  // ====== FORM & VALIDATION ======
   const [formData, setFormData] = useState<FormDataType>({
-    guru_id: '',
-    mapel_id: '',
-    kelas_id: '',
+    user_id: '',
+    id_mapel: '',
+    id_kelas: '',
     confirmData: false
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ====== FETCH DROPDOWN: TAHUN AJARAN ======
+  // ====== HELPER: API REQUEST ======
+  const apiFetch = async (url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Token tidak ditemukan');
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Operasi gagal');
+    return data;
+  };
+
+  // ====== FETCH TAHUN AJARAN ======
   const fetchTahunAjaran = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const options = data.data.map((ta: any) => ({
-          id: ta.id_tahun_ajaran,
-          tahun_ajaran: ta.tahun_ajaran,
-          semester: (ta.semester || 'ganjil').toLowerCase(),
-          is_aktif: ta.status === 'aktif'
-        }));
-        setTahunAjaranList(options);
-      }
+      const data = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
+      const options = data.data.map((ta: any) => ({
+        id: ta.id_tahun_ajaran,
+        tahun_ajaran: ta.tahun_ajaran,
+        semester: (ta.semester || 'ganjil').toLowerCase(),
+        is_aktif: ta.status === 'aktif'
+      }));
+      setTahunAjaranList(options);
     } catch (err) {
       console.error('Gagal ambil tahun ajaran:', err);
-      alert('Gagal terhubung ke server');
+      alert('Gagal memuat data tahun ajaran');
     }
   };
 
-  // ====== FETCH DROPDOWN: GURU, MAPEL, KELAS ======
-  const fetchGuruDropdown = async () => {
-    setGuruLoading(true);
+  // ====== FETCH DROPDOWN ======
+  const fetchAllDropdowns = async () => {
+    setDropdownLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch("http://localhost:5000/api/admin/dropdown/guru", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setGuruList(data.data);
-      }
+      const data = await apiFetch("http://localhost:5000/api/admin/pembelajaran/dropdown");
+      setGuruList(data.data.guru || []);
+      setKelasList(data.data.kelas || []);
+      setMapelList(data.data.mata_pelajaran || []);
     } catch (err) {
-      console.error('Error fetch guru dropdown:', err);
+      console.error('Gagal muat dropdown:', err);
+      alert('Gagal memuat data dropdown');
     } finally {
-      setGuruLoading(false);
-    }
-  };
-
-  const fetchMapelDropdown = async (taId: number) => {
-    setMapelLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/dropdown/mapel?tahun_ajaran_id=${taId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMapelList(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetch mapel dropdown:', err);
-    } finally {
-      setMapelLoading(false);
-    }
-  };
-
-  const fetchKelasDropdown = async () => {
-    setKelasLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch("http://localhost:5000/api/admin/dropdown", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setKelasList(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetch kelas dropdown:', err);
-    } finally {
-      setKelasLoading(false);
+      setDropdownLoading(false);
     }
   };
 
@@ -146,21 +118,17 @@ export default function DataPembelajaranPage() {
   const fetchData = async (taId: number) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/pembelajaran?tahun_ajaran_id=${taId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const camelCased = data.results.map((item: any) => ({
-          id: item.id_guru_bidang_studi,
-          nama_mapel: item.nama_mapel,
-          nama_kelas: item.nama_kelas,
-          nama_guru: item.nama_guru,
-          tahun_ajaran: item.tahun_ajaran
-        }));
-        setDataList(camelCased);
-      }
+      const data = await apiFetch("http://localhost:5000/api/admin/pembelajaran");
+      const list = (data.data || []).map((item: any) => ({
+        id: item.id,
+        nama_mapel: item.nama_mapel || 'Mapel Tidak Ditemukan',
+        nama_kelas: item.nama_kelas,
+        nama_guru: item.nama_guru || 'Belum ditetapkan',
+        user_id: item.user_id,
+        id_mapel: item.id_mapel,
+        id_kelas: item.id_kelas
+      }));
+      setDataList(list);
     } catch (err) {
       console.error('Error fetch pembelajaran:', err);
       alert('Gagal memuat data pembelajaran');
@@ -172,16 +140,19 @@ export default function DataPembelajaranPage() {
   // ====== EFFECTS ======
   useEffect(() => {
     fetchTahunAjaran();
-    fetchKelasDropdown();
   }, []);
 
-  // ✅ PANGGIL DROPDOWN GURU & MAPEL SAAT MODAL DIBUKA ATAU TAHUN AJARAN BERUBAH
   useEffect(() => {
-    if ((showTambah || showEdit) && selectedTahunAjaranId) {
-      fetchGuruDropdown();
-      fetchMapelDropdown(selectedTahunAjaranId);
+    if (selectedTahunAjaranId) {
+      fetchData(selectedTahunAjaranId);
     }
-  }, [showTambah, showEdit, selectedTahunAjaranId]);
+  }, [selectedTahunAjaranId]);
+
+  useEffect(() => {
+    if (selectedTahunAjaranAktif) {
+      fetchAllDropdowns();
+    }
+  }, [selectedTahunAjaranAktif]);
 
   // ====== EVENT HANDLERS ======
   const handleInputChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -191,71 +162,100 @@ export default function DataPembelajaranPage() {
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.guru_id) newErrors.guru_id = 'Pilih guru';
-    if (!formData.mapel_id) newErrors.mapel_id = 'Pilih mata pelajaran';
-    if (!formData.kelas_id) newErrors.kelas_id = 'Pilih kelas';
+    if (!formData.user_id) newErrors.user_id = 'Pilih guru';
+    if (!formData.id_mapel) newErrors.id_mapel = 'Pilih mata pelajaran';
+    if (!formData.id_kelas) newErrors.id_kelas = 'Pilih kelas';
     if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data';
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (isEdit: boolean) => {
-    if (!validate()) return;
-    const token = localStorage.getItem('token');
-    const url = isEdit
-      ? `http://localhost:5000/api/admin/pembelajaran/${editId}`
-      : `http://localhost:5000/api/admin/pembelajaran`;
+    if (!validate()) {
+      const missing = [];
+      if (!formData.user_id) missing.push('Guru');
+      if (!formData.id_mapel) missing.push('Mata Pelajaran');
+      if (!formData.id_kelas) missing.push('Kelas');
+      if (!formData.confirmData) missing.push('Konfirmasi');
+      alert(`Belum lengkap! Mohon isi: ${missing.join(', ')}`);
+      return;
+    }
+
+    const payload = {
+      user_id: Number(formData.user_id),
+      mata_pelajaran_id: Number(formData.id_mapel),
+      kelas_id: Number(formData.id_kelas)
+    };
 
     try {
+      const url = isEdit
+        ? `http://localhost:5000/api/admin/pembelajaran/${editId}`
+        : `http://localhost:5000/api/admin/pembelajaran`;
+
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          user_id: Number(formData.guru_id),
-          mapel_id: Number(formData.mapel_id),
-          kelas_id: Number(formData.kelas_id),
-          tahun_ajaran_id: selectedTahunAjaranId
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        alert(isEdit ? 'Data pembelajaran berhasil diperbarui' : 'Data pembelajaran berhasil ditambahkan');
-        if (selectedTahunAjaranId) fetchData(selectedTahunAjaranId);
-        setShowTambah(false);
-        setShowEdit(false);
-        setFormData({ guru_id: '', mapel_id: '', kelas_id: '', confirmData: false });
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menyimpan data');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Error ${res.status}`);
       }
+
+      alert(isEdit ? 'Data pembelajaran berhasil diperbarui' : 'Data pembelajaran berhasil ditambahkan');
+      if (selectedTahunAjaranId) {
+        fetchData(selectedTahunAjaranId);
+      }
+      setShowTambah(false);
+      setShowEdit(false);
+      setFormData({ user_id: '', id_mapel: '', id_kelas: '', confirmData: false });
     } catch (err) {
-      alert('Gagal terhubung ke server');
+      console.error('Submit error:', err);
+      alert('Gagal menyimpan: ' + (err instanceof Error ? err.message : 'Cek koneksi'));
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Yakin ingin menghapus data pembelajaran ini?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/admin/pembelajaran/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        alert('Data pembelajaran berhasil dihapus');
-        if (selectedTahunAjaranId) fetchData(selectedTahunAjaranId);
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menghapus data');
-      }
-    } catch (err) {
-      alert('Gagal terhubung ke server');
+    if (!id) {
+        alert('ID tidak valid');
+        return;
     }
-  };
+    if (!confirm('Yakin ingin menghapus data pembelajaran ini?')) return;
+
+    // ✅ Validasi: cek apakah ID ada di data yang tampil
+    const currentData = dataList.filter(item => item.id === id);
+    if (currentData.length === 0) {
+        alert('Data tidak ditemukan di tahun ajaran ini.');
+        return;
+    }
+
+    try {
+        const url = `http://localhost:5000/api/admin/pembelajaran/${id}`;
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || `HTTP ${res.status}`);
+        }
+
+        alert('Data pembelajaran berhasil dihapus');
+        if (selectedTahunAjaranId) {
+            fetchData(selectedTahunAjaranId);
+        }
+    } catch (err) {
+        console.error('Delete error:', err);
+        alert('Gagal menghapus: ' + (err instanceof Error ? err.message : 'Cek koneksi'));
+    }
+};
 
   // ====== FILTERING & PAGINATION ======
   const filteredData = dataList.filter(item =>
@@ -267,90 +267,109 @@ export default function DataPembelajaranPage() {
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
 
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
-    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 border rounded">«</button>);
+    if (currentPage > 1) {
+      pages.push(<button key="prev-page" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
+    }
     if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border rounded ${currentPage === i ? 'bg-blue-500 text-white' : ''}`}>{i}</button>);
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
     } else {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : ''}`}>1</button>);
-      if (currentPage > 3) pages.push(<span key="dots1" className="px-2">...</span>);
+      pages.push(<button key="page-1" onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = start; i <= end; i++) pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border rounded ${currentPage === i ? 'bg-blue-500 text-white' : ''}`}>{i}</button>);
-      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2">...</span>);
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : ''}`}>{totalPages}</button>);
+      for (let i = start; i <= end; i++) {
+        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={`page-${totalPages}`} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
-    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 border rounded">»</button>);
+    if (currentPage < totalPages) {
+      pages.push(<button key="next-page" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
+    }
     return pages;
   };
 
   // ====== RENDER FORM ======
-  const renderForm = (title: string, isEdit: boolean) => (
-    <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">{title}</h1>
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">{title}</h2>
-            <button onClick={() => { setShowTambah(false); setShowEdit(false); }} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
-          </div>
+  const isFormValid = formData.user_id && formData.id_mapel && formData.id_kelas && formData.confirmData;
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  const renderForm = (title: string, isEdit: boolean) => (
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
+      <div className="w-full max-w-2xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">{title}</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+            <button
+              onClick={() => { setShowTambah(false); setShowEdit(false); }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:gap-5">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Guru Pengampu <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Guru Pengampu <span className="text-red-500">*</span>
+              </label>
               <select
-                name="guru_id"
-                value={formData.guru_id}
+                name="user_id"
+                value={formData.user_id}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.guru_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2`}
-                disabled={guruLoading}
+                className={`w-full border ${errors.user_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                disabled={dropdownLoading}
               >
-                <option value="">-- {guruLoading ? 'Memuat...' : 'Pilih'} --</option>
-                {guruList.map(g => (
+                <option value="">-- Pilih --</option>
+                {guruList.map((g) => (
                   <option key={g.id} value={g.id}>{g.nama}</option>
                 ))}
               </select>
-              {errors.guru_id && <p className="text-red-500 text-xs mt-1">{errors.guru_id}</p>}
+              {errors.user_id && <p className="text-red-500 text-xs mt-1">{errors.user_id}</p>}
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-1.5">Mata Pelajaran <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Mata Pelajaran <span className="text-red-500">*</span>
+              </label>
               <select
-                name="mapel_id"
-                value={formData.mapel_id}
+                name="id_mapel"
+                value={formData.id_mapel}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.mapel_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2`}
-                disabled={mapelLoading}
+                className={`w-full border ${errors.id_mapel ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                disabled={dropdownLoading}
               >
-                <option value="">-- {mapelLoading ? 'Memuat...' : 'Pilih'} --</option>
-                {mapelList.map(m => (
+                <option value="">-- Pilih --</option>
+                {mapelList.map((m) => (
                   <option key={m.id} value={m.id}>{m.nama}</option>
                 ))}
               </select>
-              {errors.mapel_id && <p className="text-red-500 text-xs mt-1">{errors.mapel_id}</p>}
+              {errors.id_mapel && <p className="text-red-500 text-xs mt-1">{errors.id_mapel}</p>}
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-1.5">Kelas <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Kelas <span className="text-red-500">*</span>
+              </label>
               <select
-                name="kelas_id"
-                value={formData.kelas_id}
+                name="id_kelas"
+                value={formData.id_kelas}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.kelas_id ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2`}
+                className={`w-full border ${errors.id_kelas ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                disabled={dropdownLoading}
               >
                 <option value="">-- Pilih --</option>
-                {kelasList.map(k => (
+                {kelasList.map((k) => (
                   <option key={k.id} value={k.id}>{k.nama}</option>
                 ))}
               </select>
-              {errors.kelas_id && <p className="text-red-500 text-xs mt-1">{errors.kelas_id}</p>}
+              {errors.id_kelas && <p className="text-red-500 text-xs mt-1">{errors.id_kelas}</p>}
             </div>
           </div>
-
           <div className="mt-6">
             <label className="flex items-start gap-2 cursor-pointer">
               <input
@@ -360,24 +379,38 @@ export default function DataPembelajaranPage() {
                 onChange={handleInputChange}
                 className="mt-0.5 w-4 h-4 text-blue-600 rounded"
               />
-              <span className="text-sm text-gray-700">Saya yakin data yang diisi sudah benar</span>
+              <span className="text-sm text-gray-700">
+                Saya yakin data yang diisi sudah benar
+              </span>
             </label>
             {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
           </div>
-
-          <div className="mt-8 flex gap-3">
-            <button
-              onClick={() => { setShowTambah(false); setShowEdit(false); }}
-              className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded hover:bg-gray-50"
-            >
-              Batal
-            </button>
-            <button
-              onClick={() => handleSubmit(isEdit)}
-              className="flex-1 bg-blue-500 text-white py-2.5 rounded hover:bg-blue-600"
-            >
-              {isEdit ? 'Update' : 'Simpan'}
-            </button>
+          <div className="mt-6 sm:mt-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <button
+                onClick={() => { setShowTambah(false); setShowEdit(false); }}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => setFormData({ user_id: '', id_mapel: '', id_kelas: '', confirmData: false })}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => handleSubmit(isEdit)}
+                disabled={!isFormValid}
+                className={`flex-1 py-2.5 rounded text-xs sm:text-sm font-medium ${
+                  !isFormValid
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                {isEdit ? 'Update' : 'Simpan'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -391,27 +424,41 @@ export default function DataPembelajaranPage() {
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Pembelajaran</h1>
-
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           {/* Dropdown Tahun Ajaran */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Tahun Ajaran</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tahun Ajaran
+            </label>
             <select
               value={selectedTahunAjaranId ?? ''}
               onChange={(e) => {
-                const id = Number(e.target.value);
-                const ta = tahunAjaranList.find(t => t.id === id);
-                setSelectedTahunAjaranId(id || null);
-                setSelectedTahunAjaranAktif(!!ta?.is_aktif);
+                const value = e.target.value;
+                if (value === '') {
+                  setSelectedTahunAjaranId(null);
+                  setSelectedTahunAjaranAktif(false);
+                  setLoading(false);
+                  setDataList([]);
+                  return;
+                }
+                const id = Number(value);
+                const selectedTa = tahunAjaranList.find(ta => ta.id === id);
+                setSelectedTahunAjaranId(id);
+                setSelectedTahunAjaranAktif(selectedTa?.is_aktif || false);
+                setLoading(true);
+                fetchData(id);
               }}
               className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-0"
             >
               <option value="">-- Pilih Tahun Ajaran --</option>
-              {tahunAjaranList.map(ta => (
-                <option key={ta.id} value={ta.id}>
-                  {ta.tahun_ajaran} {ta.semester === 'ganjil' ? 'Ganjil' : 'Genap'} {ta.is_aktif ? "(Aktif)" : ""}
-                </option>
-              ))}
+              {tahunAjaranList.map(ta => {
+                const semesterDisplay = ta.semester === 'ganjil' ? 'Ganjil' : 'Genap';
+                return (
+                  <option key={ta.id} value={ta.id}>
+                    {ta.tahun_ajaran} {semesterDisplay} {ta.is_aktif ? "(Aktif)" : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -421,81 +468,102 @@ export default function DataPembelajaranPage() {
             </div>
           ) : (
             <>
-              {/* Toolbar */}
-              <div className="flex flex-wrap justify-between gap-3 mb-4">
-                {selectedTahunAjaranAktif && (
-                  <button
-                    onClick={() => setShowTambah(true)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded flex items-center gap-2"
-                  >
-                    <Plus size={18} /> Tambah Pembelajaran
-                  </button>
-                )}
-                <div className="flex gap-3">
-                  <div className="relative min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Cari..."
-                      value={searchQuery}
-                      onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                      className="w-full border border-gray-300 rounded pl-10 pr-4 py-2"
-                    />
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  {selectedTahunAjaranAktif && (
+                    <button
+                      onClick={() => setShowTambah(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+                    >
+                      <Plus size={20} />
+                      Tambah Pembelajaran
+                    </button>
+                  )}
+                </div>
+                <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Search className="w-4 h-4 text-gray-400" />
                   </div>
+                  <input
+                    type="text"
+                    placeholder="pencarian"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                      className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                 <table className="w-full min-w-[600px] table-auto text-sm">
                   <thead>
-                    <tr className="bg-gray-800 text-white text-left">
-                      <th className="px-4 py-3">No</th>
-                      <th className="px-4 py-3">Mata Pelajaran</th>
-                      <th className="px-4 py-3">Kelas</th>
-                      <th className="px-4 py-3">Guru Pengampu</th>
-                      {selectedTahunAjaranAktif && <th className="px-4 py-3 text-center">Aksi</th>}
+                    <tr>
+                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Mata Pelajaran</th>
+                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Kelas</th>
+                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Guru Pengampu</th>
+                      <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center">Memuat data...</td></tr>
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                      </tr>
                     ) : currentData.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center">Tidak ada data pembelajaran</td></tr>
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Tidak ada data pembelajaran</td>
+                      </tr>
                     ) : (
-                      currentData.map((item, idx) => (
-                        <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-3">{startIndex + idx + 1}</td>
-                          <td className="px-4 py-3 font-medium">{item.nama_mapel}</td>
-                          <td className="px-4 py-3">{item.nama_kelas}</td>
-                          <td className="px-4 py-3">{item.nama_guru}</td>
-                          {selectedTahunAjaranAktif && (
-                            <td className="px-4 py-3 text-center">
-                              <div className="flex justify-center gap-2">
+                      currentData.map((item, index) => (
+                        <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                          <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                          <td className="px-4 py-3 text-center align-middle">{item.nama_mapel}</td>
+                          <td className="px-4 py-3 text-center align-middle">{item.nama_kelas}</td>
+                          <td className="px-4 py-3 text-center align-middle">{item.nama_guru}</td>
+                          <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
+                            {selectedTahunAjaranAktif ? (
+                              <div className="flex gap-1 justify-center">
                                 <button
                                   onClick={() => {
                                     setEditId(item.id);
                                     setFormData({
-                                      guru_id: String(item.id),
-                                      mapel_id: String(item.id),
-                                      kelas_id: String(item.id),
+                                      user_id: String(item.user_id),
+                                      id_mapel: String(item.id_mapel),
+                                      id_kelas: String(item.id_kelas),
                                       confirmData: false
                                     });
                                     setShowEdit(true);
                                   }}
-                                  className="bg-yellow-400 text-gray-800 px-3 py-1 rounded flex items-center gap-1"
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
                                 >
-                                  <Pencil size={16} />
+                                  <Pencil size={12} />
+                                  Edit
                                 </button>
                                 <button
                                   onClick={() => handleDelete(item.id)}
-                                  className="bg-red-500 text-white px-3 py-1 rounded flex items-center gap-1"
+                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={12} />
+                                  Hapus
                                 </button>
                               </div>
-                            </td>
-                          )}
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -503,13 +571,14 @@ export default function DataPembelajaranPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               {filteredData.length > 0 && (
-                <div className="flex justify-between items-center mt-4">
+                <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
                   <div className="text-sm text-gray-600">
-                    Menampilkan {startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredData.length)} dari {filteredData.length} data
+                    Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredData.length)} dari {filteredData.length} data
                   </div>
-                  <div className="flex gap-1">{renderPagination()}</div>
+                  <div className="flex gap-1 flex-wrap justify-center">
+                    {renderPagination()}
+                  </div>
                 </div>
               )}
             </>

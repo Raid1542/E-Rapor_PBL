@@ -542,7 +542,7 @@ export default function DataMataPelajaranPage() {
                       currentMapel.map((mp, index) => (
                         <tr key={mp.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
                           <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
-                          <td className="px-4 py-3 text-center align-middle font-mono">{mp.kode_mapel}</td>
+                          <td className="px-4 py-3 text-center align-middle font-medium">{mp.kode_mapel}</td>
                           <td className="px-4 py-3 align-middle">{mp.nama_mapel}</td>
                           <td className="px-4 py-3 text-center align-middle">
                             {mp.jenis.charAt(0).toUpperCase() + mp.jenis.slice(1)}

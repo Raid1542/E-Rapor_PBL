@@ -1,11 +1,12 @@
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Pencil, Plus, Search, X } from 'lucide-react';
+import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
 
 interface Kelas {
   id: number;
   nama_kelas: string;
-  wali_kelas: string;
+  wali_kelas: string; // nama guru atau '-'
+  wali_kelas_id: number | null;
   fase: string;
   jumlah_siswa: number;
 }
@@ -17,9 +18,15 @@ interface TahunAjaran {
   is_aktif: boolean;
 }
 
+interface GuruOption {
+  id: number; // ini = user_id
+  nama: string;
+}
+
 interface FormDataType {
   nama_kelas: string;
   fase: string;
+  user_id: string; // string untuk select value, dikonversi ke number saat kirim
   confirmData: boolean;
 }
 
@@ -35,10 +42,13 @@ export default function DataKelasPage() {
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
   const [selectedTahunAjaranAktif, setSelectedTahunAjaranAktif] = useState<boolean>(false);
+  const [guruList, setGuruList] = useState<GuruOption[]>([]);
+  const [loadingGuru, setLoadingGuru] = useState(false);
 
   const [formData, setFormData] = useState<FormDataType>({
     nama_kelas: '',
     fase: '',
+    user_id: '',
     confirmData: false
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,7 +80,39 @@ export default function DataKelasPage() {
     }
   };
 
-  // === Fetch Data Kelas (berdasarkan tahun ajaran) ===
+  // === Fetch Daftar Guru Kelas untuk Dropdown ===
+  const fetchGuruList = async () => {
+    setLoadingGuru(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoadingGuru(false);
+      return;
+    }
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/guru-kelas", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const validGuru = data.data
+          .filter((g: any) => g.user_id != null)
+          .map((g: any) => ({
+            id: g.user_id,
+            nama: g.nama
+          }));
+        setGuruList(validGuru);
+      } else {
+        setGuruList([]);
+      }
+    } catch (err) {
+      console.error('Error fetch guru kelas:', err);
+      setGuruList([]);
+    } finally {
+      setLoadingGuru(false);
+    }
+  };
+
+  // === Fetch Data Kelas ===
   const fetchKelas = async (tahunAjaranId: number) => {
     try {
       const token = localStorage.getItem('token');
@@ -83,7 +125,12 @@ export default function DataKelasPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setKelasList(data.data);
+        // Pastikan wali_kelas_id ada
+        const listWithId = data.data.map((k: any) => ({
+          ...k,
+          wali_kelas_id: k.wali_kelas === '-' ? null : k.wali_kelas_id
+        }));
+        setKelasList(listWithId);
       } else {
         alert('Gagal memuat data kelas: ' + (data.message || 'Tidak terotorisasi'));
       }
@@ -97,10 +144,10 @@ export default function DataKelasPage() {
 
   useEffect(() => {
     fetchTahunAjaran();
+    fetchGuruList();
   }, []);
 
-  // === Handle Form ===
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -118,7 +165,7 @@ export default function DataKelasPage() {
     if (!validate()) return;
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Sesi login telah habis. Silakan login ulang.');
+      alert('Sesi login habis');
       return;
     }
     try {
@@ -129,8 +176,8 @@ export default function DataKelasPage() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          nama_kelas: formData.nama_kelas,
-          fase: formData.fase
+          nama_kelas: formData.nama_kelas.trim(),
+          fase: formData.fase.trim()
         })
       });
       if (res.ok) {
@@ -152,42 +199,98 @@ export default function DataKelasPage() {
     setFormData({
       nama_kelas: kelas.nama_kelas,
       fase: kelas.fase,
+      user_id: kelas.wali_kelas_id ? String(kelas.wali_kelas_id) : '',
       confirmData: false
     });
     setShowEdit(true);
   };
 
+  const handleHapus = async (kelasId: number) => {
+    if (!confirm('Yakin ingin menghapus kelas ini?.')) {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token || !selectedTahunAjaranId) {
+      alert('Sesi tidak valid');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/kelas/${kelasId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        alert('Kelas berhasil dihapus');
+        fetchKelas(selectedTahunAjaranId);
+      } else {
+        const error = await res.json();
+        alert('Gagal menghapus kelas: ' + (error.message || 'Terjadi kesalahan'));
+      }
+    } catch (err) {
+      alert('Gagal terhubung ke server');
+    }
+  };
+
   const handleSubmitEdit = async () => {
     if (!validate()) return;
     const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login telah habis. Silakan login ulang.');
+    if (!token || !editId || !selectedTahunAjaranId) {
+      alert('Sesi tidak valid');
       return;
     }
+
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
+      // 1. Update data kelas
+      const resKelas = await fetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
         method: "PUT",
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          nama_kelas: formData.nama_kelas,
-          fase: formData.fase
+          nama_kelas: formData.nama_kelas.trim(),
+          fase: formData.fase.trim()
         })
       });
-      if (res.ok) {
-        alert("Data kelas berhasil diperbarui");
-        setShowEdit(false);
-        setEditId(null);
-        if (selectedTahunAjaranId) fetchKelas(selectedTahunAjaranId);
-        handleReset();
-      } else {
-        const error = await res.json();
-        alert(error.message || "Gagal memperbarui kelas");
+
+      if (!resKelas.ok) {
+        const err = await resKelas.json();
+        throw new Error(err.message || 'Gagal update kelas');
       }
-    } catch (err) {
-      alert("Gagal terhubung ke server");
+
+      // 2. Update wali kelas (hanya jika user_id diisi dan valid)
+      if (formData.user_id && formData.user_id !== '') {
+        const userIdNum = Number(formData.user_id);
+        if (isNaN(userIdNum) || userIdNum <= 0) {
+          alert('ID guru tidak valid');
+          return;
+        }
+
+        const resWali = await fetch(`http://localhost:5000/api/admin/kelas/${editId}/guru`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ user_id: userIdNum })
+        });
+
+        if (!resWali.ok) {
+          const err = await resWali.json();
+          alert('Kelas berhasil diupdate, tapi gagal menetapkan wali kelas: ' + (err.message || ''));
+        }
+      }
+
+      alert("Data kelas berhasil diperbarui");
+      setShowEdit(false);
+      setEditId(null);
+      if (selectedTahunAjaranId) fetchKelas(selectedTahunAjaranId);
+      handleReset();
+    } catch (err: any) {
+      alert("Gagal: " + (err.message || 'Terjadi kesalahan'));
     }
   };
 
@@ -195,6 +298,7 @@ export default function DataKelasPage() {
     setFormData({
       nama_kelas: '',
       fase: '',
+      user_id: '',
       confirmData: false
     });
     setErrors({});
@@ -217,9 +321,7 @@ export default function DataKelasPage() {
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
-    if (currentPage > 1) {
-      pages.push(<button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
-    }
+    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
@@ -235,16 +337,13 @@ export default function DataKelasPage() {
       if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
       pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
-    if (currentPage < totalPages) {
-      pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
-    }
+    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
     return pages;
   };
 
-  // === Render Form Tambah/Edit ===
   const renderForm = (isEdit: boolean) => (
     <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
-      <div className="w-full max-w-2xl mx-auto">
+      <div className="w-full max-w-4xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Data Kelas</h1>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
           <div className="flex items-center justify-between mb-6">
@@ -253,7 +352,8 @@ export default function DataKelasPage() {
             </h2>
             <button
               onClick={() => {
-                isEdit ? setShowEdit(false) : setShowTambah(false);
+                if (isEdit) setShowEdit(false);
+                else setShowTambah(false);
                 handleReset();
               }}
               className="text-gray-500 hover:text-gray-700"
@@ -261,7 +361,7 @@ export default function DataKelasPage() {
               <X size={24} />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Nama Kelas <span className="text-red-500">*</span>
@@ -285,11 +385,37 @@ export default function DataKelasPage() {
                 name="fase"
                 value={formData.fase}
                 onChange={handleInputChange}
-                placeholder="Contoh: A"
+                placeholder="A, B, atau C"
                 className={`w-full border ${errors.fase ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
               />
               {errors.fase && <p className="text-red-500 text-xs mt-1">{errors.fase}</p>}
             </div>
+            {isEdit && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Guru Kelas
+                </label>
+                {loadingGuru ? (
+                  <div className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-500">
+                    Memuat...
+                  </div>
+                ) : (
+                  <select
+                    name="user_id"
+                    value={formData.user_id}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  >
+                    <option value="">-- pilih --</option>
+                    {guruList.map((g) => (
+                      <option key={`guru-${g.id}`} value={g.id}>
+                        {g.nama}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
           </div>
           <div className="mt-6">
             <label className="flex items-start gap-2 cursor-pointer">
@@ -310,7 +436,8 @@ export default function DataKelasPage() {
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
                 onClick={() => {
-                  isEdit ? setShowEdit(false) : setShowTambah(false);
+                  if (isEdit) setShowEdit(false);
+                  else setShowTambah(false);
                   handleReset();
                 }}
                 className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
@@ -399,29 +526,48 @@ export default function DataKelasPage() {
                     </button>
                   )}
                 </div>
-                <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Search className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="pencarian"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
-                      className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-gray-700 text-sm">Tampilkan</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="border border-gray-300 rounded px-3 py-1 text-sm"
                     >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span className="text-gray-700 text-sm">data</span>
+                  </div>
+                  <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Search className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Pencarian"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -452,23 +598,36 @@ export default function DataKelasPage() {
                           <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                           <td className="px-4 py-3 text-center align-middle font-medium">{kelas.nama_kelas}</td>
                           <td className="px-4 py-3 text-center align-middle">
-                            {kelas.wali_kelas === '-' ? 'Belum ditetapkan' : kelas.wali_kelas}
+                            {kelas.wali_kelas === '-' ? (
+                              <span className="text-gray-400">Belum ditetapkan</span>
+                            ) : (
+                              kelas.wali_kelas
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center align-middle">{kelas.fase}</td>
                           <td className="px-4 py-3 text-center align-middle">{kelas.jumlah_siswa}</td>
                           <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
-  {selectedTahunAjaranAktif ? (
-    <button
-      onClick={() => handleEdit(kelas)}
-      className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
-    >
-      <Pencil size={16} />
-      Edit
-    </button>
-  ) : (
-    <span className="text-gray-400 text-sm">-</span>
-  )}
-</td>
+                            {selectedTahunAjaranAktif ? (
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  onClick={() => handleEdit(kelas)}
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
+                                >
+                                  <Pencil size={16} />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleHapus(kelas.id)}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded flex items-center gap-1 transition text-sm"
+                                >
+                                  <Trash2 size={16} />
+                                  Hapus
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}

@@ -81,9 +81,12 @@ router.get('/kelas', adminOnly, adminController.getKelas);
 router.get('/kelas/:id', adminOnly, adminController.getKelasById);
 router.post('/kelas', adminOnlyWithTahunAjaran, adminController.tambahKelas);
 router.put('/kelas/:id', adminOnlyWithTahunAjaran, adminController.editKelas);
-router.get('/dropdown', adminOnly, adminController.getKelasForDropdown);
-// Daftar guru yang bisa jadi wali kelas
+router.delete('/kelas/:id', adminOnlyWithTahunAjaran, adminController.hapusKelas);
+router.get('/dropdown', adminOnlyWithTahunAjaran, adminController.getKelasForDropdown);
+
+// -- Guru Kelas --
 router.get('/guru-kelas', adminOnly, adminController.getGuruKelasList);
+router.get('/kelas/:id/wali-kelas', adminOnly, adminController.getWaliKelas);
 router.post('/kelas/:id/guru', adminOnlyWithTahunAjaran, adminController.setWaliKelas);
 
 // --- Tahun Ajaran & Semester ---
@@ -98,16 +101,11 @@ router.post('/mata-pelajaran', adminOnly, adminController.tambahMataPelajaran);
 router.put('/mata-pelajaran/:id', adminOnly, adminController.editMataPelajaran);
 router.delete('/mata-pelajaran/:id', adminOnly, adminController.hapusMataPelajaran);
 
-// --- Data Pembelajaran (Guru Bidang Studi) ---
-router.get('/pembelajaran', adminOnly, adminController.getPembelajaran);
-router.post('/pembelajaran', adminOnly, adminController.tambahPembelajaran);
-router.put('/pembelajaran/:id', adminOnly, adminController.editPembelajaran);
-router.delete('/pembelajaran/:id', adminOnly, adminController.hapusPembelajaran);
-
-// --- Dropdown untuk form (opsional tapi disarankan) ---
-router.get('/dropdown/guru', adminOnly, adminController.getGuruBidangStudiForDropdown);
-router.get('/dropdown/mapel', adminOnly, adminController.getMapelForDropdown);
-router.get('/dropdown/tahun-ajaran', adminOnly, adminController.getTahunAjaranForDropdown);
-
+// --- PEMBELAJARAN ---
+router.get('/pembelajaran', adminOnlyWithTahunAjaran, adminController.getPembelajaran);
+router.get('/pembelajaran/dropdown', adminOnlyWithTahunAjaran, adminController.getDropdownPembelajaran);
+router.post('/pembelajaran', adminOnlyWithTahunAjaran, adminController.tambahPembelajaran);
+router.put('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.editPembelajaran);
+router.delete('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.hapusPembelajaran);
 
 module.exports = router;
