@@ -1,8 +1,7 @@
-// app/admin/ekstrakurikuler/page.tsx
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
-import { Pencil, Plus, Trash2, Search, Filter, X } from 'lucide-react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { Pencil, Plus, Trash2, Search, X } from 'lucide-react';
 
 interface Ekstrakurikuler {
   id: number;
@@ -30,16 +29,6 @@ export default function DataEkstrakurikulerPage() {
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
   const [selectedTahunAjaranAktif, setSelectedTahunAjaranAktif] = useState<boolean>(false);
-
-  // === Modal States ===
-  const [showFilter, setShowFilter] = useState(false);
-  const [filterClosing, setFilterClosing] = useState(false);
-  const [filterValues, setFilterValues] = useState({
-    pembina: ''
-  });
-  const [openedFilterValues, setOpenedFilterValues] = useState({
-    pembina: ''
-  });
 
   // === Form State ===
   const [formData, setFormData] = useState({
@@ -90,7 +79,7 @@ export default function DataEkstrakurikulerPage() {
       const data = await res.json();
       if (res.ok) {
         const camelCasedData = (Array.isArray(data.data) ? data.data : []).map((ekskul: any) => ({
-          id: ekskul.id,
+          id: ekskul.id_ekskul, // ✅ INI YANG DIPERBAIKI!
           nama_ekskul: ekskul.nama_ekskul,
           nama_pembina: ekskul.nama_pembina || '-',
           jumlah_anggota: ekskul.jumlah_anggota || 0
@@ -107,7 +96,6 @@ export default function DataEkstrakurikulerPage() {
     }
   };
 
-  // Panggil di useEffect
   useEffect(() => {
     fetchTahunAjaran();
   }, []);
@@ -118,6 +106,48 @@ export default function DataEkstrakurikulerPage() {
       fetchEkskul(selectedTahunAjaranId);
     }
   }, [selectedTahunAjaranId]);
+
+  // === Pencarian & Pagination ===
+  const filteredEkskul = ekskulList.filter((ekskul) => {
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      !query ||
+      ekskul.nama_ekskul.toLowerCase().includes(query) ||
+      (ekskul.nama_pembina && ekskul.nama_pembina.toLowerCase().includes(query))
+    );
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredEkskul.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentEkskul = filteredEkskul.slice(startIndex, endIndex);
+
+  const renderPagination = () => {
+    const pages: JSX.Element[] = [];
+    const maxVisible = 5;
+    if (currentPage > 1) {
+      pages.push(<button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
+    }
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
+    } else {
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+    }
+    if (currentPage < totalPages) {
+      pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
+    }
+    return pages;
+  };
 
   // === Form & Validation ===
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -233,49 +263,6 @@ export default function DataEkstrakurikulerPage() {
       confirmData: false
     });
     setErrors({});
-  };
-
-  // === Filtering & Pagination ===
-  const filteredEkskul = ekskulList.filter((ekskul) => {
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query ||
-      ekskul.nama_ekskul.toLowerCase().includes(query) ||
-      (ekskul.nama_pembina && ekskul.nama_pembina.toLowerCase().includes(query));
-    const matchesPembina = !filterValues.pembina ||
-      ekskul.nama_pembina.toLowerCase().includes(filterValues.pembina.toLowerCase());
-    return matchesSearch && matchesPembina;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredEkskul.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentEkskul = filteredEkskul.slice(startIndex, endIndex);
-
-  const renderPagination = () => {
-    const pages: JSX.Element[] = [];
-    const maxVisible = 5;
-    if (currentPage > 1) {
-      pages.push(<button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
-    }
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
-      }
-    } else {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
-      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = start; i <= end; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
-      }
-      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
-    }
-    if (currentPage < totalPages) {
-      pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
-    }
-    return pages;
   };
 
   // === Render Form Tambah/Edit ===
@@ -421,8 +408,7 @@ export default function DataEkstrakurikulerPage() {
                       onClick={() => setShowTambah(true)}
                       className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
                     >
-                      <Plus size={20} />
-                      Tambah Ekstrakurikuler
+                      <Plus size={20} /> Tambah Ekstrakurikuler
                     </button>
                   )}
                 </div>
@@ -468,21 +454,9 @@ export default function DataEkstrakurikulerPage() {
                       </button>
                     )}
                   </div>
-                  {selectedTahunAjaranAktif && (
-                    <button
-                      onClick={() => {
-                        setOpenedFilterValues({ ...filterValues });
-                        setShowFilter(true);
-                        setFilterClosing(false);
-                      }}
-                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
-                    >
-                      <Filter size={20} />
-                      Filter Ekstrakurikuler
-                    </button>
-                  )}
                 </div>
               </div>
+
               <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                 <table className="w-full min-w-[600px] table-auto text-sm">
                   <thead>
@@ -503,7 +477,7 @@ export default function DataEkstrakurikulerPage() {
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                       </tr>
-                    ) : currentEkskul.length === 0 ? (
+                    ) : filteredEkskul.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Tidak ada data ekstrakurikuler</td>
                       </tr>
@@ -513,7 +487,9 @@ export default function DataEkstrakurikulerPage() {
                           key={ekskul.id}
                           className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                         >
-                          <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                          <td className="px-4 py-3 text-center align-middle font-medium">
+                            {startIndex + index + 1}
+                          </td>
                           <td className="px-4 py-3 align-middle font-medium">{ekskul.nama_ekskul}</td>
                           <td className="px-4 py-3 align-middle">{ekskul.nama_pembina}</td>
                           <td className="px-4 py-3 text-center align-middle">{ekskul.jumlah_anggota}</td>
@@ -527,7 +503,7 @@ export default function DataEkstrakurikulerPage() {
                                       setFormData({
                                         nama_ekskul: ekskul.nama_ekskul,
                                         nama_pembina: ekskul.nama_pembina || '',
-                                        confirmData: false
+                                        confirmData: false,
                                       });
                                       setShowEdit(true);
                                     }}
@@ -553,6 +529,7 @@ export default function DataEkstrakurikulerPage() {
                   </tbody>
                 </table>
               </div>
+
               {filteredEkskul.length > 0 && (
                 <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
                   <div className="text-sm text-gray-600">
@@ -567,76 +544,6 @@ export default function DataEkstrakurikulerPage() {
           )}
         </div>
       </div>
-
-      {/* Modal Filter */}
-      {showFilter && (
-        <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${filterClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setFilterClosing(true);
-              setTimeout(() => {
-                setShowFilter(false);
-                setFilterClosing(false);
-              }, 200);
-            }
-          }}
-        >
-          <div className="absolute inset-0 bg-gray-900/70"></div>
-          <div
-            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${filterClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-          >
-            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Filter Ekstrakurikuler</h2>
-              <button
-                onClick={() => {
-                  setFilterClosing(true);
-                  setTimeout(() => {
-                    setShowFilter(false);
-                    setFilterClosing(false);
-                  }, 200);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label="Tutup filter"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pembina</label>
-                <input
-                  type="text"
-                  placeholder="Cari pembina"
-                  value={filterValues.pembina}
-                  onChange={(e) => setFilterValues({ ...filterValues, pembina: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={resetFilter}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-100 transition text-sm"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={() => {
-                    setFilterClosing(true);
-                    setTimeout(() => {
-                      setShowFilter(false);
-                      setFilterClosing(false);
-                    }, 200);
-                  }}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition text-sm"
-                >
-                  Terapkan
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ const tahunAjaranModel = require('../models/tahunAjaranModel');
 const siswaModel = require('../models/siswaModel');
 const kelasModel = require('../models/kelasModel');
 const mapelModel = require('../models/mapelModel');
+const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
@@ -618,7 +619,7 @@ const getKelas = async (req, res) => {
     WHERE k.tahun_ajaran_id = ?  
     GROUP BY k.id_kelas, k.nama_kelas, k.fase, wk.nama_lengkap, wk.user_id
     ORDER BY k.nama_kelas ASC
-`, [tahun_ajaran_id, tahun_ajaran_id, tahun_ajaran_id]); 
+`, [tahun_ajaran_id, tahun_ajaran_id, tahun_ajaran_id]);
         res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Error get kelas:', err);
@@ -1204,9 +1205,6 @@ const hapusPembelajaran = async (req, res) => {
 };
 
 // ============== EKSTRAKURIKULER ==============
-const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
-const pesertaEkskulModel = require('../models/pesertaEkskulModel');
-
 /**
  * Ambil semua ekstrakurikuler berdasarkan tahun ajaran
  */
@@ -1430,6 +1428,80 @@ const getEkskulBySiswa = async (req, res) => {
     }
 };
 
+// ============== DASHBOARD STATISTICS ==============
+// ============== DASHBOARD STATISTICS ==============
+const getDashboardStats = async (req, res) => {
+    try {
+        const taId = req.tahunAjaranAktifId; // Ambil dari middleware
+
+        if (!taId || typeof taId !== 'number') {
+            return res.status(500).json({ message: 'Tidak ada tahun ajaran aktif yang valid' });
+        }
+
+        // Count Guru
+        const [guruRows] = await db.execute(`
+            SELECT COUNT(DISTINCT u.id_user) AS total
+            FROM user u
+            INNER JOIN user_role ur ON u.id_user = ur.id_user
+            WHERE ur.role IN ('guru kelas', 'guru bidang studi')
+              AND u.status = 'aktif'
+        `);
+
+        // Count Siswa
+        const [siswaRows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM siswa s
+            INNER JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+            WHERE sk.tahun_ajaran_id = ?
+        `, [taId]);
+
+        // Count Admin
+        const [adminRows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM user u
+            INNER JOIN user_role ur ON u.id_user = ur.id_user
+            WHERE ur.role = 'admin'
+              AND u.status = 'aktif'
+        `);
+
+        // Count Ekstrakurikuler
+        const [ekskulRows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM ekstrakurikuler
+            WHERE tahun_ajaran_id = ?
+        `, [taId]);
+
+        // Count Kelas
+        const [kelasRows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM kelas
+            WHERE tahun_ajaran_id = ?
+        `, [taId]);
+
+        // Count Mata Pelajaran
+        const [mapelRows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM mata_pelajaran
+            WHERE tahun_ajaran_id = ?
+        `, [taId]);
+
+        res.json({
+            success: true,
+            data: {
+                guru: Number(guruRows[0].total) || 0,
+                siswa: Number(siswaRows[0].total) || 0,
+                admin: Number(adminRows[0].total) || 0,
+                ekstrakurikuler: Number(ekskulRows[0].total) || 0,
+                kelas: Number(kelasRows[0].total) || 0,
+                mata_pelajaran: Number(mapelRows[0].total) || 0
+            }
+        });
+    } catch (err) {
+        console.error('Error get dashboard stats:', err);
+        res.status(500).json({ message: 'Gagal memuat statistik dashboard' });
+    }
+};
+
 module.exports = {
     getAdmin, getAdminById, tambahAdmin, editAdmin, hapusAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
@@ -1440,5 +1512,6 @@ module.exports = {
     getWaliKelas, setWaliKelas, getGuruKelasList,
     getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran,
     getPembelajaran, getDropdownPembelajaran, tambahPembelajaran, editPembelajaran, hapusPembelajaran,
-    getEkskul, tambahEkskul, editEkskul, hapusEkskul, getPesertaByEkskul, getEkskulBySiswa
+    getEkskul, tambahEkskul, editEkskul, hapusEkskul, getPesertaByEkskul, getEkskulBySiswa,
+    getDashboardStats
 };
