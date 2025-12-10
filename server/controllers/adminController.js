@@ -126,63 +126,32 @@ const hapusAdmin = async (req, res) => {
 const getGuru = async (req, res) => {
     try {
         const [rows] = await db.execute(`
-    SELECT DISTINCT
+      SELECT 
         u.id_user,
         u.nama_lengkap,
         u.email_sekolah,
         u.status,
-        g.id_guru,
         g.niy,
         g.nuptk,
         g.tempat_lahir,
         g.tanggal_lahir,
         g.jenis_kelamin,
         g.alamat,
-        g.no_telepon
-    FROM user u
-    INNER JOIN guru g ON u.id_user = g.user_id
-    INNER JOIN user_role ur ON u.id_user = ur.id_user
-    WHERE ur.role IN ('guru kelas', 'guru bidang studi')
-    ORDER BY u.nama_lengkap ASC
-`);
-        const guruMap = new Map();
-        for (const row of rows) {
-            const {
-                id_user,
-                nama_lengkap,
-                email_sekolah,
-                status,
-                id_guru,
-                niy,
-                nuptk,
-                tempat_lahir,
-                tanggal_lahir,
-                jenis_kelamin,
-                alamat,
-                no_telepon,
-                role
-            } = row;
-            if (!guruMap.has(id_user)) {
-                guruMap.set(id_user, {
-                    id: id_user,
-                    nama: nama_lengkap,
-                    email: email_sekolah,
-                    status: status,
-                    niy: niy,
-                    nuptk: nuptk,
-                    tempat_lahir: tempat_lahir,
-                    tanggal_lahir: tanggal_lahir,
-                    jenis_kelamin: jenis_kelamin,
-                    alamat: alamat,
-                    no_telepon: no_telepon,
-                    roles: []
-                });
-            }
-            if (role && !guruMap.get(id_user).roles.includes(role)) {
-                guruMap.get(id_user).roles.push(role);
-            }
-        }
-        const guruList = Array.from(guruMap.values());
+        g.no_telepon,
+        GROUP_CONCAT(ur.role) AS roles
+      FROM user u
+      INNER JOIN guru g ON u.id_user = g.user_id
+      INNER JOIN user_role ur ON u.id_user = ur.id_user
+      WHERE ur.role IN ('guru kelas', 'guru bidang studi')
+      GROUP BY u.id_user
+      ORDER BY u.nama_lengkap ASC
+    `);
+
+        const guruList = rows.map(row => ({
+            ...row,
+            roles: row.roles ? row.roles.split(',') : []
+        }));
+
         res.json({ success: true, data: guruList });
     } catch (err) {
         console.error('Error get guru:', err);
