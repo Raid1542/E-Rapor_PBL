@@ -69,7 +69,6 @@ router.get('/admin', adminOnly, adminController.getAdmin);
 router.get('/admin/:id', adminOnly, adminController.getAdminById);
 router.post('/admin', adminOnly, adminController.tambahAdmin);
 router.put('/admin/:id', adminOnly, adminController.editAdmin);
-router.delete('/admin/:id', adminOnly, adminController.hapusAdmin);
 
 // --- Data Sekolah ---
 router.get('/sekolah', adminOnly, adminController.getSekolah);

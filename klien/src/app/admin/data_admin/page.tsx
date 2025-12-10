@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, X, Plus, Search, Trash2 } from 'lucide-react';
+import { Eye, Pencil, X, Plus, Search } from 'lucide-react';
 
 interface Admin {
   id: number;
@@ -187,35 +187,6 @@ export default function DataAdminPage() {
       confirmData: false
     });
     setShowEdit(true);
-  };
-
-  const handleDelete = async (id: number): Promise<void> => {
-    if (!confirm('Apakah Anda yakin ingin menghapus data admin ini?')) return;
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login telah habis. Silakan login ulang.');
-      return;
-    }
-
-    try {
-      const res = await fetch(`http://localhost:5000/api/admin/admin/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (res.ok) {
-        alert('Data admin berhasil dihapus');
-        fetchAdmin();
-      } else {
-        const error = await res.json();
-        alert(error.message || 'Gagal menghapus data admin');
-      }
-    } catch (err) {
-      alert('Gagal terhubung ke server');
-    }
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
@@ -755,13 +726,6 @@ export default function DataAdminPage() {
                         >
                           <Pencil size={16} />
                           <span className="hidden sm:inline">Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(admin.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
-                        >
-                          <Trash2 size={16} />
-                          <span className="hidden sm:inline">Hapus</span>
                         </button>
                       </div>
                     </td>
