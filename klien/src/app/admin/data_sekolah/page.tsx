@@ -1,3 +1,4 @@
+// app/admin/data_sekolah/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ export default function DataSekolahPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [fileInputKey, setFileInputKey] = useState(0); // untuk reset file input secara aman
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // 🔁 Fetch data sekolah saat halaman dimuat
   useEffect(() => {
@@ -289,7 +290,7 @@ export default function DataSekolahPage() {
           </div>
 
           {/* === Bagian Kanan: Edit Logo Sekolah === */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 h-fit">
             <h2 className="text-xl font-semibold text-gray-800 mb-5">Logo Sekolah</h2>
 
             {/* Preview Logo */}
@@ -316,7 +317,7 @@ export default function DataSekolahPage() {
             {/* Upload File */}
             <div className="mb-5">
               <input
-                key={fileInputKey} // reset input saat logo diupload
+                key={fileInputKey}
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
                 onChange={handleLogoChange}
