@@ -21,7 +21,7 @@ export default function AdminLayout({
   const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem('currentUser');
     if (userData) {
       setUser(JSON.parse(userData));
     }

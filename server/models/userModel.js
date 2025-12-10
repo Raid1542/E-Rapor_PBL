@@ -158,6 +158,14 @@ const updateAdmin = async (id, data, connection = db) => {
     }
 };
 
+const updatePassword = async (id_user, hashedPassword) => {
+    const [result] = await db.execute(
+        'UPDATE user SET password = ?, updated_at = NOW() WHERE id_user = ?',
+        [hashedPassword, id_user]
+    );
+    return result.affectedRows > 0;
+};
+
 module.exports = {
     findByEmail,
     findById,
@@ -166,5 +174,6 @@ module.exports = {
     getRolesByUserId,
     getAdminList,
     createAdmin,
-    updateAdmin
+    updateAdmin,
+    updatePassword
 };

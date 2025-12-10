@@ -1,55 +1,208 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Camera, X } from 'lucide-react';
 
-export default function ProfilePage() {
+// 👇 Definisikan tipe data profil
+interface UserProfile {
+  id: number;
+  role: string;
+  nama_lengkap: string;
+  email_sekolah: string;
+  roles: string[];
+  niy?: string;
+  nuptk?: string;
+  jenis_kelamin?: string;
+  alamat?: string;
+  no_telepon?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string | null;
+  profileImage?: string;
+}
+
+const ProfilePage = () => {
+  // State profil
   const [formData, setFormData] = useState({
-    nama: 'Admin',
-    nuptk: '8000005490594546',
-    niy: '1900002154666979',
+    nama: '',
+    nuptk: '',
+    niy: '',
     jenisKelamin: 'Laki-laki',
-    telepon: '084807158422',
-    email: 'admin@gmail.com',
-    alamat: 'Jl. Pegangsaan Timur'
+    telepon: '',
+    email: '',
+    alamat: ''
   });
 
-  const [profileImage, setProfileImage] = useState(null);
+  // State password
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e) => {
+  // === Ambil data user dari localStorage saat mount ===
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        const userData: UserProfile = JSON.parse(storedUser);
+        setFormData({
+          nama: userData.nama_lengkap || '',
+          nuptk: userData.nuptk || '',
+          niy: userData.niy || '',
+          jenisKelamin: userData.jenis_kelamin || 'Laki-laki',
+          telepon: userData.no_telepon || '',
+          email: userData.email_sekolah || '',
+          alamat: userData.alamat || ''
+        });
+        if (userData.profileImage) setProfileImage(userData.profileImage);
+      } catch (e) {
+        console.error('Gagal memuat data profil:', e);
+      }
+    }
+  }, []);
+
+  // === Handler Profil ===
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleImageClick = () => fileInputRef.current?.click();
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result);
-      };
+      reader.onloadend = () => setProfileImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleRemoveImage = (e) => {
+  const handleRemoveImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setProfileImage(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = (e) => {
+  // === Simpan Profil ke Backend ===
+  const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isConfirmed) {
-      alert('Data profil berhasil disimpan!');
-    } else {
-      alert('Harap konfirmasi data terlebih dahulu!');
+    if (!isConfirmed) {
+      alert('Harap centang konfirmasi terlebih dahulu!');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('currentUser');
+    if (!token || !storedUser) {
+      alert('Sesi login tidak valid. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const userData: UserProfile = JSON.parse(storedUser);
+      const userId = userData.id;
+
+      const response = await fetch(`http://localhost:5000/api/admin/admin/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nama_lengkap: formData.nama,
+          email_sekolah: formData.email,
+          niy: formData.niy,
+          nuptk: formData.nuptk,
+          jenis_kelamin: formData.jenisKelamin,
+          no_telepon: formData.telepon,
+          alamat: formData.alamat,
+          status: 'aktif'
+        })
+      });
+
+      if (response.ok) {
+        // Perbarui localStorage
+        const updatedUser: UserProfile = {
+          ...userData,
+          nama_lengkap: formData.nama,
+          email_sekolah: formData.email,
+          niy: formData.niy,
+          nuptk: formData.nuptk,
+          jenis_kelamin: formData.jenisKelamin,
+          no_telepon: formData.telepon,
+          alamat: formData.alamat
+        };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        alert('Profil berhasil diperbarui!');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Gagal memperbarui profil');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Gagal terhubung ke server');
+    }
+  };
+
+  // === Ganti Password ===
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { oldPassword, newPassword, confirmPassword } = passwordData;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      alert('Semua kolom kata sandi wajib diisi');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert('Kata sandi baru dan konfirmasi tidak cocok');
+      return;
+    }
+    if (newPassword.length < 8) {
+      alert('Kata sandi baru minimal 8 karakter');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login tidak valid. Silakan login ulang.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/admin/ganti-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert('Kata sandi berhasil diubah!');
+        setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+
+        // ✅ LOGOUT OTOMATIS SETELAH GANTI PASSWORD
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        window.location.href = '/login'; // Redirect ke halaman login
+      } else {
+        alert(result.message || 'Gagal mengubah kata sandi');
+      }
+    } catch (err) {
+      console.error('Error ganti password:', err);
+      alert('Gagal terhubung ke server');
     }
   };
 
@@ -60,12 +213,11 @@ export default function ProfilePage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Profile Card - Lebih Kecil */}
+        {/* Profile Card */}
         <div className="lg:w-56 flex-shrink-0">
           <div className="bg-white rounded-lg shadow-sm p-5">
             <div className="flex flex-col items-center text-center">
-              {/* Profile Image dengan Upload */}
-              <div 
+              <div
                 className="relative w-20 h-20 rounded-full cursor-pointer group mb-3"
                 onClick={handleImageClick}
               >
@@ -73,7 +225,7 @@ export default function ProfilePage() {
                   <>
                     <img
                       src={profileImage}
-                      alt="Profile"
+                      alt="Profil"
                       className="w-20 h-20 rounded-full object-cover"
                     />
                     <button
@@ -88,12 +240,9 @@ export default function ProfilePage() {
                     <User className="w-10 h-10 text-gray-500" />
                   </div>
                 )}
-                
-                {/* Camera Overlay */}
                 <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <Camera className="w-5 h-5 text-white" />
                 </div>
-                
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -102,137 +251,186 @@ export default function ProfilePage() {
                   className="hidden"
                 />
               </div>
-              
               <p className="text-xs text-gray-400 mb-3">Klik untuk ubah foto</p>
-              <h2 className="text-lg font-bold text-gray-900">{formData.nama}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{formData.nama || 'Admin'}</h2>
               <p className="text-gray-500 text-xs">Admin</p>
             </div>
           </div>
         </div>
 
-        {/* Edit Profile Form */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-5">Edit Profil</h2>
+        {/* Form Profil & Password */}
+        <div className="flex-1 space-y-8">
+          {/* Edit Profil */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-5">Edit Profil</h2>
+            <form onSubmit={handleSubmitProfile}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nama <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="nama"
+                      value={formData.nama}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NUPTK</label>
+                    <input
+                      type="text"
+                      name="nuptk"
+                      value={formData.nuptk}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NIY</label>
+                    <input
+                      type="text"
+                      name="niy"
+                      value={formData.niy}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Jenis Kelamin <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="jenisKelamin"
+                      value={formData.jenisKelamin}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                    <input
+                      type="tel"
+                      name="telepon"
+                      value={formData.telepon}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                <textarea
+                  name="alamat"
+                  value={formData.alamat}
+                  onChange={handleChange}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex items-center gap-2 mt-5 pt-4 border-t border-gray-200">
+                <input
+                  type="checkbox"
+                  id="confirm"
+                  checked={isConfirmed}
+                  onChange={(e) => setIsConfirmed(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="confirm" className="text-sm text-gray-700">
+                  Saya yakin akan mengubah data tersebut
+                </label>
+              </div>
+              <div className="mt-5">
+                <button
+                  type="submit"
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition"
+                >
+                  Simpan Profil
+                </button>
+              </div>
+            </form>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Kolom Kiri */}
-              <div className="space-y-4">
+          {/* Ganti Kata Sandi */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold mb-4">Ganti Kata Sandi</h2>
+            <form onSubmit={handlePasswordSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nama <span className="text-red-500">*</span>
+                    Kata Sandi Lama
                   </label>
                   <input
-                    type="text"
-                    name="nama"
-                    value={formData.nama}
-                    onChange={handleChange}
+                    type="password"
+                    name="oldPassword"
+                    value={passwordData.oldPassword}
+                    onChange={handlePasswordChange}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Masukkan kata sandi lama"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">NUPTK</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kata Sandi Baru
+                  </label>
                   <input
-                    type="text"
-                    name="nuptk"
-                    value={formData.nuptk}
-                    onChange={handleChange}
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Minimal 8 karakter"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">NIY</label>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Konfirmasi Kata Sandi Baru
+                  </label>
                   <input
-                    type="text"
-                    name="niy"
-                    value={formData.niy}
-                    onChange={handleChange}
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ulangi kata sandi baru"
                   />
                 </div>
               </div>
-
-              {/* Kolom Kanan */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Jenis Kelamin <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="jenisKelamin"
-                    value={formData.jenisKelamin}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Laki-laki">Laki-laki</option>
-                    <option value="Perempuan">Perempuan</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
-                  <input
-                    type="tel"
-                    name="telepon"
-                    value={formData.telepon}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              <div className="mt-4">
+                <button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded text-sm transition"
+                >
+                  Simpan Kata Sandi
+                </button>
               </div>
-            </div>
-
-            {/* Alamat */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-              <textarea
-                name="alamat"
-                value={formData.alamat}
-                onChange={handleChange}
-                rows={2}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Checkbox Konfirmasi */}
-            <div className="flex items-center gap-2 mt-5 pt-4 border-t border-gray-200">
-              <input
-                type="checkbox"
-                id="confirm"
-                checked={isConfirmed}
-                onChange={(e) => setIsConfirmed(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label htmlFor="confirm" className="text-sm text-gray-700">
-                Saya yakin akan mengubah data tersebut
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <div className="mt-5">
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition"
-              >
-                Simpan
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default ProfilePage;

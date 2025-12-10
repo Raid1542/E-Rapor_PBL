@@ -57,6 +57,13 @@ const login = async (req, res) => {
             { expiresIn: '8h' }
         );
 
+        // Ambil data guru berdasarkan user_id
+        const [guruRows] = await db.execute(
+            'SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon FROM guru WHERE user_id = ?',
+            [user.id_user]
+        );
+        const guruData = guruRows[0] || {};
+
         res.json({
             success: true,
             token,
@@ -65,7 +72,16 @@ const login = async (req, res) => {
                 role: selectedRole,
                 nama_lengkap: user.nama_lengkap,
                 email_sekolah: user.email_sekolah,
-                roles: roles // ← kirim semua role ke frontend
+                roles: roles,
+
+                // ✅ Tambahkan data guru ke response
+                niy: guruData.niy || '',
+                nuptk: guruData.nuptk || '',
+                jenis_kelamin: guruData.jenis_kelamin || 'Laki-laki', // Default jika tidak ada
+                alamat: guruData.alamat || '',
+                no_telepon: guruData.no_telepon || '',
+                tempat_lahir: guruData.tempat_lahir || '',
+                tanggal_lahir: guruData.tanggal_lahir || null
             }
         });
 
