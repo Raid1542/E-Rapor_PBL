@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, UserCircle, ChevronDown, User } from 'lucide-react';
+import { LogOut, ChevronDown, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface UserData {
@@ -11,8 +11,17 @@ interface UserData {
 }
 
 interface HeaderProps {
-  user: UserData; // ✅ user wajib ada, tidak optional
+  user: UserData;
 }
+
+//  Fungsi bantu: ambil inisial dari nama
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map(word => word[0]?.toUpperCase() || '')
+    .join('');
+};
 
 export default function Header({ user }: HeaderProps) {
   const router = useRouter();
@@ -20,7 +29,7 @@ export default function Header({ user }: HeaderProps) {
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
-      localStorage.removeItem('currentUser'); // ✅ Sesuaikan dengan key yang dipakai
+      localStorage.removeItem('currentUser');
       sessionStorage.clear();
     }
     router.push('/login');
@@ -50,7 +59,14 @@ export default function Header({ user }: HeaderProps) {
                 <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
               </div>
-              <UserCircle className="w-8 h-8 text-gray-600" />
+
+              {/* ✅ Avatar Inisial Menggantikan UserCircle */}
+              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                <span className="text-black text-xs font-semibold">
+                  {getInitials(user.nama_lengkap)}
+                </span>
+              </div>
+
               <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
 

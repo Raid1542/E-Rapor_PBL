@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Camera, X } from 'lucide-react';
 
-// 👇 Definisikan tipe data profil
 interface UserProfile {
   id: number;
   role: string;
@@ -39,9 +38,7 @@ const ProfilePage = () => {
     confirmPassword: ''
   });
 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // === Ambil data user dari localStorage saat mount ===
   useEffect(() => {
@@ -58,7 +55,6 @@ const ProfilePage = () => {
           email: userData.email_sekolah || '',
           alamat: userData.alamat || ''
         });
-        if (userData.profileImage) setProfileImage(userData.profileImage);
       } catch (e) {
         console.error('Gagal memuat data profil:', e);
       }
@@ -71,22 +67,6 @@ const ProfilePage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageClick = () => fileInputRef.current?.click();
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setProfileImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setProfileImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   // === Simpan Profil ke Backend ===
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -214,49 +194,25 @@ const ProfilePage = () => {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Profile Card */}
-        <div className="lg:w-56 flex-shrink-0">
-          <div className="bg-white rounded-lg shadow-sm p-5">
-            <div className="flex flex-col items-center text-center">
-              <div
-                className="relative w-20 h-20 rounded-full cursor-pointer group mb-3"
-                onClick={handleImageClick}
-              >
-                {profileImage ? (
-                  <>
-                    <img
-                      src={profileImage}
-                      alt="Profil"
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                    <button
-                      onClick={handleRemoveImage}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </>
-                ) : (
-                  <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-gray-500" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-5 h-5 text-white" />
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mb-3">Klik untuk ubah foto</p>
-              <h2 className="text-lg font-bold text-gray-900">{formData.nama || 'Admin'}</h2>
-              <p className="text-gray-500 text-xs">Admin</p>
-            </div>
-          </div>
-        </div>
+<div className="lg:w-56 flex-shrink-0">
+  <div className="bg-white rounded-lg shadow-sm p-5">
+    <div className="flex flex-col items-center text-center">
+      {/* Avatar berbasis inisial */}
+      <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center mb-3">
+        <span className="text-black text-lg font-semibold">
+          {(formData.nama || '??')
+            .split(' ')
+            .slice(0, 2)
+            .map(word => word[0]?.toUpperCase() || '')
+            .join('') || '??'}
+        </span>
+      </div>
+      {/* <p className="text-xs text-gray-400 mb-3">Klik untuk ubah foto</p> */}
+      <h2 className="text-lg font-bold text-gray-900">{formData.nama || 'Admin'}</h2>
+      <p className="text-gray-500 text-xs">Admin</p>
+    </div>
+  </div>
+</div>
 
         {/* Form Profil & Password */}
         <div className="flex-1 space-y-8">
