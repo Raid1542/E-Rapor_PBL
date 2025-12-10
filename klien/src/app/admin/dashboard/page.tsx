@@ -5,13 +5,30 @@ import { ChevronRight, Users, UserCircle, Award, School, Book } from 'lucide-rea
 import { UserData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
+// ✅ Definisikan tipe stats
+interface DashboardStats {
+  guru: number;
+  siswa: number;
+  admin: number;
+  ekstrakurikuler: number;
+  kelas: number;
+  mata_pelajaran: number;
+}
+
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [stats, setStats] = useState<DashboardStats>({ 
+    guru: 0,
+    siswa: 0,
+    admin: 0,
+    ekstrakurikuler: 0,
+    kelas: 0,
+    mata_pelajaran: 0
+  });
   const router = useRouter();
 
   useEffect(() => {
-    // Cek apakah user sudah login
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
@@ -22,20 +39,33 @@ export default function AdminDashboardPage() {
 
     if (userData) {
       const parsedUser: UserData = JSON.parse(userData);
-      
       if (parsedUser.role !== 'admin') {
         alert('Anda tidak memiliki akses ke halaman ini');
         window.location.href = '/login';
         return;
       }
-      
       setUser(parsedUser);
     }
-    
-    setLoading(false);
-  }, []);
 
-  // Fungsi untuk navigasi ke halaman yang sesuai
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/admin/dashboard/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          setStats(result.data);
+        }
+      } catch (err) {
+        console.error('Gagal memuat statistik:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats(); // ✅ Panggil di sini
+  }, []); // ✅ Hanya sekali saat komponen mount
+
   const handleNavigation = (path: string) => {
     router.push(path);
   };
@@ -74,7 +104,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Guru</p>
-              <p className="text-3xl font-bold text-gray-900">32</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.guru}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <Users className="w-8 h-8 text-orange-600" />
@@ -94,7 +124,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Siswa</p>
-              <p className="text-3xl font-bold text-gray-900">245</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.siswa}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <Users className="w-8 h-8 text-orange-600" />
@@ -114,7 +144,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Admin</p>
-              <p className="text-3xl font-bold text-gray-900">5</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.admin}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <UserCircle className="w-8 h-8 text-orange-600" />
@@ -134,7 +164,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Ekstrakurikuler</p>
-              <p className="text-3xl font-bold text-gray-900">8</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.ekstrakurikuler}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <Award className="w-8 h-8 text-orange-600" />
@@ -154,7 +184,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Kelas</p>
-              <p className="text-3xl font-bold text-gray-900">12</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.kelas}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <School className="w-8 h-8 text-orange-600" />
@@ -174,7 +204,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Data Mata Pelajaran</p>
-              <p className="text-3xl font-bold text-gray-900">15</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.mata_pelajaran}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <Book className="w-8 h-8 text-orange-600" />

@@ -542,7 +542,7 @@ export default function DataMataPelajaranPage() {
                       currentMapel.map((mp, index) => (
                         <tr key={mp.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
                           <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
-                          <td className="px-4 py-3 text-center align-middle font-mono">{mp.kode_mapel}</td>
+                          <td className="px-4 py-3 text-center align-middle font-medium">{mp.kode_mapel}</td>
                           <td className="px-4 py-3 align-middle">{mp.nama_mapel}</td>
                           <td className="px-4 py-3 text-center align-middle">
                             {mp.jenis.charAt(0).toUpperCase() + mp.jenis.slice(1)}
@@ -553,16 +553,16 @@ export default function DataMataPelajaranPage() {
                               <div className="flex gap-1 justify-center">
                                 <button
                                   onClick={() => handleEdit(mp)}
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
-                                  <Pencil size={12} />
+                                  <Pencil size={16} />
                                   Edit
                                 </button>
                                 <button
                                   onClick={() => handleDelete(mp.id)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1"
+                                  className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={16} />
                                   Hapus
                                 </button>
                               </div>
