@@ -79,8 +79,8 @@ const createAdmin = async (userData, connection = db) => {
     } = userData;
 
     // ✅ Jika tidak ada password, gunakan default
-    const finalPassword = password && password.trim() !== '' 
-        ? password 
+    const finalPassword = password && password.trim() !== ''
+        ? password
         : 'sekolah123'; // atau "admin123", dll
 
     const hashedPassword = await require('../utils/hash').hashPassword(finalPassword);
@@ -158,20 +158,13 @@ const updateAdmin = async (id, data, connection = db) => {
     }
 };
 
-    const deleteUserById = async (id) => {
-        await db.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
-        await db.execute('DELETE FROM guru WHERE user_id = ?', [id]);
-        await db.execute('DELETE FROM user WHERE id_user = ?', [id]);
-    };
-
-    module.exports = {
-        findByEmail,
-        findById,
-        createUser,
-        updateUser,
-        getRolesByUserId,
-        getAdminList,
-        createAdmin,
-        updateAdmin,
-        deleteUserById
-    };
+module.exports = {
+    findByEmail,
+    findById,
+    createUser,
+    updateUser,
+    getRolesByUserId,
+    getAdminList,
+    createAdmin,
+    updateAdmin
+};

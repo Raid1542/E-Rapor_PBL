@@ -111,17 +111,6 @@ const editAdmin = async (req, res) => {
     }
 };
 
-const hapusAdmin = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await userModel.deleteUserById(id);
-        res.json({ message: 'Admin berhasil dihapus' });
-    } catch (err) {
-        console.error('Error hapus admin:', err.message);
-        res.status(500).json({ message: 'Gagal menghapus admin' });
-    }
-};
-
 // ============== GURU ==============
 const getGuru = async (req, res) => {
     try {
@@ -1201,7 +1190,7 @@ const getTahunAjaranForDropdown = async (req, res) => {
 };
 
 module.exports = {
-    getAdmin, getAdminById, tambahAdmin, editAdmin, hapusAdmin,
+    getAdmin, getAdminById, tambahAdmin, editAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
     getSekolah, editSekolah, uploadLogo,
     getSiswa, getSiswaById, tambahSiswa, editSiswa, importSiswa,
