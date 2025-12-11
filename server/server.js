@@ -49,6 +49,9 @@ app.use('/api/admin', adminRoutes);
 const guruKelasRoutes = require('./routes/guruKelasRoutes');
 app.use('/api/guru-kelas', guruKelasRoutes);
 
+const guruBidangStudiRoutes = require('./routes/guruBidangStudiRoutes');
+app.use('/api/guru-bidang-studi', guruBidangStudiRoutes);
+
 const sekolahPublicRoutes = require('./routes/sekolahPublicRoutes');
 app.use('/api/sekolah', sekolahPublicRoutes);
 

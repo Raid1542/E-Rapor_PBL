@@ -1,3 +1,4 @@
+// app/guru_kelas/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,10 +7,10 @@ import { useRouter } from 'next/navigation';
 // Types
 interface UserData {
   id: string;
-  name: string;
-  email: string;
+  nama_lengkap: string; 
+  email_sekolah: string;
   role: string;
-  class?: string;
+  kelas?: string;
 }
 
 interface KelasResponse {
@@ -42,7 +43,7 @@ export default function GuruDashboard() {
         return;
       }
 
-      setUser(parsedUser);
+      setUser(parsedUser); // ✅ parsedUser punya `nama_lengkap`, bukan `name`
 
       const fetchKelas = async () => {
         try {
@@ -105,15 +106,15 @@ export default function GuruDashboard() {
       {/* Welcome Card */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
         <h2 className="text-2xl font-bold mb-2">
-          Selamat Datang, {user.name}! 👋
+          Selamat Datang, {user.nama_lengkap || 'Guru'}! 👋
         </h2>
         <p className="text-orange-100">
-          Anda login sebagai Guru Kelas <strong>{kelasInfo.kelas}</strong>. Kelola data siswa dan rapor dengan mudah.
+          Anda login sebagai <strong>Guru Kelas {kelasInfo.kelas}</strong>. Kelola data siswa dan rapor dengan mudah.
         </p>
       </div>
 
-      {/* Menu Cards — Hanya 2 Kolom Sekarang */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"> {/* Tambahkan mb-8 untuk jarak ke bawah */}
+      {/* Menu Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Card Kelola Data */}
         <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer transform hover:-translate-y-1 duration-200">
           <div className="flex items-center justify-between mb-4">
