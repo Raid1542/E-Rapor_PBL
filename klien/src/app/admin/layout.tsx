@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../globals.css";
-import Layout from "@/components/Layout"; // ⬅️ penting!
+import Layout from "@/app/admin/components/Layout"; // ⬅️ penting!
 
 export const metadata: Metadata = {
   title: "E-Rapor SDIT Ulil Albab Batam",

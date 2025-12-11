@@ -10,6 +10,7 @@ const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/db');
+const bcrypt = require('bcrypt');
 
 // ============== ADMIN ==============
 const getAdmin = async (req, res) => {
@@ -108,6 +109,48 @@ const editAdmin = async (req, res) => {
         res.status(500).json({ message: 'Gagal memperbarui data admin' });
     } finally {
         connection.release();
+    }
+};
+
+const gantiPasswordAdmin = async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.id; // Dari middleware authenticate (JWT)
+
+    // Validasi input
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'Kata sandi lama dan baru wajib diisi' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Kata sandi baru minimal 8 karakter' });
+    }
+
+    try {
+        // 1. Ambil user dari database
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User tidak ditemukan' });
+        }
+
+        // 2. Verifikasi password lama
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Kata sandi lama salah' });
+        }
+
+        // 3. Hash password baru
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // 4. Update password di database
+        const success = await userModel.updatePassword(userId, hashedPassword);
+        if (!success) {
+            return res.status(500).json({ message: 'Gagal memperbarui password' });
+        }
+
+        return res.json({ message: 'Kata sandi berhasil diubah' });
+
+    } catch (err) {
+        console.error('Error ganti password admin:', err);
+        return res.status(500).json({ message: 'Terjadi kesalahan saat mengganti kata sandi' });
     }
 };
 
@@ -272,18 +315,18 @@ const getSekolah = async (req, res) => {
 
 const editSekolah = async (req, res) => {
     try {
-        const { namaSekolah, npsn, nss, alamat, kodePos, telepon, email, website, kepalaSekolah, niyKepalaSekolah } = req.body;
+        const { nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website, kepala_sekolah, niy_kelapa_sekolah } = req.body;
         const data = {};
-        if (namaSekolah !== undefined) data.nama_sekolah = namaSekolah;
+        if (nama_sekolah !== undefined) data.nama_sekolah = nama_sekolah;
         if (npsn !== undefined) data.npsn = npsn;
         if (nss !== undefined) data.nss = nss;
         if (alamat !== undefined) data.alamat = alamat;
-        if (kodePos !== undefined) data.kode_pos = kodePos;
+        if (kode_pos !== undefined) data.kode_pos = kode_pos;
         if (telepon !== undefined) data.telepon = telepon;
         if (email !== undefined) data.email = email;
         if (website !== undefined) data.website = website;
-        if (kepalaSekolah !== undefined) data.kepala_sekolah = kepalaSekolah;
-        if (niyKepalaSekolah !== undefined) data.niy_kepala_sekolah = niyKepalaSekolah;
+        if (kepala_sekolah !== undefined) data.kepala_sekolah = kepala_sekolah;
+        if (niy_kelapa_sekolah !== undefined) data.niy_kepala_sekolah = niy_kelapa_sekolah;
         await sekolahModel.updateSekolah(data);
         res.json({ message: 'Data sekolah berhasil diperbarui' });
     } catch (err) {
@@ -1387,7 +1430,6 @@ const getEkskulBySiswa = async (req, res) => {
 };
 
 // ============== DASHBOARD STATISTICS ==============
-// ============== DASHBOARD STATISTICS ==============
 const getDashboardStats = async (req, res) => {
     try {
         const taId = req.tahunAjaranAktifId; // Ambil dari middleware
@@ -1461,7 +1503,7 @@ const getDashboardStats = async (req, res) => {
 };
 
 module.exports = {
-    getAdmin, getAdminById, tambahAdmin, editAdmin,
+    getAdmin, getAdminById, tambahAdmin, editAdmin, gantiPasswordAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
     getSekolah, editSekolah, uploadLogo,
     getSiswa, getSiswaById, tambahSiswa, editSiswa, importSiswa,

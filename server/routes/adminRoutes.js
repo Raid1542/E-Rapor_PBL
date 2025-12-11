@@ -64,10 +64,12 @@ router.get('/siswa', adminOnly, adminController.getSiswa);
 router.get('/siswa/:id', adminOnly, adminController.getSiswaById);
 router.post('/siswa', adminOnlyWithTahunAjaran, adminController.tambahSiswa);
 router.put('/siswa/:id', adminOnlyWithTahunAjaran, adminController.editSiswa);
+
 // --- Data Admin ---
 router.get('/admin', adminOnly, adminController.getAdmin);
 router.get('/admin/:id', adminOnly, adminController.getAdminById);
 router.post('/admin', adminOnly, adminController.tambahAdmin);
+router.put('/admin/ganti-password', adminOnly, adminController.gantiPasswordAdmin);
 router.put('/admin/:id', adminOnly, adminController.editAdmin);
 
 // --- Data Sekolah ---

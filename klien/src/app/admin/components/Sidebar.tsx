@@ -1,107 +1,115 @@
 'use client';
 
-import React from 'react';
-import { Home, Users, FileText, BookOpen, Award, Menu, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Home,
+  Users,
+  FileText,
+  BookOpen,
+  Award,
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+} from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
-export default function ResponsiveSidebar() {
+interface SidebarProps {
+  user: {
+    id: number;
+    nama_lengkap: string;
+    email_sekolah: string;
+    role: string;
+  };
+}
+
+export default function Sidebar({ user }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = React.useState(true);
-  const [activeMenu, setActiveMenu] = React.useState('Dashboard');
-  const [openDropdowns, setOpenDropdowns] = React.useState({
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [openDropdowns, setOpenDropdowns] = useState({
     pengguna: false,
     administrasi: false,
-    rapor: false
+    rapor: false,
   });
 
-  // State untuk menyimpan URL logo sekolah
-  const [logoUrl, setLogoUrl] = React.useState<string>('/images/LogoUA.jpg');
-  
-  // Ambil logo sekolah dari backend saat halaman dibuka
-  React.useEffect(() => {
-    let mounted = true;
+  const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
+  const [schoolName, setSchoolName] = useState<string>('SDIT Ulil Albab');
 
-    const fetchLogo = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  // Fetch data sekolah (logo + nama)
+  const fetchSchoolData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
 
-        const res = await fetch('http://localhost:5000/api/admin/sekolah', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+      const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        if (!res.ok) return;
+      if (res.ok) {
         const { data } = await res.json();
-        if (data?.logo_path && mounted) {
-          // tambahkan timestamp untuk menghindari cache lama
-          setLogoUrl(`http://localhost:5000${data.logo_path}?t=${Date.now()}`);
+        if (data) {
+          if (data.logo_path) {
+            setLogoUrl(`http://localhost:5000${data.logo_path}?t=${Date.now()}`);
+          }
+          if (data.nama_sekolah) {
+            setSchoolName(data.nama_sekolah);
+          }
         }
-      } catch (err) {
-        console.warn('Gagal memuat logo — pakai logo default.', err);
       }
-    };
+    } catch (err) {
+      console.warn('Gagal fetch data sekolah, pakai default.', err);
+    }
+  };
 
-    fetchLogo();
+  useEffect(() => {
+    fetchSchoolData();
 
-    // Handle logo update event dengan CustomEvent
-    const handleLogoUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { logoPath, timestamp } = customEvent.detail || {};
-      
+    const handleLogoUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const logoPath = customEvent.detail?.logoPath;
       if (logoPath) {
-        // Update logo dengan timestamp dari event
-        setLogoUrl(`http://localhost:5000${logoPath}?t=${timestamp || Date.now()}`);
+        setLogoUrl(`http://localhost:5000${logoPath}?t=${Date.now()}`);
       } else {
-        // Fallback: fetch ulang jika tidak ada detail
-        fetchLogo();
+        fetchSchoolData();
       }
     };
 
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'token') fetchLogo();
+    const handleSchoolUpdate = () => {
+      fetchSchoolData(); // Refresh seluruh data sekolah saat ada perubahan
     };
 
     window.addEventListener('logoUpdated', handleLogoUpdate);
-    window.addEventListener('storage', handleStorage);
+    window.addEventListener('schoolUpdated', handleSchoolUpdate);
 
     return () => {
-      mounted = false;
       window.removeEventListener('logoUpdated', handleLogoUpdate);
-      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('schoolUpdated', handleSchoolUpdate);
     };
   }, []);
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
     if (isExpanded) {
-      setOpenDropdowns({
-        pengguna: false,
-        administrasi: false,
-        rapor: false
-      });
+      setOpenDropdowns({ pengguna: false, administrasi: false, rapor: false });
     }
   };
 
   const toggleDropdown = (menu: string) => {
-    if (!isExpanded) {
-      setIsExpanded(true);
-    }
-    setOpenDropdowns(prev => ({
+    if (!isExpanded) setIsExpanded(true);
+    setOpenDropdowns((prev) => ({
       pengguna: menu === 'pengguna' ? !prev.pengguna : false,
       administrasi: menu === 'administrasi' ? !prev.administrasi : false,
-      rapor: menu === 'rapor' ? !prev.rapor : false
+      rapor: menu === 'rapor' ? !prev.rapor : false,
     }));
   };
 
-  const handleNavigation = (menuName: string, url: string) => {
-    setActiveMenu(menuName);
-    router.push(url);
-  };
+  const handleNavigation = (url: string) => router.push(url);
 
+  // Submenu
   const penggunaSubmenu = [
     { name: 'Data Guru', url: '/admin/data_guru' },
-    { name: 'Data Admin', url: '/admin/data_admin' }
+    { name: 'Data Admin', url: '/admin/data_admin' },
   ];
 
   const administrasiSubmenu = [
@@ -109,33 +117,30 @@ export default function ResponsiveSidebar() {
     { name: 'Data Siswa', url: '/admin/data_siswa' },
     { name: 'Data Kelas', url: '/admin/data_kelas' },
     { name: 'Data Mata Pelajaran', url: '/admin/data_mata_pelajaran' },
-    { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' }
+    { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' },
   ];
 
-  const raporSubmenu = [
-    { name: 'Unduh Rapor', url: '/admin/unduh_rapor' }
-  ];
+  const raporSubmenu = [{ name: 'Unduh Rapor', url: '/admin/unduh_rapor' }];
 
-  const isPenggunaActive = penggunaSubmenu.some(item => activeMenu === item.name);
-  const isAdministrasiActive = administrasiSubmenu.some(item => activeMenu === item.name);
-  const isRaporActive = raporSubmenu.some(item => activeMenu === item.name);
+  // Active state
+  const isDashboardActive = pathname === '/admin/dashboard';
+  const isTahunAjaranActive = pathname === '/admin/data_tahun_ajaran';
+  const isEkskulActive = pathname === '/admin/ekstrakurikuler';
+  const isPenggunaActive = penggunaSubmenu.some((item) => item.url === pathname);
+  const isAdministrasiActive = administrasiSubmenu.some((item) => item.url === pathname);
+  const isRaporActive = raporSubmenu.some((item) => item.url === pathname);
 
-  React.useEffect(() => {
-    if (isPenggunaActive) {
-      setOpenDropdowns(prev => ({ ...prev, pengguna: true }));
-    }
-    if (isAdministrasiActive) {
-      setOpenDropdowns(prev => ({ ...prev, administrasi: true }));
-    }
-    if (isRaporActive) {
-      setOpenDropdowns(prev => ({ ...prev, rapor: true }));
-    }
+  useEffect(() => {
+    if (isPenggunaActive) setOpenDropdowns((prev) => ({ ...prev, pengguna: true }));
+    if (isAdministrasiActive) setOpenDropdowns((prev) => ({ ...prev, administrasi: true }));
+    if (isRaporActive) setOpenDropdowns((prev) => ({ ...prev, rapor: true }));
   }, [isPenggunaActive, isAdministrasiActive, isRaporActive]);
 
   return (
     <div
-      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'
-        }`}
+      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${
+        isExpanded ? 'w-64' : 'w-20'
+      }`}
     >
       <div className="flex items-center justify-between p-4 border-b">
         {isExpanded ? (
@@ -143,12 +148,12 @@ export default function ResponsiveSidebar() {
             <div className="flex items-center gap-3">
               <img
                 src={logoUrl}
-                alt="Logo SDIT Ulil Albab"
+                alt="Logo Sekolah"
                 className="w-10 h-10 object-contain"
-                key={logoUrl}
+                onError={() => setLogoUrl('/images/LogoUA.jpg')}
               />
               <div>
-                <h2 className="text-sm font-bold text-gray-900">SDIT Ulil Albab</h2>
+                <h2 className="text-sm font-bold text-gray-900">{schoolName}</h2>
                 <p className="text-xs text-gray-500">E-Rapor</p>
               </div>
             </div>
@@ -171,12 +176,12 @@ export default function ResponsiveSidebar() {
 
       <div className="flex-1 overflow-y-auto p-4">
         <button
-          onClick={() => handleNavigation('Dashboard', '/admin/dashboard')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Dashboard'
+          onClick={() => handleNavigation('/admin/dashboard')}
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
+            isDashboardActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
-          title={!isExpanded ? 'Dashboard' : ''}
+          }`}
         >
           <Home className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Dashboard</span>}
@@ -185,18 +190,14 @@ export default function ResponsiveSidebar() {
         {isExpanded && (
           <h3 className="text-xs font-semibold text-gray-500 mb-3 px-3 mt-4">MASTER DATA</h3>
         )}
-        {!isExpanded && (
-          <div className="border-t border-gray-300 my-4"></div>
-        )}
 
-        {/* Tahun Ajaran - dipindahkan ke atas */}
         <button
-          onClick={() => handleNavigation('Tahun Ajaran', '/admin/data_tahun_ajaran')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Tahun Ajaran'
+          onClick={() => handleNavigation('/admin/data_tahun_ajaran')}
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
+            isTahunAjaranActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
-          title={!isExpanded ? 'Tahun Ajaran' : ''}
+          }`}
         >
           <Calendar className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Tahun Ajaran</span>}
@@ -205,30 +206,34 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('pengguna')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isPenggunaActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+              isPenggunaActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-              }`}
-            title={!isExpanded ? 'Pengguna' : ''}
+            }`}
           >
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 flex-shrink-0" />
               {isExpanded && <span className="font-medium">Pengguna</span>}
             </div>
-            {isExpanded && (
-              openDropdowns.pengguna ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            )}
+            {isExpanded &&
+              (openDropdowns.pengguna ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              ))}
           </button>
           {isExpanded && openDropdowns.pengguna && (
             <div className="ml-6 mt-1 space-y-1">
               {penggunaSubmenu.map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                  onClick={() => handleNavigation(item.url)}
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
+                    item.url === pathname
                       ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                    }`}
+                  }`}
                 >
                   {item.name}
                 </button>
@@ -240,30 +245,34 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('administrasi')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isAdministrasiActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+              isAdministrasiActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-              }`}
-            title={!isExpanded ? 'Administrasi' : ''}
+            }`}
           >
             <div className="flex items-center gap-3">
               <FileText className="w-5 h-5 flex-shrink-0" />
               {isExpanded && <span className="font-medium">Administrasi</span>}
             </div>
-            {isExpanded && (
-              openDropdowns.administrasi ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            )}
+            {isExpanded &&
+              (openDropdowns.administrasi ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              ))}
           </button>
           {isExpanded && openDropdowns.administrasi && (
             <div className="ml-6 mt-1 space-y-1">
               {administrasiSubmenu.map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                  onClick={() => handleNavigation(item.url)}
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
+                    item.url === pathname
                       ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                    }`}
+                  }`}
                 >
                   {item.name}
                 </button>
@@ -273,12 +282,12 @@ export default function ResponsiveSidebar() {
         </div>
 
         <button
-          onClick={() => handleNavigation('Ekstrakurikuler', '/admin/ekstrakurikuler')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${activeMenu === 'Ekstrakurikuler'
+          onClick={() => handleNavigation('/admin/ekstrakurikuler')}
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
+            isEkskulActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
-          title={!isExpanded ? 'Ekstrakurikuler' : ''}
+          }`}
         >
           <Award className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Ekstrakurikuler</span>}
@@ -287,30 +296,34 @@ export default function ResponsiveSidebar() {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('rapor')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isRaporActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+              isRaporActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-              }`}
-            title={!isExpanded ? 'Rapor' : ''}
+            }`}
           >
             <div className="flex items-center gap-3">
               <BookOpen className="w-5 h-5 flex-shrink-0" />
               {isExpanded && <span className="font-medium">Rapor</span>}
             </div>
-            {isExpanded && (
-              openDropdowns.rapor ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            )}
+            {isExpanded &&
+              (openDropdowns.rapor ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              ))}
           </button>
           {isExpanded && openDropdowns.rapor && (
             <div className="ml-6 mt-1 space-y-1">
               {raporSubmenu.map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleNavigation(item.name, item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${activeMenu === item.name
+                  onClick={() => handleNavigation(item.url)}
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
+                    item.url === pathname
                       ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                    }`}
+                  }`}
                 >
                   {item.name}
                 </button>
@@ -321,15 +334,12 @@ export default function ResponsiveSidebar() {
       </div>
 
       <div className="p-4 border-t">
-        {isExpanded ? (
+        {isExpanded && (
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <p className="text-sm text-gray-500">© 2025 E-Rapor</p>
-              <p className="text-sm text-gray-500">SDIT Ulil Albab</p>
+              <p className="text-sm text-gray-500">{schoolName}</p>
             </div>
-          </div>
-        ) : (
-          <div className="flex justify-center">
           </div>
         )}
       </div>

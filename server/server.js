@@ -46,6 +46,9 @@ app.use('/api/auth', authRoutes);
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
 
+const guruKelasRoutes = require('./routes/guruKelasRoutes');
+app.use('/api/guru-kelas', guruKelasRoutes);
+
 // ✅ Debug endpoint
 app.get('/debug/uploads', (req, res) => {
     try {

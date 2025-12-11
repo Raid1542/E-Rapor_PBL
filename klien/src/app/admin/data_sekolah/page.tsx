@@ -1,3 +1,4 @@
+// app/admin/data_sekolah/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ export default function DataSekolahPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [fileInputKey, setFileInputKey] = useState(0); // untuk reset file input secara aman
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // 🔁 Fetch data sekolah saat halaman dimuat
   useEffect(() => {
@@ -101,47 +102,48 @@ export default function DataSekolahPage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.confirmData) {
-      alert('Mohon centang konfirmasi data sebelum menyimpan');
-      return;
-    }
+  if (!formData.confirmData) {
+    alert('Mohon centang konfirmasi data sebelum menyimpan');
+    return;
+  }
 
-    setSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/sekolah', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nama_sekolah: formData.namaSekolah,
-          npsn: formData.npsn,
-          nss: formData.nss,
-          alamat: formData.alamat,
-          kode_pos: formData.kodePos,
-          telepon: formData.telepon,
-          email: formData.email,
-          website: formData.website,
-          kepala_sekolah: formData.kepalaSekolah,
-          niy_kepala_sekolah: formData.niyKepalaSekolah
-        })
-      });
+  setSaving(true);
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nama_sekolah: formData.namaSekolah,
+        npsn: formData.npsn,
+        nss: formData.nss,
+        alamat: formData.alamat,
+        kode_pos: formData.kodePos,
+        telepon: formData.telepon,
+        email: formData.email,
+        website: formData.website,
+        kepala_sekolah: formData.kepalaSekolah,
+        niy_kepala_sekolah: formData.niyKepalaSekolah
+      })
+    });
 
-      if (res.ok) {
-        alert('✅ Data sekolah berhasil disimpan!');
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menyimpan data sekolah');
-      }
-    } catch (err) {
-      console.error('Error simpan data:', err);
-      alert('Gagal menghubungi server');
-    } finally {
-      setSaving(false);
+    if (res.ok) {
+      alert('✅ Data sekolah berhasil disimpan!');
+      window.dispatchEvent(new CustomEvent('schoolUpdated'));
+    } else {
+      const err = await res.json();
+      alert(err.message || 'Gagal menyimpan data sekolah');
     }
-  };
+  } catch (err) {
+    console.error('Error simpan data:', err);
+    alert('Gagal menghubungi server');
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleUpdateLogo = async () => {
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -289,7 +291,7 @@ export default function DataSekolahPage() {
           </div>
 
           {/* === Bagian Kanan: Edit Logo Sekolah === */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 h-fit">
             <h2 className="text-xl font-semibold text-gray-800 mb-5">Logo Sekolah</h2>
 
             {/* Preview Logo */}
@@ -316,7 +318,7 @@ export default function DataSekolahPage() {
             {/* Upload File */}
             <div className="mb-5">
               <input
-                key={fileInputKey} // reset input saat logo diupload
+                key={fileInputKey}
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
                 onChange={handleLogoChange}
