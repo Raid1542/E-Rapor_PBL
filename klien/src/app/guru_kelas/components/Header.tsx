@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, UserCircle, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface UserData {
@@ -49,7 +49,7 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                             </div>
-                            <UserCircle className="w-8 h-8 text-gray-600" />
+                            <User className="w-8 h-8 text-gray-600" />
                             <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
 
@@ -60,7 +60,7 @@ export default function Header({ user }: HeaderProps) {
                             <div className="p-4 border-b border-gray-200">
                                 <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-sm text-gray-500">{user.email_sekolah}</p>
-                                <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                                     {user.role.toUpperCase()} {user.class && `Kelas ${user.class}`}
                                 </span>
                             </div>
@@ -69,7 +69,7 @@ export default function Header({ user }: HeaderProps) {
                                     onClick={handleProfile}
                                     className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
                                 >
-                                    <UserCircle className="w-4 h-4" />
+                                    <User className="w-4 h-4" />
                                     <span className="text-sm">Profil Saya</span>
                                 </button>
                                 <button

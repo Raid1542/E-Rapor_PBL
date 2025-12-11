@@ -77,7 +77,7 @@ const updateSekolah = async (newData) => {
             );
         }
 
-        console.log('Update/Insert berhasil');
+        console.log('Update berhasil');
     } catch (err) {
         console.error('Error updateSekolah:', err);
         throw err;

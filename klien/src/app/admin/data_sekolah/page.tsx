@@ -102,47 +102,48 @@ export default function DataSekolahPage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.confirmData) {
-      alert('Mohon centang konfirmasi data sebelum menyimpan');
-      return;
-    }
+  if (!formData.confirmData) {
+    alert('Mohon centang konfirmasi data sebelum menyimpan');
+    return;
+  }
 
-    setSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/sekolah', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nama_sekolah: formData.namaSekolah,
-          npsn: formData.npsn,
-          nss: formData.nss,
-          alamat: formData.alamat,
-          kode_pos: formData.kodePos,
-          telepon: formData.telepon,
-          email: formData.email,
-          website: formData.website,
-          kepala_sekolah: formData.kepalaSekolah,
-          niy_kepala_sekolah: formData.niyKepalaSekolah
-        })
-      });
+  setSaving(true);
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nama_sekolah: formData.namaSekolah,
+        npsn: formData.npsn,
+        nss: formData.nss,
+        alamat: formData.alamat,
+        kode_pos: formData.kodePos,
+        telepon: formData.telepon,
+        email: formData.email,
+        website: formData.website,
+        kepala_sekolah: formData.kepalaSekolah,
+        niy_kepala_sekolah: formData.niyKepalaSekolah
+      })
+    });
 
-      if (res.ok) {
-        alert('✅ Data sekolah berhasil disimpan!');
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menyimpan data sekolah');
-      }
-    } catch (err) {
-      console.error('Error simpan data:', err);
-      alert('Gagal menghubungi server');
-    } finally {
-      setSaving(false);
+    if (res.ok) {
+      alert('✅ Data sekolah berhasil disimpan!');
+      window.dispatchEvent(new CustomEvent('schoolUpdated'));
+    } else {
+      const err = await res.json();
+      alert(err.message || 'Gagal menyimpan data sekolah');
     }
-  };
+  } catch (err) {
+    console.error('Error simpan data:', err);
+    alert('Gagal menghubungi server');
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleUpdateLogo = async () => {
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;

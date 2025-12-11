@@ -6,9 +6,18 @@ const authorize = (...allowedRoles) => {
             return res.status(403).json({ message: 'Anda tidak memiliki akses' });
         }
 
-        // Konversi ke lowercase untuk perbandingan
+        // 🔁 Normalisasi: flatten array jika perlu
+        let rolesArray = [];
+        for (const role of allowedRoles) {
+            if (Array.isArray(role)) {
+                rolesArray.push(...role);
+            } else {
+                rolesArray.push(role);
+            }
+        }
+
         const normalizedUserRole = userRole.toLowerCase();
-        const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+        const normalizedAllowedRoles = rolesArray.map(r => r.toLowerCase());
 
         if (!normalizedAllowedRoles.includes(normalizedUserRole)) {
             return res.status(403).json({ message: 'Anda tidak memiliki akses' });

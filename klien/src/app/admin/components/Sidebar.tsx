@@ -33,47 +33,59 @@ export default function Sidebar({ user }: SidebarProps) {
     rapor: false,
   });
 
-  // ✅ State logo dengan fallback ke default
   const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
+  const [schoolName, setSchoolName] = useState<string>('SDIT Ulil Albab');
 
-  // ✅ Fetch logo awal + dengarkan event global
-  useEffect(() => {
-    const fetchLogo = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  // Fetch data sekolah (logo + nama)
+  const fetchSchoolData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
 
-        const res = await fetch('http://localhost:5000/admin/sekolah', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        if (res.ok) {
-          const { data } = await res.json();
-          if (data?.logo_path) {
+      if (res.ok) {
+        const { data } = await res.json();
+        if (data) {
+          if (data.logo_path) {
             setLogoUrl(`http://localhost:5000${data.logo_path}?t=${Date.now()}`);
           }
+          if (data.nama_sekolah) {
+            setSchoolName(data.nama_sekolah);
+          }
         }
-      } catch (err) {
-        console.warn('Gagal fetch logo awal, pakai default.', err);
       }
-    };
+    } catch (err) {
+      console.warn('Gagal fetch data sekolah, pakai default.', err);
+    }
+  };
 
-    // Fetch logo saat pertama kali
-    fetchLogo();
+  useEffect(() => {
+    fetchSchoolData();
 
-    // ✅ Dengarkan event "logoUpdated" dari halaman lain
     const handleLogoUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       const logoPath = customEvent.detail?.logoPath;
       if (logoPath) {
         setLogoUrl(`http://localhost:5000${logoPath}?t=${Date.now()}`);
       } else {
-        fetchLogo(); // fallback
+        fetchSchoolData();
       }
     };
 
+    const handleSchoolUpdate = () => {
+      fetchSchoolData(); // Refresh seluruh data sekolah saat ada perubahan
+    };
+
     window.addEventListener('logoUpdated', handleLogoUpdate);
-    return () => window.removeEventListener('logoUpdated', handleLogoUpdate);
+    window.addEventListener('schoolUpdated', handleSchoolUpdate);
+
+    return () => {
+      window.removeEventListener('logoUpdated', handleLogoUpdate);
+      window.removeEventListener('schoolUpdated', handleSchoolUpdate);
+    };
   }, []);
 
   const toggleSidebar = () => {
@@ -110,7 +122,7 @@ export default function Sidebar({ user }: SidebarProps) {
 
   const raporSubmenu = [{ name: 'Unduh Rapor', url: '/admin/unduh_rapor' }];
 
-  // Active state berdasarkan pathname
+  // Active state
   const isDashboardActive = pathname === '/admin/dashboard';
   const isTahunAjaranActive = pathname === '/admin/data_tahun_ajaran';
   const isEkskulActive = pathname === '/admin/ekstrakurikuler';
@@ -136,12 +148,12 @@ export default function Sidebar({ user }: SidebarProps) {
             <div className="flex items-center gap-3">
               <img
                 src={logoUrl}
-                alt="Logo SDIT Ulil Albab"
+                alt="Logo Sekolah"
                 className="w-10 h-10 object-contain"
                 onError={() => setLogoUrl('/images/LogoUA.jpg')}
               />
               <div>
-                <h2 className="text-sm font-bold text-gray-900">SDIT Ulil Albab</h2>
+                <h2 className="text-sm font-bold text-gray-900">{schoolName}</h2>
                 <p className="text-xs text-gray-500">E-Rapor</p>
               </div>
             </div>
@@ -326,7 +338,7 @@ export default function Sidebar({ user }: SidebarProps) {
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <p className="text-sm text-gray-500">© 2025 E-Rapor</p>
-              <p className="text-sm text-gray-500">SDIT Ulil Albab</p>
+              <p className="text-sm text-gray-500">{schoolName}</p>
             </div>
           </div>
         )}

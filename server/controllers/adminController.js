@@ -315,18 +315,18 @@ const getSekolah = async (req, res) => {
 
 const editSekolah = async (req, res) => {
     try {
-        const { namaSekolah, npsn, nss, alamat, kodePos, telepon, email, website, kepalaSekolah, niyKepalaSekolah } = req.body;
+        const { nama_sekolah, npsn, nss, alamat, kode_pos, telepon, email, website, kepala_sekolah, niy_kelapa_sekolah } = req.body;
         const data = {};
-        if (namaSekolah !== undefined) data.nama_sekolah = namaSekolah;
+        if (nama_sekolah !== undefined) data.nama_sekolah = nama_sekolah;
         if (npsn !== undefined) data.npsn = npsn;
         if (nss !== undefined) data.nss = nss;
         if (alamat !== undefined) data.alamat = alamat;
-        if (kodePos !== undefined) data.kode_pos = kodePos;
+        if (kode_pos !== undefined) data.kode_pos = kode_pos;
         if (telepon !== undefined) data.telepon = telepon;
         if (email !== undefined) data.email = email;
         if (website !== undefined) data.website = website;
-        if (kepalaSekolah !== undefined) data.kepala_sekolah = kepalaSekolah;
-        if (niyKepalaSekolah !== undefined) data.niy_kepala_sekolah = niyKepalaSekolah;
+        if (kepala_sekolah !== undefined) data.kepala_sekolah = kepala_sekolah;
+        if (niy_kelapa_sekolah !== undefined) data.niy_kepala_sekolah = niy_kelapa_sekolah;
         await sekolahModel.updateSekolah(data);
         res.json({ message: 'Data sekolah berhasil diperbarui' });
     } catch (err) {

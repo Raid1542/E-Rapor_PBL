@@ -130,15 +130,6 @@ export default function Sidebar({ user }: SidebarProps) {
                         </div>
                     )}
                 </div>
-
-                {isExpanded && <h3 className="text-xs font-semibold text-gray-500 mb-3 mt-4 px-3">AKUN</h3>}
-                <button
-                    onClick={() => handleNavigation('/guru_kelas/profil')}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg ${pathname === '/guru_kelas/profil' ? 'bg-orange-500 text-white' : 'text-gray-700 hover:bg-orange-50'}`}
-                >
-                    <UserCircle className="w-5 h-5" />
-                    {isExpanded && <span>Profil</span>}
-                </button>
             </div>
 
             <div className="p-4 border-t">
