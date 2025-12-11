@@ -6,6 +6,12 @@ const authorize = require('../middleware/authorize');
 const guruKelasController = require('../controllers/guruKelasController');
 
 // ambil data kelas yang diampu guru
-router.get('/kelas', authenticate, authorize(['guru kelas']), guruKelasController.getKelasSaya);
+router.get('/kelas', authenticate, guruKelasController.getKelasSaya);
+
+// Profil
+router.put('/profil', authenticate, guruKelasController.editProfil);
+
+// Gnati password
+router.put('/ganti-password', authenticate, guruKelasController.gantiPassword);
 
 module.exports = router;

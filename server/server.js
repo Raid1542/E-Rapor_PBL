@@ -49,6 +49,9 @@ app.use('/api/admin', adminRoutes);
 const guruKelasRoutes = require('./routes/guruKelasRoutes');
 app.use('/api/guru-kelas', guruKelasRoutes);
 
+const sekolahPublicRoutes = require('./routes/sekolahPublicRoutes');
+app.use('/api/sekolah', sekolahPublicRoutes);
+
 // ✅ Debug endpoint
 app.get('/debug/uploads', (req, res) => {
     try {

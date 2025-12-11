@@ -8,7 +8,7 @@ interface UserData {
     nama_lengkap: string;
     email_sekolah: string;
     role: string;
-    class?: string; // tambahan untuk guru kelas
+    class?: string;
 }
 
 interface HeaderProps {
@@ -49,7 +49,16 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                             </div>
-                            <User className="w-8 h-8 text-gray-600" />
+
+                            {/* ✅ GANTI INI: Avatar berbasis inisial */}
+                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-gray-700">
+                                {(user.nama_lengkap || '??')
+                                    .split(' ')
+                                    .slice(0, 2)
+                                    .map(word => word[0]?.toUpperCase() || '')
+                                    .join('') || '??'}
+                            </div>
+
                             <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
 

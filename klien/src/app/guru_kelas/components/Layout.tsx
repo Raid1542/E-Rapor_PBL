@@ -1,4 +1,3 @@
-// app/guru_kelas/components/Layout.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
