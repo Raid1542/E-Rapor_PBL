@@ -100,17 +100,26 @@ router.post('/mata-pelajaran', adminOnly, adminController.tambahMataPelajaran);
 router.put('/mata-pelajaran/:id', adminOnly, adminController.editMataPelajaran);
 router.delete('/mata-pelajaran/:id', adminOnly, adminController.hapusMataPelajaran);
 
-// --- Data Pembelajaran (Guru Bidang Studi) ---
-router.get('/pembelajaran', adminOnly, adminController.getPembelajaran);
-router.post('/pembelajaran', adminOnly, adminController.tambahPembelajaran);
-router.put('/pembelajaran/:id', adminOnly, adminController.editPembelajaran);
-router.delete('/pembelajaran/:id', adminOnly, adminController.hapusPembelajaran);
+// --- PEMBELAJARAN ---
+router.get('/pembelajaran', adminOnlyWithTahunAjaran, adminController.getPembelajaran);
+router.get('/pembelajaran/dropdown', adminOnlyWithTahunAjaran, adminController.getDropdownPembelajaran);
+router.post('/pembelajaran', adminOnlyWithTahunAjaran, adminController.tambahPembelajaran);
+router.put('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.editPembelajaran);
+router.delete('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.hapusPembelajaran);
 
-// --- Dropdown untuk form (opsional tapi disarankan) ---
-router.get('/dropdown/guru', adminOnly, adminController.getGuruBidangStudiForDropdown);
-router.get('/dropdown/mapel', adminOnly, adminController.getMapelForDropdown);
-router.get('/dropdown/tahun-ajaran', adminOnly, adminController.getTahunAjaranForDropdown);
+// --- EKSTRAKURIKULER ---
+// CRUD Ekstrakurikuler
+router.get('/ekstrakurikuler', adminOnly, adminController.getEkskul);
+router.post('/ekstrakurikuler', adminOnlyWithTahunAjaran, adminController.tambahEkskul);
+router.put('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.editEkskul);
+router.delete('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.hapusEkskul);
 
+// Ambil data tambahan (ekskul)
+router.get('/ekstrakurikuler/:id/anggota', adminOnly, adminController.getPesertaByEkskul);
+router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulBySiswa); 
+
+// --- Dashboard Stats ---
+router.get('/dashboard/stats', adminOnlyWithTahunAjaran, adminController.getDashboardStats);
 
 module.exports = router;
 
