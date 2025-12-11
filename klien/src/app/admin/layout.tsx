@@ -3,7 +3,7 @@ import "../globals.css";
 import Layout from "@/components/Layout"; // ⬅️ penting!
 
 export const metadata: Metadata = {
-  title: "E-Rapor Admin",
+  title: "E-Rapor SDIT Ulil Albab Batam",
   description: "Dashboard Admin E-Rapor",
 };
 
