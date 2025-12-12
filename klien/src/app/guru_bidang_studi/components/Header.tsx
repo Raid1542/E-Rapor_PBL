@@ -54,7 +54,7 @@ export default function Header({ user }: HeaderProps) {
                             </div>
 
                             {/* ✅ Avatar berbasis inisial — tetap sama */}
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-gray-700">
+                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-black">
                                 {(user.nama_lengkap || '??')
                                     .split(' ')
                                     .slice(0, 2)

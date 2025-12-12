@@ -8,10 +8,15 @@ const guruKelasController = require('../controllers/guruKelasController');
 // ambil data kelas yang diampu guru
 router.get('/kelas', authenticate, guruKelasController.getKelasSaya);
 
+// Data siswa berdasarkan kelas
+router.get('/siswa', authenticate, guruKelasController.getSiswaByKelas);
+
 // Profil
 router.put('/profil', authenticate, guruKelasController.editProfil);
 
-// Gnati password
+// Ganti password
 router.put('/ganti-password', authenticate, guruKelasController.gantiPassword);
+
+
 
 module.exports = router;

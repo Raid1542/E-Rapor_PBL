@@ -166,3 +166,86 @@ exports.gantiPassword = async (req, res) => {
         res.status(500).json({ message: 'Gagal mengubah kata sandi' });
     }
 };
+
+
+exports.getSiswaByKelas = async (req, res) => {
+    // ✅ Pastikan userId number
+    const userId = Number(req.user.id);
+
+    // ✅ Debug
+    console.log('🔍 userId:', userId, 'tipe:', typeof userId);
+
+    try {
+        const [guruKelasRows] = await db.execute(
+            `
+      SELECT gk.kelas_id, k.nama_kelas
+      FROM guru_kelas gk
+      JOIN kelas k ON gk.kelas_id = k.id_kelas
+      WHERE gk.user_id = ?
+        AND gk.tahun_ajaran_id = (
+          SELECT id_tahun_ajaran 
+          FROM tahun_ajaran 
+          WHERE status = 'aktif'
+          LIMIT 1
+        )
+      `,
+            [userId]
+        );
+
+        if (guruKelasRows.length === 0) {
+            console.log('❌ Tidak ada data di guru_kelas untuk user_id:', userId);
+            return res.status(404).json({
+                success: false,
+                message: 'Anda tidak memiliki kelas yang diampu pada tahun ajaran aktif.'
+            });
+        }
+
+        const { kelas_id, nama_kelas } = guruKelasRows[0];
+        console.log('✅ kelas_id ditemukan:', kelas_id);
+
+        const [siswaRows] = await db.execute(
+            `
+      SELECT 
+        s.id_siswa AS id,
+        s.nis,
+        s.nisn,
+        s.nama_lengkap AS nama,
+        s.tempat_lahir,
+        s.tanggal_lahir,
+        s.jenis_kelamin,
+        s.alamat,
+        s.status,
+        k.nama_kelas AS kelas,
+        k.fase
+      FROM siswa s
+      JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+      JOIN kelas k ON sk.kelas_id = k.id_kelas
+      WHERE sk.kelas_id = ?
+        AND sk.tahun_ajaran_id = (
+          SELECT id_tahun_ajaran 
+          FROM tahun_ajaran 
+          WHERE status = 'aktif'
+          LIMIT 1
+        )
+      ORDER BY s.nama_lengkap
+      `,
+            [kelas_id]
+        );
+
+        res.json({
+            success: true,
+            data: siswaRows.map(row => ({
+                ...row,
+                statusSiswa: row.status ? row.status : 'aktif'
+            }))
+        });
+
+    } catch (err) {
+        console.error('❌ Error di getSiswaByKelas:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal mengambil data siswa',
+            error: err.message || 'Unknown error'
+        });
+    }
+};
