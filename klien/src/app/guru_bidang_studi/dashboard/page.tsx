@@ -1,126 +1,285 @@
+// src/app/dashboard/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { ChevronRight, Menu, X, LogOut, User, Edit, Trash2, Plus, Home } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  ChevronRight,
+  Menu,
+  X,
+  LogOut,
+  User,
+  Edit,
+  Trash2,
+  Plus,
+  Home,
+  Pencil,
+} from 'lucide-react';
+
+interface ProfileData {
+  name: string;
+  role: string;
+  subject: string;
+  email: string;
+  phone: string;
+  nip: string;
+}
+
+interface Kelas {
+  id: number;
+  name: string;
+  tingkat: number;
+  studentCount: number;
+}
+
+interface Siswa {
+  id: number;
+  nis: string;
+  name: string;
+  uh1: number;
+  uh2: number;
+  uh3: number;
+  uh4: number;
+  uh5: number;
+  pts: number;
+  pas: number;
+  deskripsi: string;
+}
 
 export default function GuruBidangStudiDashboard() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'input-nilai'>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
-  const [editingStudent, setEditingStudent] = useState(null);
+  const [editingStudent, setEditingStudent] = useState<Siswa | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0, deskripsi: ''
+  const [newStudent, setNewStudent] = useState<{
+    uh1: number;
+    uh2: number;
+    uh3: number;
+    uh4: number;
+    uh5: number;
+    pts: number;
+    pas: number;
+  }>({
+    uh1: 0,
+    uh2: 0,
+    uh3: 0,
+    uh4: 0,
+    uh5: 0,
+    pts: 0,
+    pas: 0,
   });
 
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<ProfileData>({
     name: 'Noir Prince S.Pd.',
     role: 'Guru Bidang Studi',
     subject: 'Matematika',
     email: 'noir.prince@sditulilalbab.sch.id',
     phone: '+6281234567890',
-    nip: '198507122010011005'
+    nip: '198507122010011005',
   });
 
-  const [classes] = useState([
-    { id: 1, name: 'Kelas 1A', tingkat: 1, studentCount: 28 },
-    { id: 2, name: 'Kelas 1B', tingkat: 1, studentCount: 30 },
-    { id: 3, name: 'Kelas 1C', tingkat: 1, studentCount: 27 },
-    { id: 4, name: 'Kelas 1D', tingkat: 1, studentCount: 29 },
-    { id: 5, name: 'Kelas 1E', tingkat: 1, studentCount: 26 },
-    { id: 6, name: 'Kelas 2A', tingkat: 2, studentCount: 30 },
-    { id: 7, name: 'Kelas 2B', tingkat: 2, studentCount: 28 },
-    { id: 8, name: 'Kelas 2C', tingkat: 2, studentCount: 29 },
-    { id: 9, name: 'Kelas 2D', tingkat: 2, studentCount: 27 },
-    { id: 10, name: 'Kelas 2E', tingkat: 2, studentCount: 31 },
-    { id: 11, name: 'Kelas 3A', tingkat: 3, studentCount: 27 },
-    { id: 12, name: 'Kelas 3B', tingkat: 3, studentCount: 29 },
-    { id: 13, name: 'Kelas 3C', tingkat: 3, studentCount: 28 },
-    { id: 14, name: 'Kelas 3D', tingkat: 3, studentCount: 30 },
-    { id: 15, name: 'Kelas 3E', tingkat: 3, studentCount: 26 },
-    { id: 16, name: 'Kelas 4A', tingkat: 4, studentCount: 29 },
-    { id: 17, name: 'Kelas 4B', tingkat: 4, studentCount: 31 },
-    { id: 18, name: 'Kelas 4C', tingkat: 4, studentCount: 28 },
-    { id: 19, name: 'Kelas 4D', tingkat: 4, studentCount: 30 },
-    { id: 20, name: 'Kelas 4E', tingkat: 4, studentCount: 27 },
-    { id: 21, name: 'Kelas 5A', tingkat: 5, studentCount: 31 },
-    { id: 22, name: 'Kelas 5B', tingkat: 5, studentCount: 29 },
-    { id: 23, name: 'Kelas 5C', tingkat: 5, studentCount: 30 },
-    { id: 24, name: 'Kelas 5D', tingkat: 5, studentCount: 28 },
-    { id: 25, name: 'Kelas 5E', tingkat: 5, studentCount: 32 },
-    { id: 26, name: 'Kelas 6A', tingkat: 6, studentCount: 26 },
-    { id: 27, name: 'Kelas 6B', tingkat: 6, studentCount: 28 },
-    { id: 28, name: 'Kelas 6C', tingkat: 6, studentCount: 27 },
-    { id: 29, name: 'Kelas 6D', tingkat: 6, studentCount: 29 },
-    { id: 30, name: 'Kelas 6E', tingkat: 6, studentCount: 25 }
+  // ✅ Kelas 1A sampai 6E (30 kelas)
+  const [classes] = useState<Kelas[]>([
+    // Kelas 1
+    { id: 1, name: 'Kelas 1A', tingkat: 1, studentCount: 1 },
+    { id: 2, name: 'Kelas 1B', tingkat: 1, studentCount: 1 },
+    { id: 3, name: 'Kelas 1C', tingkat: 1, studentCount: 1 },
+    { id: 4, name: 'Kelas 1D', tingkat: 1, studentCount: 1 },
+    { id: 5, name: 'Kelas 1E', tingkat: 1, studentCount: 1 },
+    // Kelas 2
+    { id: 6, name: 'Kelas 2A', tingkat: 2, studentCount: 1 },
+    { id: 7, name: 'Kelas 2B', tingkat: 2, studentCount: 1 },
+    { id: 8, name: 'Kelas 2C', tingkat: 2, studentCount: 1 },
+    { id: 9, name: 'Kelas 2D', tingkat: 2, studentCount: 1 },
+    { id: 10, name: 'Kelas 2E', tingkat: 2, studentCount: 1 },
+    // Kelas 3
+    { id: 11, name: 'Kelas 3A', tingkat: 3, studentCount: 1 },
+    { id: 12, name: 'Kelas 3B', tingkat: 3, studentCount: 1 },
+    { id: 13, name: 'Kelas 3C', tingkat: 3, studentCount: 1 },
+    { id: 14, name: 'Kelas 3D', tingkat: 3, studentCount: 1 },
+    { id: 15, name: 'Kelas 3E', tingkat: 3, studentCount: 1 },
+    // Kelas 4
+    { id: 16, name: 'Kelas 4A', tingkat: 4, studentCount: 1 },
+    { id: 17, name: 'Kelas 4B', tingkat: 4, studentCount: 1 },
+    { id: 18, name: 'Kelas 4C', tingkat: 4, studentCount: 1 },
+    { id: 19, name: 'Kelas 4D', tingkat: 4, studentCount: 1 },
+    { id: 20, name: 'Kelas 4E', tingkat: 4, studentCount: 1 },
+    // Kelas 5
+    { id: 21, name: 'Kelas 5A', tingkat: 5, studentCount: 1 },
+    { id: 22, name: 'Kelas 5B', tingkat: 5, studentCount: 1 },
+    { id: 23, name: 'Kelas 5C', tingkat: 5, studentCount: 1 },
+    { id: 24, name: 'Kelas 5D', tingkat: 5, studentCount: 1 },
+    { id: 25, name: 'Kelas 5E', tingkat: 5, studentCount: 1 },
+    // Kelas 6
+    { id: 26, name: 'Kelas 6A', tingkat: 6, studentCount: 1 },
+    { id: 27, name: 'Kelas 6B', tingkat: 6, studentCount: 1 },
+    { id: 28, name: 'Kelas 6C', tingkat: 6, studentCount: 1 },
+    { id: 29, name: 'Kelas 6D', tingkat: 6, studentCount: 1 },
+    { id: 30, name: 'Kelas 6E', tingkat: 6, studentCount: 1 },
   ]);
 
-  const [students, setStudents] = useState([
-    { id: 1, nis: '2024001', name: 'Ahmad Fauzi', uh1: 80, uh2: 82, uh3: 78, uh4: 85, uh5: 83, pts: 82, pas: 88, deskripsi: 'Bagus' },
-    { id: 2, nis: '2024002', name: 'Siti Nurhaliza', uh1: 88, uh2: 89, uh3: 90, uh4: 87, uh5: 91, pts: 89, pas: 92, deskripsi: 'Sangat baik' },
-    { id: 3, nis: '2024003', name: 'Budi Prasetyo', uh1: 70, uh2: 72, uh3: 68, uh4: 71, uh5: 73, pts: 72, pas: 78, deskripsi: 'Perlu ditingkatkan' },
-    { id: 4, nis: '2024004', name: 'Dewi Lestari', uh1: 85, uh2: 86, uh3: 84, uh4: 87, uh5: 88, pts: 87, pas: 90, deskripsi: 'Konsisten' },
-    { id: 5, nis: '2024005', name: 'Riko Saputra', uh1: 75, uh2: 76, uh3: 74, uh4: 77, uh5: 78, pts: 76, pas: 80, deskripsi: 'Cukup baik' },
-    { id: 6, nis: '2024006', name: 'Aisyah Putri', uh1: 90, uh2: 91, uh3: 92, uh4: 93, uh5: 94, pts: 91, pas: 93, deskripsi: 'Excellent' },
-    { id: 7, nis: '2024007', name: 'Farhan Ali', uh1: 82, uh2: 83, uh3: 81, uh4: 84, uh5: 85, pts: 81, pas: 85, deskripsi: 'Baik' },
-    { id: 8, nis: '2024008', name: 'Nadia Rahman', uh1: 84, uh2: 85, uh3: 86, uh4: 87, uh5: 88, pts: 86, pas: 89, deskripsi: 'Sangat baik' }
-  ]);
+  // ✅ Satu siswa unik per kelas
+  const [classStudents, setClassStudents] = useState<Record<number, Siswa[]>>(() => {
+    const names = [
+      'Ariel Putra', 'Bunga Sari', 'Candra Wijaya', 'Dinda Permata', 'Eka Prasetya',
+      'Fajar Nugroho', 'Gina Lestari', 'Hendra Gunawan', 'Intan Cahaya', 'Joko Santoso',
+      'Karina Dewi', 'Lukman Hakim', 'Mira Anggraini', 'Nanda Pratama', 'Olivia Rahayu',
+      'Pandu Wirawan', 'Qori Amalia', 'Raka Adhitama', 'Salsa Firdaus', 'Taufik Hidayat',
+      'Ulya Maharani', 'Vino Darmawan', 'Winda Kusuma', 'Xavier Andika', 'Yuniarti Putri',
+      'Zahra Maulida', 'Abimanyu', 'Bella Safira', 'Cinta Rani', 'Dimas Arya'
+    ];
+    const initial: Record<number, Siswa[]> = {};
+    for (let i = 0; i < 30; i++) {
+      const id = i + 1;
+      const nilaiDasar = 70 + (i % 20); // variasi nilai
+      initial[id] = [{
+        id: id,
+        nis: `NIS2024${String(id).padStart(3, '0')}`,
+        name: names[i],
+        uh1: nilaiDasar,
+        uh2: nilaiDasar + 2,
+        uh3: nilaiDasar - 1,
+        uh4: nilaiDasar + 3,
+        uh5: nilaiDasar + 1,
+        pts: nilaiDasar + 2,
+        pas: nilaiDasar + 4,
+        deskripsi: '', // akan diisi otomatis
+      }];
+    }
+    return initial;
+  });
 
-  const [selectedClass, setSelectedClass] = useState(null);
+  const [selectedClass, setSelectedClass] = useState<Kelas | null>(null);
 
-  const calculateRapor = (student) => {
-    const total = student.uh1 + student.uh2 + student.uh3 + student.uh4 + student.uh5 + student.pts + student.pas;
-    const avg = total / 7;
-    return avg.toFixed(1);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      inputRefs.current = [];
+    } else {
+      setTimeout(() => {
+        if (inputRefs.current[0]) inputRefs.current[0].focus();
+      }, 100);
+    }
+  }, [showAddModal]);
+
+  const calculateRapor = (student: Siswa) => {
+    const { uh1, uh2, uh3, uh4, uh5, pts, pas } = student;
+    const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
+    return parseFloat((total / 7).toFixed(1));
   };
 
-  const handleViewDetail = (classData) => {
+  const getGradeAndDescription = (average: number): { grade: string; description: string } => {
+    if (average >= 90) return { grade: 'A', description: 'Sangat Baik' };
+    if (average >= 80) return { grade: 'B', description: 'Baik' };
+    if (average >= 70) return { grade: 'C', description: 'Cukup' };
+    if (average >= 60) return { grade: 'D', description: 'Kurang' };
+    return { grade: 'E', description: 'Sangat Kurang' };
+  };
+
+  const handleViewDetail = (classData: Kelas) => {
     setSelectedClass(classData);
     setCurrentPage('input-nilai');
   };
 
-  const handleEdit = (student) => {
+  const handleEdit = (student: Siswa) => {
     setEditingStudent({ ...student });
   };
 
   const handleSaveEdit = () => {
-    setStudents(students.map(s => s.id === editingStudent.id ? editingStudent : s));
+    if (!editingStudent || !selectedClass) return;
+
+    const { uh1, uh2, uh3, uh4, uh5, pts, pas } = editingStudent;
+    const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
+    const average = total / 7;
+    const { description } = getGradeAndDescription(average);
+
+    setClassStudents(prev => ({
+      ...prev,
+      [selectedClass.id]: prev[selectedClass.id].map(s =>
+        s.id === editingStudent.id ? { ...editingStudent, deskripsi: description } : s
+      )
+    }));
+
     setEditingStudent(null);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      setStudents(students.filter(s => s.id !== id));
+  const handleDelete = (id: number) => {
+    if (!selectedClass) return;
+    if (window.confirm('Hapus data siswa ini?')) {
+      setClassStudents(prev => ({
+        ...prev,
+        [selectedClass.id]: prev[selectedClass.id].filter(s => s.id !== id)
+      }));
     }
   };
 
   const handleAddStudent = () => {
-    if (
-      newStudent.uh1 === 0 &&
-      newStudent.uh2 === 0 &&
-      newStudent.uh3 === 0 &&
-      newStudent.uh4 === 0 &&
-      newStudent.uh5 === 0 &&
-      newStudent.pts === 0 &&
-      newStudent.pas === 0
-    ) {
-      alert('Silakan masukkan setidaknya satu nilai!');
+    if (!selectedClass) return;
+
+    const { uh1, uh2, uh3, uh4, uh5, pts, pas } = newStudent;
+    const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
+    if (total === 0) {
+      alert('Masukkan minimal satu nilai!');
       return;
     }
-    const id = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
-    setStudents([...students, { 
-      id, 
-      nis: `NEW${id}`, 
-      name: 'Siswa Baru', 
-      ...newStudent 
-    }]);
+
+    const average = total / 7;
+    const { description } = getGradeAndDescription(average);
+
+    const currentList = classStudents[selectedClass.id] || [];
+    const id = currentList.length > 0 ? Math.max(...currentList.map(s => s.id)) + 1 : 1;
+
+    const newSiswa: Siswa = {
+      id,
+      nis: `NIS2024${String(id).padStart(3, '0')}`,
+      name: `Siswa Baru ${selectedClass.name}`,
+      uh1,
+      uh2,
+      uh3,
+      uh4,
+      uh5,
+      pts,
+      pas,
+      deskripsi: description,
+    };
+
+    setClassStudents(prev => ({
+      ...prev,
+      [selectedClass.id]: [...(prev[selectedClass.id] || []), newSiswa]
+    }));
+
     setShowAddModal(false);
-    setNewStudent({ uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0, deskripsi: '' });
+    setNewStudent({ uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0 });
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextIndex = index + 1;
+      if (inputRefs.current[nextIndex]) {
+        inputRefs.current[nextIndex]?.focus();
+      }
+    }
   };
 
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const filteredClasses = classes.filter(c => c.tingkat === activeTab);
+  const filteredClasses = classes.filter((c) => c.tingkat === activeTab);
+  const currentStudents = selectedClass ? classStudents[selectedClass.id] || [] : [];
+
+  // Hitung deskripsi awal untuk semua siswa (saat load)
+  useEffect(() => {
+    const updated: Record<number, Siswa[]> = {};
+    Object.entries(classStudents).forEach(([kelasId, siswaList]) => {
+      updated[parseInt(kelasId)] = siswaList.map(s => {
+        const avg = calculateRapor(s);
+        const { description } = getGradeAndDescription(avg);
+        return { ...s, deskripsi: description };
+      });
+    });
+    setClassStudents(updated);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -196,7 +355,6 @@ export default function GuruBidangStudiDashboard() {
         </div>
       </header>
 
-      {/* Main Content: Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* SIDEBAR */}
         <div 
@@ -210,7 +368,6 @@ export default function GuruBidangStudiDashboard() {
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
-
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <button
               onClick={() => {
@@ -226,7 +383,6 @@ export default function GuruBidangStudiDashboard() {
               <Home className="w-5 h-5" />
               {sidebarOpen && <span className="text-sm font-medium">Dashboard</span>}
             </button>
-
             <button
               onClick={() => setCurrentPage('input-nilai')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
@@ -241,7 +397,6 @@ export default function GuruBidangStudiDashboard() {
           </nav>
         </div>
 
-        {/* Konten Utama */}
         <main className="flex-1 overflow-auto p-6">
           {currentPage === 'dashboard' ? (
             <>
@@ -328,13 +483,13 @@ export default function GuruBidangStudiDashboard() {
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH5</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase">PTS</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase">PAS</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase">Nilai Rapor</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase">Rapor (Grade)</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase">Aksi</th>
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase">Deskripsi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {students.map((student, index) => (
+                      {currentStudents.map((student, index) => (
                         <tr key={student.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
                           <td className="px-4 py-4 text-sm text-gray-900">{student.nis}</td>
@@ -346,22 +501,24 @@ export default function GuruBidangStudiDashboard() {
                           <td className="px-4 py-4 text-sm text-gray-900">{student.uh5}</td>
                           <td className="px-4 py-4 text-sm text-gray-900">{student.pts}</td>
                           <td className="px-4 py-4 text-sm text-gray-900">{student.pas}</td>
-                          <td className="px-4 py-4 text-sm font-semibold text-gray-900">{calculateRapor(student)}</td>
+                          <td className="px-4 py-4 text-sm font-semibold text-gray-900">
+                            {calculateRapor(student).toFixed(1)} ({getGradeAndDescription(calculateRapor(student)).grade})
+                          </td>
                           <td className="px-4 py-4">
-                            <div className="flex space-x-2">
+                            <div className="flex gap-2">
                               <button
                                 onClick={() => handleEdit(student)}
-                                className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-yellow-400 bg-yellow-100 text-black hover:bg-yellow-200 text-sm font-medium"
                               >
-                                <Edit size={18} />
-                                <span className="text-sm font-medium">Edit</span>
+                                <Pencil size={14} />
+                                <span>Edit</span>
                               </button>
                               <button
                                 onClick={() => handleDelete(student.id)}
-                                className="text-red-600 hover:text-red-800 flex items-center space-x-1"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-red-400 bg-red-100 text-black hover:bg-red-200 text-sm font-medium"
                               >
-                                <Trash2 size={18} />
-                                <span className="text-sm font-medium">Hapus</span>
+                                <Trash2 size={14} />
+                                <span>Hapus</span>
                               </button>
                             </div>
                           </td>
@@ -376,6 +533,133 @@ export default function GuruBidangStudiDashboard() {
           )}
         </main>
       </div>
+
+      {/* MODAL TAMBAH */}
+      {showAddModal && (
+        <div 
+          className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4">Tambah Nilai</h3>
+            <div className="space-y-4">
+              {(['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'] as const).map((field, idx) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.toUpperCase()}
+                  </label>
+                  <input
+                    ref={(el) => {
+                      inputRefs.current[idx] = el;
+                    }}
+                    type="number"
+                    value={newStudent[field]}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) || 0 : 0;
+                      setNewStudent(prev => ({ ...prev, [field]: val }));
+                    }}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                </div>
+              ))}
+              {/* Preview deskripsi otomatis */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Otomatis</label>
+                {(() => {
+                  const { uh1, uh2, uh3, uh4, uh5, pts, pas } = newStudent;
+                  const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
+                  if (total === 0) return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">-</div>;
+                  const avg = total / 7;
+                  const { description } = getGradeAndDescription(avg);
+                  return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">{description}</div>;
+                })()}
+              </div>
+            </div>
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleAddStudent}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
+              >
+                Tambah
+              </button>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT */}
+      {editingStudent && (
+        <div 
+          className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
+          onClick={() => setEditingStudent(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4">Edit Nilai - {editingStudent.name}</h3>
+            <div className="space-y-4">
+              {(['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'] as const).map((field, idx) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.toUpperCase()}
+                  </label>
+                  <input
+                    type="number"
+                    value={editingStudent[field]}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : 0;
+                      setEditingStudent(prev => prev ? { ...prev, [field]: val } : null);
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              ))}
+              {/* Preview deskripsi otomatis */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Otomatis</label>
+                {(() => {
+                  if (!editingStudent) return <div>-</div>;
+                  const { uh1, uh2, uh3, uh4, uh5, pts, pas } = editingStudent;
+                  const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
+                  const avg = total / 7;
+                  const { description } = getGradeAndDescription(avg);
+                  return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">{description}</div>;
+                })()}
+              </div>
+            </div>
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleSaveEdit}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
+              >
+                Simpan
+              </button>
+              <button
+                onClick={() => setEditingStudent(null)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL PROFIL */}
       {showProfileModal && (
@@ -405,7 +689,6 @@ export default function GuruBidangStudiDashboard() {
                   value={profileData.nip}
                   onChange={(e) => setProfileData({...profileData, nip: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Nomor Induk Pegawai"
                 />
               </div>
               <div>
@@ -439,124 +722,6 @@ export default function GuruBidangStudiDashboard() {
               </button>
               <button
                 onClick={() => setShowProfileModal(false)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDIT */}
-      {editingStudent && (
-        <div 
-          className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
-          onClick={() => setEditingStudent(null)}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-semibold mb-4">Edit Nilai - {editingStudent.name}</h3>
-            <div className="space-y-4">
-              {['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'].map((field) => (
-                <div key={field}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {field.toUpperCase()}
-                  </label>
-                  <input
-                    type="number"
-                    value={editingStudent[field]}
-                    onChange={(e) => {
-                      const val = e.target.value ? parseInt(e.target.value, 10) : 0;
-                      setEditingStudent(prev => ({ ...prev, [field]: val }));
-                    }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-                <input
-                  type="text"
-                  value={editingStudent.deskripsi}
-                  onChange={(e) => setEditingStudent(prev => ({ ...prev, deskripsi: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                />
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleSaveEdit}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
-              >
-                Simpan
-              </button>
-              <button
-                onClick={() => setEditingStudent(null)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL TAMBAH */}
-      {showAddModal && (
-        <div 
-          className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div 
-            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-semibold mb-4">Tambah Nilai</h3>
-            <div className="space-y-4">
-              {['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'].map((field) => (
-                <div key={field}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {field.toUpperCase()}
-                  </label>
-                  <input
-                    type="number"
-                    value={newStudent[field]}
-                    onChange={(e) => {
-                      const val = e.target.value ? parseInt(e.target.value, 10) || 0 : 0;
-                      setNewStudent(prev => ({ ...prev, [field]: val }));
-                    }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    placeholder="0–100"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-                <input
-                  type="text"
-                  value={newStudent.deskripsi}
-                  onChange={(e) => setNewStudent(prev => ({ ...prev, deskripsi: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  placeholder="Deskripsi tambahan"
-                />
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleAddStudent}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
-              >
-                Tambah
-              </button>
-              <button
-                onClick={() => setShowAddModal(false)}
                 className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
               >
                 Batal
