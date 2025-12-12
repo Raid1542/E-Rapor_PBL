@@ -5,18 +5,27 @@ const authorize = require('../middleware/authorize');
 
 const guruKelasController = require('../controllers/guruKelasController');
 
-// ambil data kelas yang diampu guru
-router.get('/kelas', authenticate, guruKelasController.getKelasSaya);
+// Middleware: hanya user dengan role 'guru_kelas' yang diizinkan
+const guruKelasOnly = authorize(['guru kelas']);
 
-// Data siswa berdasarkan kelas
-router.get('/siswa', authenticate, guruKelasController.getSiswaByKelas);
+// Ambil data siswa berdasarkan kelas
+router.get('/kelas', authenticate, guruKelasOnly, guruKelasController.getKelasSaya);
+router.get('/siswa', authenticate, guruKelasOnly, guruKelasController.getSiswaByKelas);
 
-// Profil
-router.put('/profil', authenticate, guruKelasController.editProfil);
+// Profil Guru Kelas
+router.put('/profil', authenticate, guruKelasOnly, guruKelasController.editProfil);
+router.put('/ganti-password', authenticate, guruKelasOnly, guruKelasController.gantiPassword);
 
-// Ganti password
-router.put('/ganti-password', authenticate, guruKelasController.gantiPassword);
+// Absensi
+router.get('/absensi', authenticate, guruKelasOnly, guruKelasController.getAbsensiTotal);
+router.put('/absensi/:siswa_id', authenticate, guruKelasOnly, guruKelasController.updateAbsensiTotal);
 
+// Catatan Wali Kelas
+router.get('/catatan-wali-kelas', authenticate, guruKelasOnly, guruKelasController.getCatatanWaliKelas);
+router.put('/catatan-wali-kelas/:siswa_id', authenticate, guruKelasOnly, guruKelasController.updateCatatanWaliKelas);
 
+// Ekstrakurikuler
+router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskulSiswa);
+router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
 module.exports = router;

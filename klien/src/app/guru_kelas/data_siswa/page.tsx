@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Search, X } from 'lucide-react';
 
 interface Siswa {
   id: number;
   nis: string;
   nisn: string;
-  nama: string; // ← penting: bukan nama_lengkap!
+  nama: string;
   tempat_lahir?: string;
   tanggal_lahir?: string;
   jenis_kelamin: string;
@@ -44,6 +44,8 @@ export default function DataSiswaPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
   const [detailClosing, setDetailClosing] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const closeDetail = () => {
     setDetailClosing(true);
@@ -110,11 +112,40 @@ export default function DataSiswaPage() {
       );
       setFilteredSiswa(filtered);
     }
+    setCurrentPage(1); // Reset ke halaman 1 saat pencarian
   }, [searchQuery, siswaList]);
 
   const handleDetail = (siswa: Siswa) => {
     setSelectedSiswa(siswa);
     setShowDetail(true);
+  };
+
+  const totalPages = Math.ceil(filteredSiswa.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentSiswa = filteredSiswa.slice(startIndex, endIndex);
+
+  const renderPagination = () => {
+    const pages: ReactNode[] = [];
+    const maxVisible = 5;
+    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
+    } else {
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+      }
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+    }
+    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
+    return pages;
   };
 
   return (
@@ -124,22 +155,58 @@ export default function DataSiswaPage() {
 
         {/* Header Informasi Kelas */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
               <p className="text-sm text-gray-600">Menampilkan siswa yang terdata di kelas ini.</p>
             </div>
-            <div className="relative min-w-[240px] max-w-xs">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search className="w-4 h-4 text-gray-400" />
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {/* Tampilkan per halaman */}
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-gray-700 text-sm">Tampilkan</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-gray-700 text-sm">data</span>
               </div>
-              <input
-                type="text"
-                placeholder="Pencarian"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
+              {/* Pencarian */}
+              <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Pencarian"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -162,19 +229,19 @@ export default function DataSiswaPage() {
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                 </tr>
-              ) : filteredSiswa.length === 0 ? (
+              ) : currentSiswa.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     {searchQuery ? 'Tidak ada siswa yang cocok.' : 'Belum ada siswa di kelas ini.'}
                   </td>
                 </tr>
               ) : (
-                filteredSiswa.map((siswa, index) => (
+                currentSiswa.map((siswa, index) => (
                   <tr
                     key={siswa.id}
                     className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                   >
-                    <td className="px-4 py-3 text-center align-middle font-medium">{index + 1}</td>
+                    <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                     <td className="px-4 py-3 text-center align-middle font-medium">{siswa.nama}</td>
                     <td className="px-4 py-3 text-center align-middle">{siswa.nis}</td>
                     <td className="px-4 py-3 text-center align-middle">{siswa.nisn}</td>
@@ -197,6 +264,17 @@ export default function DataSiswaPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+          <div className="text-sm text-gray-600">
+            Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari{' '}
+            {filteredSiswa.length} data
+          </div>
+          <div className="flex gap-1 flex-wrap justify-center">
+            {renderPagination()}
+          </div>
         </div>
       </div>
 

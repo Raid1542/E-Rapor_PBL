@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 // Types
 interface UserData {
   id: string;
-  nama_lengkap: string; 
+  nama_lengkap: string;
   email_sekolah: string;
   role: string;
   kelas?: string;
@@ -54,11 +54,15 @@ export default function GuruDashboard() {
           });
 
           if (response.ok) {
-            const kelasData: KelasResponse = await response.json();
-            setKelasInfo(kelasData);
-          } else {
-            const error = await response.json();
-            console.error('Error:', error.message || 'Gagal memuat data kelas');
+            const data = await response.json(); // Ini array
+
+            if (Array.isArray(data) && data.length > 0) {
+              const kelasData: KelasResponse = data[0]; // Ambil elemen pertama
+              setKelasInfo(kelasData);
+            } else {
+              console.error('Data kelas kosong atau bukan array');
+              setKelasInfo(null);
+            }
           }
         } catch (err) {
           console.error('Fetch error:', err);
@@ -90,7 +94,7 @@ export default function GuruDashboard() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <p className="text-red-600 mb-4">Gagal memuat data kelas.</p>
-          <button 
+          <button
             onClick={() => router.refresh()}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >

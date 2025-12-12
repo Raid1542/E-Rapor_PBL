@@ -25,6 +25,16 @@ const ProfilePage = () => {
     alamat: ''
   });
 
+  const [originalData, setOriginalData] = useState({
+  nama: '',
+  nuptk: '',
+  niy: '',
+  jenisKelamin: 'Laki-laki',
+  telepon: '',
+  email: '',
+  alamat: ''
+});
+
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -40,7 +50,7 @@ const ProfilePage = () => {
     if (stored) {
       try {
         const user: UserProfile = JSON.parse(stored);
-        setFormData({
+        const initialData = {
           nama: user.nama_lengkap || '',
           nuptk: user.nuptk || '',
           niy: user.niy || '',
@@ -48,9 +58,10 @@ const ProfilePage = () => {
           telepon: user.no_telepon || '',
           email: user.email_sekolah || '',
           alamat: user.alamat || ''
-        });
+        };
+        setFormData(initialData);
+        setOriginalData(initialData);
 
-        // Format role untuk tampilan
         const roleMap: Record<string, string> = {
           admin: 'Admin',
           guru: 'Guru',
@@ -72,6 +83,21 @@ const ProfilePage = () => {
   // === Simpan profil ===
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const hasChanges =
+      formData.nama !== originalData.nama ||
+      formData.nuptk !== originalData.nuptk ||
+      formData.niy !== originalData.niy ||
+      formData.jenisKelamin !== originalData.jenisKelamin ||
+      formData.telepon !== originalData.telepon ||
+      formData.email !== originalData.email ||
+      formData.alamat !== originalData.alamat;
+
+    if (!hasChanges) {
+      alert('Tidak ada perubahan yang dilakukan.');
+      return; 
+    }
+
     if (!isConfirmed) {
       alert('Harap centang konfirmasi terlebih dahulu!');
       return;
@@ -106,6 +132,7 @@ const ProfilePage = () => {
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
         const updatedUser = { ...currentUser, ...result.data };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        setOriginalData(formData); 
         alert('✅ Profil berhasil diperbarui!');
       } else {
         const err = await res.json();
