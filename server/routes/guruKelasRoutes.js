@@ -28,4 +28,8 @@ router.put('/catatan-wali-kelas/:siswa_id', authenticate, guruKelasOnly, guruKel
 router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskulSiswa);
 router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
+// Kokurikuler
+router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
+router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateKokurikuler);
+
 module.exports = router;
