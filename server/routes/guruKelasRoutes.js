@@ -29,7 +29,7 @@ router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskul
 router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
 // Kokurikuler
-router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
-router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateKokurikuler);
+router.get('/kokurikuler/:jenis_penilaian', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
+router.put('/kokurikuler/:siswaId/:jenis_penilaian', authenticate, guruKelasOnly, guruKelasController.updateKokurikuler);
 
 module.exports = router;

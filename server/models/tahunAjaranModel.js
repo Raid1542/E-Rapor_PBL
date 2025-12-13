@@ -8,7 +8,8 @@ const getAllTahunAjaran = async () => {
             tahun_ajaran,
             semester,
             status,
-            tanggal_pembagian_rapor
+            tanggal_pembagian_pts,
+            tanggal_pembagian_pas
         FROM tahun_ajaran
         ORDER BY 
             CASE 
@@ -31,9 +32,19 @@ const createTahunAjaran = async (data) => {
 
         // Tambah yang baru sebagai aktif
         const [result] = await connection.execute(
-            `INSERT INTO tahun_ajaran (tahun_ajaran, semester, tanggal_pembagian_rapor, status)
-        VALUES (?, ?, ?, 'aktif')`,
-            [data.tahun_ajaran, data.semester, data.tanggal_pembagian_rapor]
+            `INSERT INTO tahun_ajaran (
+                tahun_ajaran, 
+                semester, 
+                tanggal_pembagian_pts, 
+                tanggal_pembagian_pas, 
+                status
+            ) VALUES (?, ?, ?, ?, 'aktif')`,
+            [
+                data.tahun_ajaran, 
+                data.semester, 
+                data.tanggal_pembagian_pts, 
+                data.tanggal_pembagian_pas
+            ]
         );
 
         await connection.commit();
@@ -50,9 +61,19 @@ const createTahunAjaran = async (data) => {
 const updateTahunAjaranById = async (id, data) => {
     const [result] = await db.execute(
         `UPDATE tahun_ajaran 
-        SET tahun_ajaran = ?, semester = ?, tanggal_pembagian_rapor = ?
+        SET 
+            tahun_ajaran = ?, 
+            semester = ?, 
+            tanggal_pembagian_pts = ?, 
+            tanggal_pembagian_pas = ?
         WHERE id_tahun_ajaran = ?`,
-        [data.tahun_ajaran, data.semester, data.tanggal_pembagian_rapor, id]
+        [
+            data.tahun_ajaran, 
+            data.semester, 
+            data.tanggal_pembagian_pts, 
+            data.tanggal_pembagian_pas, 
+            id
+        ]
     );
     return result.affectedRows > 0;
 };

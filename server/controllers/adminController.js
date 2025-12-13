@@ -556,13 +556,13 @@ const getTahunAjaran = async (req, res) => {
 
 const tambahTahunAjaran = async (req, res) => {
     try {
-        const { tahun1, tahun2, semester, tanggal_pembagian_rapor } = req.body;
+        const { tahun1, tahun2, semester, tanggal_pembagian_pts, tanggal_pembagian_pas } = req.body;
         if (!tahun1 || !tahun2 || !semester) {
             return res.status(400).json({ message: 'Tahun dan semester wajib diisi' });
         }
         const tahun_ajaran = `${tahun1}/${tahun2}`;
         const success = await tahunAjaranModel.createTahunAjaran({
-            tahun_ajaran, semester, tanggal_pembagian_rapor
+            tahun_ajaran, semester, tanggal_pembagian_pts, tanggal_pembagian_pas
         });
         if (!success) return res.status(500).json({ message: 'Gagal membuat tahun ajaran baru' });
         res.status(201).json({ message: 'Tahun ajaran berhasil ditambahkan' });
@@ -575,13 +575,13 @@ const tambahTahunAjaran = async (req, res) => {
 const updateTahunAjaran = async (req, res) => {
     try {
         const { id } = req.params;
-        const { tahun1, tahun2, semester, tanggal_pembagian_rapor } = req.body;
+        const { tahun1, tahun2, semester, tanggal_pembagian_pts, tanggal_pembagian_pas } = req.body;
         if (!tahun1 || !tahun2 || !semester) {
             return res.status(400).json({ message: 'Tahun dan semester wajib diisi' });
         }
         const tahun_ajaran = `${tahun1}/${tahun2}`;
         const success = await tahunAjaranModel.updateTahunAjaranById(id, {
-            tahun_ajaran, semester, tanggal_pembagian_rapor
+            tahun_ajaran, semester, tanggal_pembagian_pts, tanggal_pembagian_pas
         });
         if (!success) return res.status(404).json({ message: 'Tahun ajaran tidak ditemukan' });
         res.json({ message: 'Data tahun ajaran berhasil diperbarui' });

@@ -1,23 +1,19 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Pencil, X, Search, BookOpen } from 'lucide-react';
+import { useState, useEffect, ReactNode } from 'react';
+import { Pencil, X, Search } from 'lucide-react';
 
-// Sesuai RAPOR PAS.docx
-const ASPEK_KOKUL = [
-  'Mutabaaah Yaumiyah',
-  'Mentoring Bina Pribadi Islam',
-  'Literasi',
-  'Sekolahku Indah Tanpa Sampah'
-] as const;
-
-type Aspek = typeof ASPEK_KOKUL[number];
-
+// Struktur data sesuai kebutuhan PTS dan PAS
 interface KokurikulerData {
-  aspek: Aspek;
-  nilai_angka: number | null;
-  grade: 'A' | 'B' | 'C' | 'D' | null;
-  deskripsi: string;
+  // Untuk PAS
+  mutabaah?: string;
+  bpi?: string;
+  literasi?: string;
+  judul_proyek?: string;
+  deskripsi_proyek?: string;
+  // Untuk PTS
+  mutabaah_nilai_angka?: number | null;
+  mutabaah_grade?: 'A' | 'B' | 'C' | 'D' | null;
 }
 
 interface SiswaKokurikuler {
@@ -25,7 +21,7 @@ interface SiswaKokurikuler {
   nama: string;
   nis: string;
   nisn: string;
-  kokurikuler: KokurikulerData[];
+  kokurikuler: KokurikulerData;
 }
 
 export default function DataKokurikulerPage() {
@@ -33,15 +29,14 @@ export default function DataKokurikulerPage() {
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<KokurikulerData[]>([]);
+  const [editData, setEditData] = useState<KokurikulerData>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
   const [detailClosing, setDetailClosing] = useState(false);
+  const [semester, setSemester] = useState<string>('');
   const [jenisPenilaian, setJenisPenilaian] = useState<'pts' | 'pas'>('pas');
-  const [tahunAjaranId, setTahunAjaranId] = useState<number | null>(null);
-  const [kelasId, setKelasId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchKokurikuler = async () => {
@@ -53,7 +48,7 @@ export default function DataKokurikulerPage() {
           return;
         }
 
-        const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler?jenis_penilaian=${jenisPenilaian}`, {
+        const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler/${jenisPenilaian}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -62,8 +57,7 @@ export default function DataKokurikulerPage() {
           if (data.success) {
             setSiswaList(data.data || []);
             setKelasNama(data.kelas || 'Kelas Anda');
-            setTahunAjaranId(data.tahun_ajaran_id); 
-            setKelasId(data.kelas_id);               
+            setSemester(data.semester || '');
           } else {
             alert(data.message || 'Gagal memuat data kokurikuler');
           }
@@ -84,7 +78,7 @@ export default function DataKokurikulerPage() {
 
   const handleEdit = (siswa: SiswaKokurikuler) => {
     setEditingId(siswa.id);
-    setEditData([...siswa.kokurikuler]);
+    setEditData({ ...siswa.kokurikuler });
     setShowDetail(true);
   };
 
@@ -96,19 +90,9 @@ export default function DataKokurikulerPage() {
         return;
       }
 
-      const payload = {
-        tahun_ajaran_id: tahunAjaranId,
-        kelas_id: kelasId,
-        jenis_penilaian,
-        aspek_data: editData.map(item => ({
-          aspek: item.aspek,
-          nilai_angka: item.nilai_angka,
-          grade: item.grade,
-          deskripsi: item.deskripsi
-        }))
-      };
+      const payload = { ...editData };
 
-      const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler/${siswaId}`, {
+      const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler/${siswaId}/${jenisPenilaian}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +103,6 @@ export default function DataKokurikulerPage() {
 
       if (res.ok) {
         alert('Data kokurikuler berhasil disimpan');
-        // Refresh data
         const updatedSiswa = siswaList.map(s =>
           s.id === siswaId ? { ...s, kokurikuler: editData } : s
         );
@@ -136,22 +119,8 @@ export default function DataKokurikulerPage() {
     }
   };
 
-  const handleDeskripsiChange = (aspek: Aspek, value: string) => {
-    setEditData(prev =>
-      prev.map(item =>
-        item.aspek === aspek ? { ...item, deskripsi: value } : item
-      )
-    );
-  };
-
-  const handleNilaiChange = (aspek: Aspek, field: 'nilai_angka' | 'grade', value: string) => {
-    setEditData(prev =>
-      prev.map(item =>
-        item.aspek === aspek
-          ? { ...item, [field]: field === 'nilai_angka' ? (value ? Number(value) : null) : (value || null) }
-          : item
-      )
-    );
+  const handleFieldChange = (field: keyof KokurikulerData, value: string | number | null) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
   };
 
   const filteredSiswa = siswaList.filter((siswa) => {
@@ -166,8 +135,8 @@ export default function DataKokurikulerPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentSiswa = filteredSiswa.slice(startIndex, endIndex);
+
   const renderPagination = () => {
-    // ... (sama seperti di absensi, bisa copy-paste)
     const pages: ReactNode[] = [];
     const maxVisible = 5;
     if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
@@ -199,10 +168,19 @@ export default function DataKokurikulerPage() {
     }, 200);
   };
 
-  // Tentukan aspek yang ditampilkan berdasarkan jenis penilaian
-  const aspekTampil = jenisPenilaian === 'pts' 
-    ? ['Mutabaaah Yaumiyah'] 
-    : ASPEK_KOKUL;
+  const kolomTampil = jenisPenilaian === 'pts'
+    ? [
+        { key: 'mutabaah', label: 'Mutaba’ah Yaumiyah' },
+        { key: 'mutabaah_nilai_angka', label: 'Nilai Angka' },
+        { key: 'mutabaah_grade', label: 'Grade' }
+      ]
+    : [
+        { key: 'mutabaah', label: 'Mutaba’ah Yaumiyah' },
+        { key: 'bpi', label: 'Mentoring Bina Pribadi Islam' },
+        { key: 'literasi', label: 'Literasi' },
+        { key: 'judul_proyek', label: 'Judul Proyek' },
+        { key: 'deskripsi_proyek', label: 'Deskripsi Proyek' }
+      ];
 
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
@@ -211,14 +189,11 @@ export default function DataKokurikulerPage() {
 
         {/* Header Informasi Kelas */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
               <p className="text-sm text-gray-600">
-                Isi catatan kokurikuler sesuai jenis penilaian:
-                <span className="font-medium ml-1">
-                  {jenisPenilaian === 'pts' ? 'PTS (Mutabaaah Yaumiyah)' : 'PAS (Semua Aspek)'}
-                </span>
+                Semester: <span className="font-medium">{semester || '-'}</span>
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -261,7 +236,7 @@ export default function DataKokurikulerPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Pencarian"
+                  placeholder="Cari siswa..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -288,29 +263,29 @@ export default function DataKokurikulerPage() {
 
         {/* Tabel Kokurikuler */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
-          <table className="w-full min-w-[600px] table-auto text-sm">
+          <table className="w-full min-w-[800px] table-auto text-sm">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
-                <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
-                <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIS</th>
-                <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NISN</th>
-                {aspekTampil.map(aspek => (
-                  <th key={aspek} className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
-                    {aspek}
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIS</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NISN</th>
+                {kolomTampil.map(col => (
+                  <th key={col.key} className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                    {col.label}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5 + aspekTampil.length} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                  <td colSpan={6 + kolomTampil.length} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                 </tr>
               ) : currentSiswa.length === 0 ? (
                 <tr>
-                  <td colSpan={5 + aspekTampil.length} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6 + kolomTampil.length} className="px-4 py-8 text-center text-gray-500">
                     Belum ada siswa di kelas ini.
                   </td>
                 </tr>
@@ -320,30 +295,25 @@ export default function DataKokurikulerPage() {
                     key={siswa.id}
                     className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                   >
-                    <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
-                    <td className="px-4 py-3 text-center align-middle font-medium">{siswa.nama}</td>
-                    <td className="px-4 py-3 text-center align-middle">{siswa.nis}</td>
-                    <td className="px-4 py-3 text-center align-middle">{siswa.nisn}</td>
-                    {aspekTampil.map(aspek => {
-                      const data = siswa.kokurikuler.find(k => k.aspek === aspek);
+                    <td className="px-3 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                    <td className="px-3 py-3 text-center align-middle font-medium">{siswa.nama}</td>
+                    <td className="px-3 py-3 text-center align-middle">{siswa.nis}</td>
+                    <td className="px-3 py-3 text-center align-middle">{siswa.nisn}</td>
+                    {kolomTampil.map(col => {
+                      const value = siswa.kokurikuler[col.key as keyof typeof siswa.kokurikuler];
                       return (
-                        <td key={aspek} className="px-4 py-3 text-center align-middle">
-                          {data?.deskripsi ? (
-                            <div className="max-w-xs truncate" title={data.deskripsi}>
-                              {data.deskripsi}
+                        <td key={col.key} className="px-3 py-3 text-center align-middle">
+                          {value !== undefined && value !== null ? (
+                            <div className="max-w-xs truncate" title={String(value)}>
+                              {String(value)}
                             </div>
                           ) : (
                             <span className="text-gray-400">–</span>
                           )}
-                          {jenisPenilaian === 'pts' && data && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Nilai: {data.nilai_angka} | Grade: {data.grade}
-                            </div>
-                          )}
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
+                    <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
                       <button
                         onClick={() => handleEdit(siswa)}
                         className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
@@ -384,7 +354,9 @@ export default function DataKokurikulerPage() {
             className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
           >
             <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Edit Kokurikuler</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                Edit Kokurikuler ({jenisPenilaian.toUpperCase()})
+              </h2>
               <button
                 onClick={closeDetail}
                 className="text-gray-500 hover:text-gray-700"
@@ -398,85 +370,76 @@ export default function DataKokurikulerPage() {
                 const siswa = siswaList.find(s => s.id === editingId);
                 if (!siswa) return null;
                 return (
-                  <>
-                    <div className="flex flex-col items-center mb-4">
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                        <BookOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">
-                        {siswa.nama}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {jenisPenilaian === 'pts' ? 'PTS: Mutabaaah Yaumiyah' : 'PAS: Semua Aspek'}
-                      </p>
-                    </div>
+                  <div className="space-y-4">
+                    {kolomTampil.map(col => {
+                      const value = editData[col.key as keyof KokurikulerData];
 
-                    <div className="space-y-4">
-                      {aspekTampil.map(aspek => {
-                        const data = editData.find(d => d.aspek === aspek);
-                        if (!data) return null;
-
+                      if (col.key === 'mutabaah_nilai_angka') {
                         return (
-                          <div key={aspek} className="border rounded-lg p-3">
-                            <h4 className="font-semibold text-sm mb-2">{aspek}</h4>
-                            <textarea
-                              value={data.deskripsi}
-                              onChange={(e) => handleDeskripsiChange(aspek, e.target.value)}
-                              placeholder="Masukkan deskripsi..."
+                          <div key={col.key} className="border rounded-lg p-3">
+                            <label className="text-xs text-gray-600 block mb-1">{col.label} (0–100)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={value ?? ''}
+                              onChange={(e) => handleFieldChange(col.key, e.target.value ? Number(e.target.value) : null)}
                               className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                              rows={3}
                             />
-                            {jenisPenilaian === 'pts' && aspek === 'Mutabaaah Yaumiyah' && (
-                              <div className="mt-3 grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="text-xs text-gray-600">Nilai Angka (0–100)</label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    value={data.nilai_angka ?? ''}
-                                    onChange={(e) => handleNilaiChange(aspek, 'nilai_angka', e.target.value)}
-                                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-600">Grade (A–D)</label>
-                                  <select
-                                    value={data.grade ?? ''}
-                                    onChange={(e) => handleNilaiChange(aspek, 'grade', e.target.value)}
-                                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm mt-1"
-                                  >
-                                    <option value="">Pilih</option>
-                                    <option value="A">A</option>
-                                    <option value="B">B</option>
-                                    <option value="C">C</option>
-                                    <option value="D">D</option>
-                                  </select>
-                                </div>
-                              </div>
-                            )}
                           </div>
                         );
-                      })}
-                    </div>
+                      }
 
-                    <div className="mt-6 flex justify-end gap-2">
-                      <button
-                        onClick={closeDetail}
-                        className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-xs sm:text-sm font-medium"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        onClick={() => handleSave(editingId!)}
-                        className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition text-xs sm:text-sm font-medium"
-                      >
-                        Simpan
-                      </button>
-                    </div>
-                  </>
+                      if (col.key === 'mutabaah_grade') {
+                        return (
+                          <div key={col.key} className="border rounded-lg p-3">
+                            <label className="text-xs text-gray-600 block mb-1">{col.label} (A–D)</label>
+                            <select
+                              value={value ?? ''}
+                              onChange={(e) => handleFieldChange(col.key, e.target.value || null)}
+                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                            >
+                              <option value="">Pilih</option>
+                              <option value="A">A</option>
+                              <option value="B">B</option>
+                              <option value="C">C</option>
+                              <option value="D">D</option>
+                            </select>
+                          </div>
+                        );
+                      }
+
+                      // Textarea untuk semua field lainnya
+                      return (
+                        <div key={col.key} className="border rounded-lg p-3">
+                          <h4 className="font-semibold text-sm mb-2">{col.label}</h4>
+                          <textarea
+                            value={value ?? ''}
+                            onChange={(e) => handleFieldChange(col.key, e.target.value)}
+                            placeholder={`Masukkan ${col.label.toLowerCase()}...`}
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                            rows={col.key === 'deskripsi_proyek' ? 4 : 2}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 );
               })()}
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={closeDetail}
+                  className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-xs sm:text-sm font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => handleSave(editingId!)}
+                  className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition text-xs sm:text-sm font-medium"
+                >
+                  Simpan
+                </button>
+              </div>
             </div>
           </div>
         </div>
