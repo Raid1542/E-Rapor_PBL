@@ -1,3 +1,4 @@
+// app/guru_kelas/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,10 +7,10 @@ import { useRouter } from 'next/navigation';
 // Types
 interface UserData {
   id: string;
-  name: string;
-  email: string;
+  nama_lengkap: string;
+  email_sekolah: string;
   role: string;
-  class?: string;
+  kelas?: string;
 }
 
 interface KelasResponse {
@@ -42,7 +43,7 @@ export default function GuruDashboard() {
         return;
       }
 
-      setUser(parsedUser);
+      setUser(parsedUser); // ✅ parsedUser punya `nama_lengkap`, bukan `name`
 
       const fetchKelas = async () => {
         try {
@@ -53,11 +54,15 @@ export default function GuruDashboard() {
           });
 
           if (response.ok) {
-            const kelasData: KelasResponse = await response.json();
-            setKelasInfo(kelasData);
-          } else {
-            const error = await response.json();
-            console.error('Error:', error.message || 'Gagal memuat data kelas');
+            const data = await response.json(); // Ini array
+
+            if (Array.isArray(data) && data.length > 0) {
+              const kelasData: KelasResponse = data[0]; // Ambil elemen pertama
+              setKelasInfo(kelasData);
+            } else {
+              console.error('Data kelas kosong atau bukan array');
+              setKelasInfo(null);
+            }
           }
         } catch (err) {
           console.error('Fetch error:', err);
@@ -78,23 +83,22 @@ export default function GuruDashboard() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data kelas...</p>
+          <p className="mt-4 text-gray-600">Memuat data...</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !kelasInfo) {
+  if (!kelasInfo) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Gagal memuat data kelas.</p>
-          <button 
-            onClick={() => router.refresh()}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Muat Ulang
-          </button>
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="bg-white rounded-lg shadow-sm p-6 max-w-2xl mx-auto text-center">
+          <h2 className="text-lg font-medium text-gray-800 mb-2">
+            Anda belum ditugaskan sebagai guru kelas.
+          </h2>
+          <p className="text-gray-600 text-sm">
+            Silakan hubungi admin untuk penugasan ke kelas pada tahun ajaran ini.
+          </p>
         </div>
       </div>
     );
@@ -105,15 +109,15 @@ export default function GuruDashboard() {
       {/* Welcome Card */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
         <h2 className="text-2xl font-bold mb-2">
-          Selamat Datang, {user.name}! 👋
+          Selamat Datang, {user.nama_lengkap || 'Guru'}! 👋
         </h2>
         <p className="text-orange-100">
-          Anda login sebagai Guru Kelas <strong>{kelasInfo.kelas}</strong>. Kelola data siswa dan rapor dengan mudah.
+          Anda login sebagai <strong>Guru Kelas {kelasInfo.kelas}</strong>. Kelola data siswa dan rapor dengan mudah.
         </p>
       </div>
 
-      {/* Menu Cards — Hanya 2 Kolom Sekarang */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"> {/* Tambahkan mb-8 untuk jarak ke bawah */}
+      {/* Menu Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Card Kelola Data */}
         <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer transform hover:-translate-y-1 duration-200">
           <div className="flex items-center justify-between mb-4">

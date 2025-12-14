@@ -8,7 +8,7 @@ interface UserData {
     nama_lengkap: string;
     email_sekolah: string;
     role: string;
-    class?: string;
+    subject?: string; // 👈 tambahkan ini untuk mata pelajaran
 }
 
 interface HeaderProps {
@@ -25,7 +25,7 @@ export default function Header({ user }: HeaderProps) {
     };
 
     const handleProfile = () => {
-        router.push('/guru_kelas/profil');
+        router.push('/guru_bidang_studi/profil'); // 👈 ubah ke profil guru bidang studi
     };
 
     return (
@@ -33,8 +33,11 @@ export default function Header({ user }: HeaderProps) {
             <div className="px-6 py-4">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Dashboard Guru Kelas</h1>
-                        <p className="text-sm text-gray-500">{user.class ? `Kelas ${user.class}` : ''}</p>
+                        {/* 👇 Ubah judul dan tambahkan mata pelajaran */}
+                        <h1 className="text-2xl font-bold text-gray-900">Dashboard Guru Bidang Studi</h1>
+                        <p className="text-sm text-gray-500">
+                            {user.subject ? `Mata Pelajaran: ${user.subject}` : ''}
+                        </p>
                     </div>
 
                     <div className="relative">
@@ -50,7 +53,7 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                             </div>
 
-                            {/* ✅ GANTI INI: Avatar berbasis inisial */}
+                            {/* ✅ Avatar berbasis inisial — tetap sama */}
                             <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-black">
                                 {(user.nama_lengkap || '??')
                                     .split(' ')
@@ -70,7 +73,7 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-sm text-gray-500">{user.email_sekolah}</p>
                                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                    {user.role.toUpperCase()} {user.class && `Kelas ${user.class}`}
+                                    {user.role.toUpperCase()} {user.subject && `• ${user.subject}`}
                                 </span>
                             </div>
                             <div className="p-2 space-y-1">

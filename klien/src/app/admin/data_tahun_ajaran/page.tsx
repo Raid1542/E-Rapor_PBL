@@ -7,7 +7,8 @@ interface TahunAjaran {
   id_tahun_ajaran: number;
   tahun_ajaran: string;
   semester: 'Ganjil' | 'Genap';
-  tanggal_pembagian_rapor: string;
+  tanggal_pembagian_pts: string | null;
+  tanggal_pembagian_pas: string | null;
   status: 'aktif' | 'nonaktif';
 }
 
@@ -44,7 +45,8 @@ export default function DataTahunAjaranPage() {
     tahun1: '2024',
     tahun2: '2025',
     semester: 'Ganjil' as 'Ganjil' | 'Genap',
-    tanggal_pembagian_rapor: '2025-06-16'
+    tanggal_pembagian_pts: '',
+    tanggal_pembagian_pas: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -90,8 +92,8 @@ export default function DataTahunAjaranPage() {
     if (!formData.semester) {
       newErrors.semester = 'Semester wajib dipilih';
     }
-    if (!formData.tanggal_pembagian_rapor) {
-      newErrors.tanggal = 'Tanggal pembagian rapor wajib diisi';
+    if (!formData.tanggal_pembagian_pas) {
+      newErrors.tanggal_pas = 'Tanggal pembagian PAS wajib diisi';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -116,14 +118,21 @@ export default function DataTahunAjaranPage() {
           tahun1: formData.tahun1,
           tahun2: formData.tahun2,
           semester: formData.semester,
-          tanggal_pembagian_rapor: formData.tanggal_pembagian_rapor
+          tanggal_pembagian_pts: formData.tanggal_pembagian_pts || null,
+          tanggal_pembagian_pas: formData.tanggal_pembagian_pas
         })
       });
 
       if (res.ok) {
         alert("Tahun ajaran berhasil ditambahkan");
         setShowTambah(false);
-        setFormData({ tahun1: '2024', tahun2: '2025', semester: 'Ganjil', tanggal_pembagian_rapor: '2025-06-16' });
+        setFormData({ 
+          tahun1: '2024', 
+          tahun2: '2025', 
+          semester: 'Ganjil', 
+          tanggal_pembagian_pts: '', 
+          tanggal_pembagian_pas: '' 
+        });
         fetchTahunAjaran();
       } else {
         const err = await res.json();
@@ -141,7 +150,8 @@ export default function DataTahunAjaranPage() {
       tahun1: thn1 || '2024',
       tahun2: thn2 || '2025',
       semester: item.semester,
-      tanggal_pembagian_rapor: item.tanggal_pembagian_rapor || '2025-06-16'
+      tanggal_pembagian_pts: item.tanggal_pembagian_pts || '',
+      tanggal_pembagian_pas: item.tanggal_pembagian_pas || ''
     });
     setShowEdit(true);
   };
@@ -165,7 +175,8 @@ export default function DataTahunAjaranPage() {
           tahun1: formData.tahun1,
           tahun2: formData.tahun2,
           semester: formData.semester,
-          tanggal_pembagian_rapor: formData.tanggal_pembagian_rapor
+          tanggal_pembagian_pts: formData.tanggal_pembagian_pts || null,
+          tanggal_pembagian_pas: formData.tanggal_pembagian_pas
         })
       });
 
@@ -192,29 +203,33 @@ export default function DataTahunAjaranPage() {
           tahun1: thn1 || '2024',
           tahun2: thn2 || '2025',
           semester: item.semester,
-          tanggal_pembagian_rapor: item.tanggal_pembagian_rapor || '2025-06-16'
+          tanggal_pembagian_pts: item.tanggal_pembagian_pts || '',
+          tanggal_pembagian_pas: item.tanggal_pembagian_pas || ''
         });
       }
     } else {
-      setFormData({ tahun1: '2024', tahun2: '2025', semester: 'Ganjil', tanggal_pembagian_rapor: '2025-06-16' });
+      setFormData({ 
+        tahun1: '2024', 
+        tahun2: '2025', 
+        semester: 'Ganjil', 
+        tanggal_pembagian_pts: '', 
+        tanggal_pembagian_pas: '' 
+      });
     }
   };
 
-  // === Sorting & Pagination ===
-  // Urutkan data: Aktif dulu, lalu Nonaktif
+  // Sorting & Pagination
   const sortedData = [...tahunAjaranList].sort((a, b) => {
     if (a.status === b.status) {
-      // Untuk status yang sama, urutkan berdasarkan ID terbaru (desc)
       return b.id_tahun_ajaran - a.id_tahun_ajaran;
     }
-    // Data 'aktif' selalu muncul di atas
     return a.status === 'aktif' ? -1 : 1;
   });
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = sortedData.slice(startIndex, endIndex); // 🔥 Gunakan sortedData di sini
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage); // 🔥 Dan di sini
+  const currentData = sortedData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
 
   const renderPagination = () => {
     const pages = [];
@@ -294,16 +309,28 @@ export default function DataTahunAjaranPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Tanggal Pembagian Rapor
+                Tanggal Pembagian PTS
               </label>
               <input
                 type="date"
-                name="tanggal_pembagian_rapor"
-                value={formData.tanggal_pembagian_rapor}
+                name="tanggal_pembagian_pts"
+                value={formData.tanggal_pembagian_pts}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.tanggal && <p className="text-red-500 text-xs mt-1">{errors.tanggal}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Tanggal Pembagian PAS <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="tanggal_pembagian_pas"
+                value={formData.tanggal_pembagian_pas}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.tanggal_pas && <p className="text-red-500 text-xs mt-1">{errors.tanggal_pas}</p>}
             </div>
           </div>
           <div className="mt-6 sm:mt-8">
@@ -343,7 +370,6 @@ export default function DataTahunAjaranPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="text-sm text-gray-600">
-              {/* 🔥 Gunakan sortedData untuk menghitung jumlah data */}
               Menampilkan {startIndex + 1} - {Math.min(endIndex, sortedData.length)} dari {sortedData.length} data
             </div>
             <button
@@ -360,25 +386,27 @@ export default function DataTahunAjaranPage() {
               <thead>
                 <tr>
                   <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
-                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Tahun Ajaran</th>
-                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Semester</th>
-                  <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Tanggal Pembagian Rapor</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Tahun Ajaran</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Semester</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Pembagian Rapor PTS</th>
+                  <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Pembagian Rapor PAS</th>
                   <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Status</th>
                   <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
                 ) : currentData.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data tahun ajaran</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data tahun ajaran</td></tr>
                 ) : (
                   currentData.map((item, index) => (
                     <tr key={item.id_tahun_ajaran} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
                       <td className="px-4 py-3 text-center font-medium">{startIndex + index + 1}</td>
-                      <td className="px-4 py-3 font-medium">{item.tahun_ajaran}</td>
-                      <td className="px-4 py-3">{item.semester}</td>
-                      <td className="px-4 py-3">{formatTanggalIndonesia(item.tanggal_pembagian_rapor)}</td>
+                      <td className="px-4 py-3 text-center font-medium">{item.tahun_ajaran}</td>
+                      <td className="px-4 py-3 text-center">{item.semester}</td>
+                      <td className="px-4 py-3 text-center">{formatTanggalIndonesia(item.tanggal_pembagian_pts)}</td>
+                      <td className="px-4 py-3 text-center">{formatTanggalIndonesia(item.tanggal_pembagian_pas)}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {item.status.toUpperCase()}
@@ -405,7 +433,6 @@ export default function DataTahunAjaranPage() {
           {totalPages > 1 && (
             <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
               <div className="text-sm text-gray-600">
-                {/* 🔥 Gunakan sortedData untuk menghitung jumlah data */}
                 Menampilkan {startIndex + 1} - {Math.min(endIndex, sortedData.length)} dari {sortedData.length} data
               </div>
               <div className="flex gap-1">{renderPagination()}</div>

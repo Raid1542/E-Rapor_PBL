@@ -9,10 +9,10 @@ interface UserData {
     nama_lengkap: string;
     email_sekolah: string;
     role: string;
-    class?: string;
+    subject?: string; 
 }
 
-export default function GuruKelasLayout({
+export default function GuruBidangStudiLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -27,7 +27,11 @@ export default function GuruKelasLayout({
     }, []);
 
     if (!user) {
-        return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                Loading...
+            </div>
+        );
     }
 
     return (
