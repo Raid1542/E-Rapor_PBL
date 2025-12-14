@@ -15,11 +15,11 @@ const login = async (req, res) => {
     }
 
     try {
-        // ✅ Cari user berdasarkan email
+        // ✅ Cari user
         const [userRows] = await db.execute(
             `SELECT id_user, email_sekolah, password, nama_lengkap, status 
-             FROM user 
-             WHERE email_sekolah = ?`,
+         FROM user 
+         WHERE email_sekolah = ?`,
             [email_sekolah]
         );
 
@@ -32,7 +32,7 @@ const login = async (req, res) => {
 
         const user = userRows[0];
 
-        // ✅ Cek status akun
+        // ✅ Cek status
         if (user.status !== 'aktif') {
             return res.status(403).json({
                 success: false,
@@ -49,10 +49,10 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Ambil semua role dari tabel user_role
+        // ✅ Ambil roles
         const roles = await userModel.getRolesByUserId(user.id_user);
 
-        // ✅ Validasi: apakah role yang dipilih tersedia?
+        // ✅ Validasi role
         if (!roles.includes(selectedRole)) {
             return res.status(403).json({
                 success: false,
@@ -60,23 +60,29 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Generate JWT dengan role yang dipilih
+        // ✅ Generate token
         const token = jwt.sign(
             { id: user.id_user, role: selectedRole },
             process.env.JWT_SECRET,
             { expiresIn: '5h' }
         );
 
-        // ✅ Ambil data tambahan guru (jika ada)
+        // ✅ Ambil data guru — PASTIKAN user.id_user VALID
+        console.log('🔍 User ID:', user.id_user); // 👈 LOG INI
+
         const [guruRows] = await db.execute(
-            `SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon 
-             FROM guru 
-             WHERE user_id = ?`,
+            `SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, foto_path 
+         FROM guru 
+         WHERE user_id = ?`,
             [user.id_user]
         );
+
+        console.log('📊 Guru Rows:', guruRows); // 👈 LOG INI
         const guruData = guruRows[0] || {};
 
-        // ✅ Response sukses — HANYA data dasar, TIDAK ADA kelas_yang_diajar!
+        console.log('📄 Guru Data:', guruData); // 👈 LOG INI
+
+        // ✅ Response
         return res.status(200).json({
             success: true,
             token,
@@ -86,8 +92,7 @@ const login = async (req, res) => {
                 roles: roles,
                 nama_lengkap: user.nama_lengkap,
                 email_sekolah: user.email_sekolah,
-
-                // Data guru
+                profileImage: guruData.foto_path || null, // 👈 INI HARUS BISA NILAI
                 niy: guruData.niy || '',
                 nuptk: guruData.nuptk || '',
                 jenis_kelamin: guruData.jenis_kelamin || 'Laki-laki',
@@ -95,8 +100,6 @@ const login = async (req, res) => {
                 no_telepon: guruData.no_telepon || '',
                 tempat_lahir: guruData.tempat_lahir || '',
                 tanggal_lahir: guruData.tanggal_lahir || null
-
-                
             }
         });
 

@@ -215,9 +215,18 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
     }
 };
 
+const updateFoto = async (userId, fotoPath) => {
+    const [result] = await db.execute(
+        'UPDATE guru SET foto_path = ? WHERE user_id = ?',
+        [fotoPath, userId]
+    );
+    return result.affectedRows > 0; // true jika ada baris yang diupdate
+};
+
 module.exports = {
     getAllGuru,
     getGuruById,
     createGuru,
-    updateGuru
+    updateGuru,
+    updateFoto
 };

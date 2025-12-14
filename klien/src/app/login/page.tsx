@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email_sekolah: "",
     password: "",
@@ -18,15 +20,10 @@ export default function LoginPage() {
 
     const { email_sekolah, password, role } = formData;
 
-    // Validasi
     if (!email_sekolah.trim() || !password || !role) {
       setError("Email, password, dan role wajib diisi");
       return;
     }
-
-    console.log("📧 Email:", JSON.stringify(email_sekolah));
-    console.log("🔐 Password:", password.length, "karakter");
-    console.log("👤 Role:", role);
 
     setLoading(true);
 
@@ -44,35 +41,32 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (!res.ok) {
-        console.error("❌ Error dari backend:", data.message);
         setError(data.message || "Login gagal");
         setLoading(false);
         return;
       }
 
-      console.log("✅ Login berhasil:", data);
-
-      // Simpan token
+      // ✅ Simpan ke localStorage
       localStorage.setItem("token", data.token);
-      
-      // Simpan user data
       if (data.user) {
         localStorage.setItem("currentUser", JSON.stringify(data.user));
       }
 
-      // Redirect berdasarkan role menggunakan window.location
+      // ✅ PENTING: Beri tahu aplikasi bahwa user data sudah tersedia
+      window.dispatchEvent(new Event('userDataUpdated'));
+
+      // ✅ Redirect sesuai role
       if (role === "admin") {
-        window.location.href = "/admin/dashboard";
+        router.push("/admin/dashboard");
       } else if (role === "guru kelas") {
-        window.location.href = "/guru_kelas/dashboard";
+        router.push("/guru_kelas/dashboard");
       } else if (role === "guru bidang studi") {
-        window.location.href = "/guru_bidang_studi/dashboard";
+        router.push("/guru_bidang_studi/dashboard");
       }
 
     } catch (err) {
       console.error("💥 Error koneksi:", err);
-
-      setError("Gagal terhubung ke server. Silahkan coba lagi");
+      setError("Gagal terhubung ke server. Silakan coba lagi");
       setLoading(false);
     }
   };
@@ -80,29 +74,20 @@ export default function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
-
-    setFormData({
-      ...formData,
-      [name]: trimmedValue,
-    });
+    setFormData({ ...formData, [name]: trimmedValue });
   };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        
-        * {
-          font-family: 'Poppins', sans-serif;
-        }
-        
+        * { font-family: 'Poppins', sans-serif; }
         .bg-image {
           background-image: url('/images/bg-logo.jpg');
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
         }
-        
         .glass-overlay {
           background: rgba(255, 255, 255, 0.7);
           backdrop-filter: blur(10px);
@@ -112,7 +97,6 @@ export default function LoginPage() {
 
       <div className="min-h-screen relative bg-image">
         <div className="absolute inset-0 glass-overlay"></div>
-
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-md">
             <div className="bg-white rounded-3xl shadow-2xl p-8">
@@ -137,7 +121,7 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Error Message */}
+              {/* Error */}
               {error && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
                   {error}
@@ -149,18 +133,8 @@ export default function LoginPage() {
                 {/* Email */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
-                    <svg
-                      className="w-5 h-5 mr-2 text-orange-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
+                    <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     Email
                   </label>
@@ -178,18 +152,8 @@ export default function LoginPage() {
                 {/* Password */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
-                    <svg
-                      className="w-5 h-5 mr-2 text-orange-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
+                    <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     Password
                   </label>
@@ -207,18 +171,8 @@ export default function LoginPage() {
                 {/* Role */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
-                    <svg
-                      className="w-5 h-5 mr-2 text-orange-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
+                    <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                     Role
                   </label>

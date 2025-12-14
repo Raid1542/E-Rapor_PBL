@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera } from 'lucide-react';
 
 interface UserProfile {
   id: number;
@@ -12,9 +13,12 @@ interface UserProfile {
   jenis_kelamin?: string;
   alamat?: string;
   no_telepon?: string;
+  profileImage?: string;
 }
 
 const ProfilePage = () => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   const [formData, setFormData] = useState({
     nama: '',
     nuptk: '',
@@ -25,16 +29,6 @@ const ProfilePage = () => {
     alamat: ''
   });
 
-  const [originalData, setOriginalData] = useState({
-  nama: '',
-  nuptk: '',
-  niy: '',
-  jenisKelamin: 'Laki-laki',
-  telepon: '',
-  email: '',
-  alamat: ''
-});
-
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -44,59 +38,121 @@ const ProfilePage = () => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [roleLabel, setRoleLabel] = useState('Guru Kelas');
 
-  // === Muat data dari localStorage ===
+  // Foto profil
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // === Muat data user dari localStorage ===
   useEffect(() => {
     const stored = localStorage.getItem('currentUser');
-    if (stored) {
-      try {
-        const user: UserProfile = JSON.parse(stored);
-        const initialData = {
-          nama: user.nama_lengkap || '',
-          nuptk: user.nuptk || '',
-          niy: user.niy || '',
-          jenisKelamin: user.jenis_kelamin || 'Laki-laki',
-          telepon: user.no_telepon || '',
-          email: user.email_sekolah || '',
-          alamat: user.alamat || ''
-        };
-        setFormData(initialData);
-        setOriginalData(initialData);
-
-        const roleMap: Record<string, string> = {
-          admin: 'Admin',
-          guru: 'Guru',
-          'guru_kelas': 'Guru Kelas'
-        };
-        setRoleLabel(roleMap[user.role] || 'Guru');
-      } catch (e) {
-        console.error('Gagal memuat profil', e);
-      }
+    if (!stored) {
+      window.location.href = '/login';
+      return;
     }
-  }, []);
 
-  // === Handle perubahan form profil ===
+    try {
+      const user: UserProfile = JSON.parse(stored);
+      const initialData = {
+        nama: user.nama_lengkap || '',
+        nuptk: user.nuptk || '',
+        niy: user.niy || '',
+        jenisKelamin: user.jenis_kelamin || 'Laki-laki',
+        telepon: user.no_telepon || '',
+        email: user.email_sekolah || '',
+        alamat: user.alamat || ''
+      };
+      setFormData(initialData);
+
+      if (user.profileImage) {
+        setProfileImage(`${API_URL}${user.profileImage}`);
+      }
+
+      const roleMap: Record<string, string> = {
+        admin: 'Admin',
+        guru: 'Guru',
+        'guru_kelas': 'Guru Kelas'
+      };
+      setRoleLabel(roleMap[user.role] || 'Guru');
+    } catch (e) {
+      console.error('Gagal memuat profil', e);
+      window.location.href = '/login';
+    }
+  }, [API_URL]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // === Simpan profil ===
+  // === Upload Foto Profil ===
+  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Hanya file JPG, PNG, atau WebP yang diizinkan');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => setPreviewImage(reader.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login tidak valid.');
+      setIsUploading(false);
+      return;
+    }
+
+    const formDataUpload = new FormData();
+    formDataUpload.append('foto', file);
+
+    try {
+      const response = await fetch(`${API_URL}/api/guru-kelas/upload_foto`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataUpload
+      });
+
+      const result = await response.json();
+      if (response.ok && result.fotoPath) {
+        // Update localStorage
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          userData.profileImage = result.fotoPath;
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+        }
+
+        // Trigger Header update (jika ada listener)
+        window.dispatchEvent(new Event('userDataUpdated'));
+
+        setProfileImage(`${API_URL}${result.fotoPath}`);
+        setPreviewImage(null);
+        alert('✅ Foto profil berhasil diupload!');
+      } else {
+        throw new Error(result.message || 'Upload gagal');
+      }
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      alert('Gagal mengupload foto: ' + (err.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // === Simpan Profil ===
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const hasChanges =
-      formData.nama !== originalData.nama ||
-      formData.nuptk !== originalData.nuptk ||
-      formData.niy !== originalData.niy ||
-      formData.jenisKelamin !== originalData.jenisKelamin ||
-      formData.telepon !== originalData.telepon ||
-      formData.email !== originalData.email ||
-      formData.alamat !== originalData.alamat;
-
-    if (!hasChanges) {
-      alert('Tidak ada perubahan yang dilakukan.');
-      return; 
-    }
 
     if (!isConfirmed) {
       alert('Harap centang konfirmasi terlebih dahulu!');
@@ -104,13 +160,14 @@ const ProfilePage = () => {
     }
 
     const token = localStorage.getItem('token');
-    if (!token) {
+    const storedUser = localStorage.getItem('currentUser');
+    if (!token || !storedUser) {
       alert('Sesi login tidak valid. Silakan login ulang.');
       return;
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/guru-kelas/profil', {
+      const res = await fetch(`${API_URL}/api/guru-kelas/profil`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -128,11 +185,9 @@ const ProfilePage = () => {
       });
 
       if (res.ok) {
-        const result = await res.json();
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const updatedUser = { ...currentUser, ...result.data };
+        const currentUser = JSON.parse(storedUser);
+        const updatedUser = { ...currentUser, ...formData };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        setOriginalData(formData); 
         alert('✅ Profil berhasil diperbarui!');
       } else {
         const err = await res.json();
@@ -144,13 +199,12 @@ const ProfilePage = () => {
     }
   };
 
-  // === Handle perubahan password ===
+  // === Ganti Password ===
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // === Simpan password ===
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { oldPassword, newPassword, confirmPassword } = passwordData;
@@ -175,7 +229,7 @@ const ProfilePage = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/guru-kelas/ganti-password', {
+      const res = await fetch(`${API_URL}/api/guru-kelas/ganti-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +242,6 @@ const ProfilePage = () => {
       if (res.ok) {
         alert('✅ Kata sandi berhasil diubah!');
         setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-        // ✅ Logout setelah ganti password (opsional tapi aman)
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
         window.location.href = '/login';
@@ -208,21 +261,47 @@ const ProfilePage = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Profile Card */}
+        {/* Foto Profil */}
         <div className="lg:w-56 flex-shrink-0">
           <div className="bg-white rounded-lg shadow-sm p-5">
             <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center mb-3">
-                <span className="text-black text-lg font-semibold">
-                  {(formData.nama || '??')
-                    .split(' ')
-                    .slice(0, 2)
-                    .map(word => word[0]?.toUpperCase() || '')
-                    .join('') || '??'}
-                </span>
+              {/* Avatar */}
+              <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
+                {previewImage ? (
+                  <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                ) : profileImage ? (
+                  <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
+                    {(formData.nama || '??')
+                      .split(' ')
+                      .slice(0, 2)
+                      .map((word) => word[0]?.toUpperCase() || '')
+                      .join('') || '??'}
+                  </span>
+                )}
               </div>
-              <h2 className="text-lg font-bold text-gray-900">{formData.nama || 'Nama User'}</h2>
-              <p className="text-gray-500 text-xs capitalize">Guru Kelas</p>
+
+              {/* Tombol Ganti Foto */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
+              >
+                <Camera size={14} />
+                {isUploading ? 'Mengupload...' : 'Ganti Foto'}
+              </button>
+
+              {/* Input File Hidden */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleUploadPhoto}
+                accept="image/*"
+                className="hidden"
+                disabled={isUploading}
+              />
             </div>
           </div>
         </div>
@@ -333,7 +412,8 @@ const ProfilePage = () => {
               <div className="mt-5">
                 <button
                   type="submit"
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition"
+                  disabled={isUploading}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition disabled:opacity-70"
                 >
                   Simpan Profil
                 </button>
@@ -347,9 +427,7 @@ const ProfilePage = () => {
             <form onSubmit={handlePasswordSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kata Sandi Lama
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Lama</label>
                   <input
                     type="password"
                     name="oldPassword"
@@ -360,9 +438,7 @@ const ProfilePage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kata Sandi Baru
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Baru</label>
                   <input
                     type="password"
                     name="newPassword"
@@ -373,9 +449,7 @@ const ProfilePage = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Konfirmasi Kata Sandi Baru
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Kata Sandi Baru</label>
                   <input
                     type="password"
                     name="confirmPassword"

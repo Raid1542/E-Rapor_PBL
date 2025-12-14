@@ -1,7 +1,8 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const guruModel = require('../models/guruModel');
 
-//  Perbaiki role sesuai database (spasi, bukan underscore)
+//  Role
 const ensureGuruBidangStudi = (req, res) => {
     if (req.user.role !== 'guru bidang studi') {
         return res.status(403).json({ message: 'Akses ditolak: hanya untuk guru bidang studi' });
@@ -157,5 +158,37 @@ exports.getKelasYangDiajar = async (req, res) => {
     } catch (err) {
         console.error('Error get kelas yang diajar:', err);
         res.status(500).json({ message: 'Gagal mengambil data kelas yang diajar' });
+    }
+};
+
+exports.uploadFotoProfil = async (req, res) => {
+    // ✅ Pastikan hanya guru bidang studi yang bisa akses
+    const roleError = ensureGuruBidangStudi(req, res);
+    if (roleError) return;
+
+    try {
+        const userId = req.user.id; // ✅ AMBIL USER ID DARI TOKEN
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'File foto diperlukan' });
+        }
+
+        // ✅ Path harus sesuai folder public
+        const fotoPath = `uploads/${req.file.filename}`;
+
+        const success = await guruModel.updateFoto(userId, fotoPath);
+        if (!success) {
+            return res.status(404).json({ message: 'Guru tidak ditemukan di database' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Foto profil berhasil diupload',
+            fotoPath // Contoh: "/public/uploads/profil_12345.jpg"
+        });
+
+    } catch (err) {
+        console.error('Error upload foto profil guru bidang studi:', err);
+        res.status(500).json({ message: 'Gagal mengupload foto profil' });
     }
 };

@@ -127,7 +127,7 @@ export default function DataMataPelajaranPage() {
     const newErrors: Record<string, string> = {};
     if (!formData.kode_mapel?.trim()) newErrors.kode_mapel = 'Kode mapel wajib diisi';
     if (!formData.nama_mapel?.trim()) newErrors.nama_mapel = 'Nama mapel wajib diisi';
-    if (!formData.jenis || !['wajib', 'bidang studi'].includes(formData.jenis)) {
+    if (!formData.jenis || !['wajib', 'pilihan'].includes(formData.jenis)) {
     newErrors.jenis = 'Pilih jenis yang valid';
     }
     if (!formData.kurikulum?.trim()) newErrors.kurikulum = 'Kurikulum wajib diisi';
@@ -363,7 +363,7 @@ export default function DataMataPelajaranPage() {
               >
                 <option value="">-- Pilih --</option>
                 <option value="wajib">Wajib</option>
-                <option value="bidang studi">Bidang Studi</option>
+                <option value="pilihan">pilihan</option>
               </select>
               {errors.jenis && <p className="text-red-500 text-xs mt-1">{errors.jenis}</p>}
             </div>

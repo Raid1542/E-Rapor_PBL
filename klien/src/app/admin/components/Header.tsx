@@ -2,19 +2,17 @@
 
 import { LogOut, ChevronDown, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 interface UserData {
   id: number;
   nama_lengkap: string;
   email_sekolah: string;
   role: string;
+  profileImage?: string;
 }
 
-interface HeaderProps {
-  user: UserData;
-}
-
-//  Fungsi bantu: ambil inisial dari nama
+// Fungsi bantu: ambil inisial dari nama
 const getInitials = (name: string): string => {
   return name
     .split(' ')
@@ -23,8 +21,61 @@ const getInitials = (name: string): string => {
     .join('');
 };
 
-export default function Header({ user }: HeaderProps) {
+export default function Header() {
   const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Muat data user & foto profil dari localStorage
+  useEffect(() => {
+    const loadUserData = () => {
+      try {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData: UserData = JSON.parse(storedUser);
+          setUser(userData);
+
+          // Set URL foto profil
+          if (userData.profileImage) {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            setProfileImage(baseUrl + userData.profileImage);
+          } else {
+            setProfileImage(null);
+          }
+        } else {
+          setUser(null);
+          setProfileImage(null);
+        }
+      } catch (e) {
+        console.error('Gagal memuat data user:', e);
+        setUser(null);
+        setProfileImage(null);
+      }
+    };
+
+    loadUserData();
+
+    const fallbackInterval = setInterval(() => {
+      const stored = localStorage.getItem('currentUser');
+      if (stored && !user) {
+        loadUserData();
+      }
+    }, 500);
+
+
+    // Dengarkan update dari profil page
+    const handleUserUpdate = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('userDataUpdated', handleUserUpdate);
+    window.addEventListener('profileImageUpdated', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserUpdate);
+      window.removeEventListener('profileImageUpdated', handleUserUpdate);
+    };
+  }, []);
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -36,8 +87,34 @@ export default function Header({ user }: HeaderProps) {
   };
 
   const handleProfile = () => {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) {
+      dropdown.classList.add('hidden'); 
+    }
+
+    // Lalu redirect
     router.push('/admin/profil');
   };
+
+
+  const toggleDropdown = () => {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) dropdown.classList.toggle('hidden');
+  };
+
+  // Jika user belum ada, tampilkan loading ringan (opsional)
+  if (!user) {
+    return (
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
+            <div className="w-32 h-10 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -46,13 +123,10 @@ export default function Header({ user }: HeaderProps) {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
           </div>
-          
+
           <div className="relative">
             <button
-              onClick={() => {
-                const dropdown = document.getElementById('profile-dropdown');
-                if (dropdown) dropdown.classList.toggle('hidden');
-              }}
+              onClick={toggleDropdown}
               className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
             >
               <div className="text-right">
@@ -60,11 +134,20 @@ export default function Header({ user }: HeaderProps) {
                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
               </div>
 
-              {/* ✅ Avatar Inisial Menggantikan UserCircle */}
-              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                <span className="text-black text-xs font-semibold">
-                  {getInitials(user.nama_lengkap)}
-                </span>
+              {/* Avatar: Foto Profil atau Inisial */}
+              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Foto Profil"
+                    className="w-full h-full object-cover"
+                    onError={() => setProfileImage(null)}
+                  />
+                ) : (
+                  <span className="text-black text-xs font-semibold">
+                    {getInitials(user.nama_lengkap)}
+                  </span>
+                )}
               </div>
 
               <ChevronDown className="w-4 h-4 text-gray-600" />

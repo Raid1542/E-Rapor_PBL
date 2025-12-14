@@ -2,6 +2,7 @@
 
 import { LogOut, User, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 
 interface UserData {
     id: number;
@@ -9,6 +10,7 @@ interface UserData {
     email_sekolah: string;
     role: string;
     class?: string;
+    profileImage?: string;
 }
 
 interface HeaderProps {
@@ -17,16 +19,80 @@ interface HeaderProps {
 
 export default function Header({ user }: HeaderProps) {
     const router = useRouter();
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null); // ✅ untuk akses dropdown
+
+    // Muat foto profil
+    useEffect(() => {
+        const loadProfileImage = () => {
+            try {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    const userData = JSON.parse(storedUser);
+                    if (userData.profileImage) {
+                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                        setProfileImage(baseUrl + userData.profileImage);
+                    } else {
+                        setProfileImage(null);
+                    }
+                }
+            } catch (e) {
+                console.error('Gagal memuat foto profil:', e);
+                setProfileImage(null);
+            }
+        };
+
+        loadProfileImage();
+
+        const handleProfileUpdate = () => loadProfileImage();
+        window.addEventListener('userDataUpdated', handleProfileUpdate);
+
+        return () => {
+            window.removeEventListener('userDataUpdated', handleProfileUpdate);
+        };
+    }, []);
+
+    const toggleDropdown = () => {
+        const dropdown = dropdownRef.current;
+        if (dropdown) {
+            dropdown.classList.toggle('hidden');
+        }
+    };
+
+    // ✅ Tutup dropdown (pastikan tidak error jika sudah tertutup)
+    const closeDropdown = () => {
+        const dropdown = dropdownRef.current;
+        if (dropdown) {
+            dropdown.classList.add('hidden');
+        }
+    };
 
     const handleLogout = () => {
+        closeDropdown(); // Opsional: tutup dulu sebelum logout
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
         router.push('/login');
     };
 
+    // ✅ Tutup dropdown, lalu navigasi ke profil
     const handleProfile = () => {
+        closeDropdown();
         router.push('/guru_kelas/profil');
     };
+
+    // ✅ Klik di luar dropdown → tutup
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                closeDropdown();
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     return (
         <header className="bg-white shadow-sm border-b border-gray-200">
@@ -39,10 +105,7 @@ export default function Header({ user }: HeaderProps) {
 
                     <div className="relative">
                         <button
-                            onClick={() => {
-                                const dropdown = document.getElementById('profile-dropdown-guru');
-                                if (dropdown) dropdown.classList.toggle('hidden');
-                            }}
+                            onClick={toggleDropdown}
                             className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                         >
                             <div className="text-right">
@@ -50,20 +113,31 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
                             </div>
 
-                            {/* ✅ GANTI INI: Avatar berbasis inisial */}
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-black">
-                                {(user.nama_lengkap || '??')
-                                    .split(' ')
-                                    .slice(0, 2)
-                                    .map(word => word[0]?.toUpperCase() || '')
-                                    .join('') || '??'}
+                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                                {profileImage ? (
+                                    <img
+                                        src={profileImage}
+                                        alt="Foto Profil"
+                                        className="w-full h-full object-cover"
+                                        onError={() => setProfileImage(null)}
+                                    />
+                                ) : (
+                                    <span className="text-black text-xs font-semibold">
+                                        {(user.nama_lengkap || '??')
+                                            .split(' ')
+                                            .slice(0, 2)
+                                            .map(word => word[0]?.toUpperCase() || '')
+                                            .join('') || '??'}
+                                    </span>
+                                )}
                             </div>
 
                             <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
 
+                        {/* ✅ Gunakan ref di sini */}
                         <div
-                            id="profile-dropdown-guru"
+                            ref={dropdownRef}
                             className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
                         >
                             <div className="p-4 border-b border-gray-200">

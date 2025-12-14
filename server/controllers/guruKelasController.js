@@ -3,7 +3,8 @@ const bcrypt = require('bcrypt');
 const absensiModel = require('../models/absensiModel');
 const catatanWaliKelasModel = require('../models/catatanWaliKelasModel');
 const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
-const kokurikulerModel = require('../models/kokurikulerModel'); // pastikan nama file & export sesuai
+const kokurikulerModel = require('../models/kokurikulerModel'); 
+const guruModel = require('../models/guruModel');
 
 // === KELAS & SISWA ===
 
@@ -309,7 +310,7 @@ exports.updateEkskulSiswa = async (req, res) => {
     }
 };
 
-// === KOKURIKULER (FINAL) ===
+// === KOKURIKULER ===
 
 exports.getKokurikuler = async (req, res) => {
     try {
@@ -464,5 +465,33 @@ exports.updateKokurikuler = async (req, res) => {
     } catch (err) {
         console.error('Error updateKokurikuler:', err);
         res.status(500).json({ success: false, message: 'Gagal menyimpan data kokurikuler' });
+    }
+};
+
+// === UPLOAD FOTO PROFIL ===
+exports.uploadFotoProfil = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'File foto diperlukan' });
+        }
+
+        const userId = req.user.id; // Dari JWT middleware
+        const fotoPath = `/uploads/${req.file.filename}`;
+
+        // Gunakan guruModel.updateFoto (sudah ada di guruModel)
+        const success = await guruModel.updateFoto(userId, fotoPath);
+        if (!success) {
+            return res.status(404).json({ message: 'Guru tidak ditemukan di database' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Foto profil berhasil diupload',
+            fotoPath
+        });
+
+    } catch (err) {
+        console.error('Error upload foto profil guru kelas:', err);
+        res.status(500).json({ message: 'Gagal mengupload foto profil' });
     }
 };
