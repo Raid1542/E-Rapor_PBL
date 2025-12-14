@@ -76,7 +76,7 @@ export default function Sidebar({ user }: SidebarProps) {
     };
 
     const handleSchoolUpdate = () => {
-      fetchSchoolData(); // Refresh seluruh data sekolah saat ada perubahan
+      fetchSchoolData();
     };
 
     window.addEventListener('logoUpdated', handleLogoUpdate);
@@ -120,7 +120,10 @@ export default function Sidebar({ user }: SidebarProps) {
     { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' },
   ];
 
-  const raporSubmenu = [{ name: 'Unduh Rapor', url: '/admin/unduh_rapor' }];
+  const raporSubmenu = [
+    { name: 'Leger Nilai', url: '/admin/leger_nilai' },
+    { name: 'Unduh Rapor', url: '/admin/unduh_rapor' },
+  ];
 
   // Active state
   const isDashboardActive = pathname === '/admin/dashboard';
