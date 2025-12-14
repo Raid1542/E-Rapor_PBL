@@ -300,7 +300,7 @@ exports.updateEkskulSiswa = async (req, res) => {
         const [ta] = await db.execute(`SELECT semester FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1`);
         const semester = ta[0]?.semester || 'Ganjil';
 
-        await ekstrakurikulerModel.saveEkskul(siswaId, guruKelas.id_tahun_ajaran, semester, ekskulList);
+        await ekstrakurikulerModel.savePesertaEkskul(siswaId, guruKelas.id_tahun_ajaran, ekskulList);
         res.json({ success: true, message: 'Ekstrakurikuler berhasil diperbarui' });
 
     } catch (err) {

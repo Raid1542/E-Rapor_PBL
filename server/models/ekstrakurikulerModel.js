@@ -95,6 +95,29 @@ const isNamaEkskulExist = async (nama_ekskul, tahun_ajaran_id, excludeId = null)
     return rows.length > 0;
 };
 
+/**
+ * Ambil daftar peserta (siswa) berdasarkan ID ekstrakurikuler dan tahun ajaran
+ */
+const getPesertaByEkskul = async (ekskulId, tahunAjaranId) => {
+    const [rows] = await db.execute(`
+        SELECT 
+            s.id_siswa,
+            s.nis,
+            s.nisn,
+            s.nama_lengkap AS nama,
+            pe.deskripsi,
+            k.id_kelas,
+            k.nama_kelas
+        FROM peserta_ekstrakurikuler pe
+        JOIN siswa s ON pe.siswa_id = s.id_siswa
+        LEFT JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id AND sk.tahun_ajaran_id = ?
+        LEFT JOIN kelas k ON sk.kelas_id = k.id_kelas
+        WHERE pe.ekskul_id = ? AND pe.tahun_ajaran_id = ?
+        ORDER BY s.nama_lengkap ASC
+    `, [tahunAjaranId, ekskulId, tahunAjaranId]);
+    return rows;
+};
+
 // === GURU KELAS FUNCTIONS ===
 const getGuruKelasAktif = async (userId) => {
     const [rows] = await db.execute(`
@@ -183,6 +206,7 @@ module.exports = {
     deleteById,
     getById,
     isNamaEkskulExist,
+    getPesertaByEkskul,
 
     // Guru Kelas
     getGuruKelasAktif,
