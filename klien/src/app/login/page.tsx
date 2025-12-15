@@ -152,7 +152,7 @@ export default function LoginPage() {
               {/* ✅ Judul Dinamis — tanpa teks "Login pada akun terdaftar" */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-black mb-2 tracking-tight">
-                  E-RAPOR {namaSekolah}
+                  E-Rapor {namaSekolah}
                 </h1>
               </div>
 

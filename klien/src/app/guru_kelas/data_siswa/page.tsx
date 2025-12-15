@@ -301,17 +301,17 @@ export default function DataSiswaPage() {
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <div className="flex flex-col items-center mb-6">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                  <svg className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
+              <div className="flex flex-col items-center mb-10">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">
                   {selectedSiswa.nama}
                 </h3>
               </div>
               <div className="space-y-2 sm:space-y-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
+                  <span className="font-semibold text-xs sm:text-sm">Kelas</span>
+                  <span className="text-xs sm:text-sm">:</span>
+                  <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.kelas}</span>
+                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm">NIS</span>
                   <span className="text-xs sm:text-sm">:</span>
@@ -340,9 +340,9 @@ export default function DataSiswaPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
-                  <span className="font-semibold text-xs sm:text-sm">Kelas</span>
+                  <span className="font-semibold text-xs sm:text-sm">Fase</span>
                   <span className="text-xs sm:text-sm">:</span>
-                  <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.kelas}</span>
+                  <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.fase || '-'}</span>
                 </div>
               </div>
               <div className="mt-6 flex justify-end">

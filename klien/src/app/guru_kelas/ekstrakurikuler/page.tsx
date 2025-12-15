@@ -330,7 +330,7 @@ export default function DataEkstrakurikulerPage() {
                     <td className="px-3 py-3 text-center align-middle">{siswa.nisn}</td>
                     <td className="px-3 py-3 text-center align-middle">
                       {siswa.ekskul.length === 0 ? (
-                        <span className="text-gray-400">Belum diisi</span>
+                        <span className="text-gray-400">Belum isi</span>
                       ) : (
                         <div className="flex flex-wrap gap-1 justify-center">
                           {siswa.ekskul.map((e, i) => (
@@ -405,10 +405,9 @@ export default function DataEkstrakurikulerPage() {
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 mb-6">
               <div className="text-center mb-4">
                 <h3 className="text-lg font-semibold">{viewSiswa.nama}</h3>
-                <p className="text-sm text-gray-600">NIS: {viewSiswa.nis} | NISN: {viewSiswa.nisn}</p>
               </div>
               {viewSiswa.ekskul.length === 0 ? (
                 <p className="text-center text-gray-500">Belum mengikuti ekstrakurikuler</p>

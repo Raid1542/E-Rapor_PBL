@@ -904,7 +904,7 @@ export default function DataSiswaPage() {
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <div className="flex flex-col items-center mb-6">
+              <div className="flex flex-col items-center mb-10">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">{selectedSiswa.nama}</h3>
               </div>
               <div className="space-y-2 sm:space-y-3">
