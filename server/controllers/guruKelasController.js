@@ -122,7 +122,7 @@ exports.editProfil = async (req, res) => {
         // Gabungkan & normalisasi
         const user = {
             id: userRows[0].id_user,
-            role: 'guru_kelas', // pastikan role ada
+            role: 'guru kelas', // pastikan role ada
             nama_lengkap: userRows[0].nama_lengkap,
             email_sekolah: userRows[0].email_sekolah,
             niy: guruRows[0].niy,

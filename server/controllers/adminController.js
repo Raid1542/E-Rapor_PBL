@@ -172,6 +172,7 @@ const getGuru = async (req, res) => {
         g.jenis_kelamin,
         g.alamat,
         g.no_telepon,
+        g.foto_path,
         GROUP_CONCAT(ur.role) AS roles
       FROM user u
       INNER JOIN guru g ON u.id_user = g.user_id
@@ -183,7 +184,8 @@ const getGuru = async (req, res) => {
 
         const guruList = rows.map(row => ({
             ...row,
-            roles: row.roles ? row.roles.split(',') : []
+            roles: row.roles ? row.roles.split(',') : [],
+            profileImage: row.foto_path || null
         }));
 
         res.json({ success: true, data: guruList });

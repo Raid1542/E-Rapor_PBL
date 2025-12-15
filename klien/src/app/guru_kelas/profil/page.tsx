@@ -4,520 +4,521 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Camera } from 'lucide-react';
 
 interface UserProfile {
-  id: number;
-  role: string;
-  nama_lengkap: string;
-  email_sekolah: string;
-  niy?: string;
-  nuptk?: string;
-  jenis_kelamin?: string;
-  alamat?: string;
-  no_telepon?: string;
-  profileImage?: string;
+    id: number;
+    role: string;
+    nama_lengkap: string;
+    email_sekolah: string;
+    niy?: string;
+    nuptk?: string;
+    jenis_kelamin?: string;
+    alamat?: string;
+    no_telepon?: string;
+    profileImage?: string;
 }
 
 const ProfilePage = () => {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  const [formData, setFormData] = useState({
-    nama: '',
-    nuptk: '',
-    niy: '',
-    jenisKelamin: 'Laki-laki',
-    telepon: '',
-    email: '',
-    alamat: ''
-  });
+    const [formData, setFormData] = useState({
+        nama: '',
+        nuptk: '',
+        niy: '',
+        jenisKelamin: 'Laki-laki',
+        telepon: '',
+        email: '',
+        alamat: ''
+    });
 
-  const [passwordData, setPasswordData] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+    const [passwordData, setPasswordData] = useState({
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
 
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [roleLabel, setRoleLabel] = useState('Guru Kelas');
+    const [isConfirmed, setIsConfirmed] = useState(false);
+    const [roleLabel, setRoleLabel] = useState('Guru Kelas'); // ✅ Default untuk Guru Kelas
 
-  // Foto profil
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
+    // Foto profil
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
 
-  // === Muat data user dari localStorage ===
-  useEffect(() => {
-    const stored = localStorage.getItem('currentUser');
-    if (!stored) {
-      window.location.href = '/login';
-      return;
-    }
-
-    try {
-      const user: UserProfile = JSON.parse(stored);
-      const initialData = {
-        nama: user.nama_lengkap || '',
-        nuptk: user.nuptk || '',
-        niy: user.niy || '',
-        jenisKelamin: user.jenis_kelamin || 'Laki-laki',
-        telepon: user.no_telepon || '',
-        email: user.email_sekolah || '',
-        alamat: user.alamat || ''
-      };
-      setFormData(initialData);
-      setInitialFormData(initialData);
-
-      if (user.profileImage) {
-        setProfileImage(`${API_URL}${user.profileImage}`);
-      }
-
-      const roleMap: Record<string, string> = {
-        admin: 'Admin',
-        guru: 'Guru',
-        'guru_kelas': 'Guru Kelas'
-      };
-      setRoleLabel(roleMap[user.role] || 'Guru');
-    } catch (e) {
-      console.error('Gagal memuat profil', e);
-      window.location.href = '/login';
-    }
-  }, [API_URL]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // === Upload Foto Profil ===
-  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Hanya file JPG, PNG, atau WebP yang diizinkan');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => setPreviewImage(reader.result as string);
-    reader.readAsDataURL(file);
-
-    setIsUploading(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login tidak valid.');
-      setIsUploading(false);
-      return;
-    }
-
-    const formDataUpload = new FormData();
-    formDataUpload.append('foto', file);
-
-    try {
-      const response = await fetch(`${API_URL}/api/guru-kelas/upload_foto`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formDataUpload
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Upload gagal');
-      }
-
-      // ✅ Jika backend kembalikan `user` (disarankan), gunakan itu
-      let updatedUser;
-      if (result.user) {
-        updatedUser = {
-          ...result.user,
-          profileImage: result.user.profileImage || result.user.foto_path || null,
-          role: result.user.role || 'guru_kelas'
-        };
-      } else if (result.fotoPath) {
-        // Fallback: update hanya foto
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          userData.profileImage = result.fotoPath;
-          updatedUser = userData;
-        } else {
-          throw new Error('Sesi user tidak valid');
+    // === Muat data user dari localStorage ===
+    useEffect(() => {
+        const stored = localStorage.getItem('currentUser');
+        if (!stored) {
+            window.location.href = '/login';
+            return;
         }
-      } else {
-        throw new Error('Respons tidak berisi data foto atau user');
-      }
 
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      window.dispatchEvent(new Event('userDataUpdated'));
+        try {
+            const user: UserProfile = JSON.parse(stored);
+            const initialData = {
+                nama: user.nama_lengkap || '',
+                nuptk: user.nuptk || '',
+                niy: user.niy || '',
+                jenisKelamin: user.jenis_kelamin || 'Laki-laki',
+                telepon: user.no_telepon || '',
+                email: user.email_sekolah || '',
+                alamat: user.alamat || ''
+            };
+            setFormData(initialData);
+            setInitialFormData(initialData);
 
-      setProfileImage(`${API_URL}${updatedUser.profileImage}`);
-      setPreviewImage(null);
-      alert('✅ Foto profil berhasil diupload!');
-    } catch (err: any) {
-      console.error('Upload error:', err);
-      alert('Gagal mengupload foto: ' + (err.message || 'Terjadi kesalahan'));
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
+            if (user.profileImage) {
+                const imgUrl = user.profileImage.startsWith('/')
+                    ? `${API_URL}${user.profileImage}`
+                    : `${API_URL}/${user.profileImage}`;
+                setProfileImage(imgUrl);
+            }
 
-  // === Simpan Profil ===
-  const handleSubmitProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+            // ✅ Role mapping untuk Guru Kelas
+            const roleMap: Record<string, string> = {
+                admin: 'Admin',
+                guru: 'Guru',
+                'guru kelas': 'Guru Kelas',
+                'guru_kelas': 'Guru Kelas', // fallback untuk underscore
+                'guru bidang studi': 'Guru Bidang Studi'
+            };
+            setRoleLabel(roleMap[user.role] || 'Guru');
+        } catch (e) {
+            console.error('Gagal memuat profil', e);
+            window.location.href = '/login';
+        }
+    }, [API_URL]);
 
-    // ✅ Cek apakah ada perubahan
-    if (initialFormData && JSON.stringify(initialFormData) === JSON.stringify(formData)) {
-      alert('Tidak ada perubahan data.');
-      return;
-    }
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
 
-    if (!isConfirmed) {
-      alert('Harap centang konfirmasi terlebih dahulu!');
-      return;
-    }
+    // === Upload Foto Profil ===
+    const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login tidak valid. Silakan login ulang.');
-      return;
-    }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            alert('Hanya file JPG, PNG, atau WebP yang diizinkan');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Ukuran file maksimal 5MB');
+            return;
+        }
 
-    try {
-      const res = await fetch(`${API_URL}/api/guru-kelas/profil`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nama_lengkap: formData.nama,
-          email_sekolah: formData.email,
-          niy: formData.niy,
-          nuptk: formData.nuptk,
-          jenis_kelamin: formData.jenisKelamin,
-          no_telepon: formData.telepon,
-          alamat: formData.alamat
-        })
-      });
+        const reader = new FileReader();
+        reader.onloadend = () => setPreviewImage(reader.result as string);
+        reader.readAsDataURL(file);
 
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.message || 'Gagal memperbarui profil');
-        return;
-      }
+        setIsUploading(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Sesi login tidak valid.');
+            setIsUploading(false);
+            return;
+        }
 
-      const result = await res.json();
+        const formDataUpload = new FormData();
+        formDataUpload.append('foto', file);
 
-      if (!result.user) {
-        alert('Respons tidak berisi data user. Hubungi administrator.');
-        return;
-      }
+        try {
+            // ✅ Ganti ke endpoint guru-kelas
+            const response = await fetch(`${API_URL}/api/guru-kelas/upload_foto`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formDataUpload
+            });
 
-      const normalizedUser = {
-        ...result.user,
-        profileImage: result.user.profileImage || result.user.foto_path || null,
-        role: result.user.role || 'guru_kelas'
-      };
+            const result = await response.json();
 
-      localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
-      window.dispatchEvent(new Event('userDataUpdated'));
+            if (!response.ok) {
+                throw new Error(result.message || 'Upload gagal');
+            }
 
-      alert('✅ Profil berhasil diperbarui!');
+            let updatedUser;
+            if (result.user) {
+                updatedUser = {
+                    ...result.user,
+                    profileImage: result.user.profileImage || result.user.foto_path || null,
+                    role: result.user.role || 'guru kelas'
+                };
+            } else if (result.fotoPath) {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    const userData = JSON.parse(storedUser);
+                    userData.profileImage = result.fotoPath;
+                    updatedUser = userData;
+                } else {
+                    throw new Error('Sesi user tidak valid');
+                }
+            } else {
+                throw new Error('Respons tidak berisi data foto atau user');
+            }
 
-      // ✅ OPSI 1: Refresh halaman penuh (sederhana & pasti jalan)
-      window.location.reload();
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            window.dispatchEvent(new Event('userDataUpdated'));
 
-      // ✅ OPSI 2 (alternatif): Reset initialFormData agar tidak bisa klik "simpan" lagi tanpa perubahan
-      // setInitialFormData({ ...formData });
+            const imgUrl = updatedUser.profileImage?.startsWith('/')
+                ? `${API_URL}${updatedUser.profileImage}`
+                : updatedUser.profileImage
+                    ? `${API_URL}/${updatedUser.profileImage}`
+                    : null;
+            setProfileImage(imgUrl);
+            setPreviewImage(null);
+            alert('✅ Foto profil berhasil diupload!');
+        } catch (err: any) {
+            console.error('Upload error:', err);
+            alert('Gagal mengupload foto: ' + (err.message || 'Terjadi kesalahan'));
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
-    } catch (err: any) {
-      console.error('Error update profil:', err);
-      alert('Gagal terhubung ke server: ' + (err.message || ''));
-    }
-  };
+    // === Simpan Profil ===
+    const handleSubmitProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
 
+        if (initialFormData && JSON.stringify(initialFormData) === JSON.stringify(formData)) {
+            alert('Tidak ada perubahan data.');
+            return;
+        }
 
-  // === Ganti Password ===
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({ ...prev, [name]: value }));
-  };
+        if (!isConfirmed) {
+            alert('Harap centang konfirmasi terlebih dahulu!');
+            return;
+        }
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { oldPassword, newPassword, confirmPassword } = passwordData;
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Sesi login tidak valid. Silakan login ulang.');
+            return;
+        }
 
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      alert('Semua kolom wajib diisi');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      alert('Kata sandi baru dan konfirmasi tidak cocok');
-      return;
-    }
-    if (newPassword.length < 8) {
-      alert('Kata sandi baru minimal 8 karakter');
-      return;
-    }
+        try {
+            // ✅ Ganti ke endpoint guru-kelas
+            const res = await fetch(`${API_URL}/api/guru-kelas/profil`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    nama_lengkap: formData.nama,
+                    email_sekolah: formData.email,
+                    niy: formData.niy,
+                    nuptk: formData.nuptk,
+                    jenis_kelamin: formData.jenisKelamin,
+                    no_telepon: formData.telepon,
+                    alamat: formData.alamat
+                })
+            });
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login tidak valid');
-      return;
-    }
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.message || 'Gagal memperbarui profil');
+                return;
+            }
 
-    try {
-      const res = await fetch(`${API_URL}/api/guru-kelas/ganti-password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ oldPassword, newPassword })
-      });
+            const result = await res.json();
 
-      const result = await res.json();
-      if (res.ok) {
-        alert('✅ Kata sandi berhasil diubah!');
-        setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-        localStorage.removeItem('token');
-        localStorage.removeItem('currentUser');
-        window.location.href = '/login';
-      } else {
-        alert(result.message || 'Gagal mengubah kata sandi');
-      }
-    } catch (err) {
-      console.error('Error ganti password:', err);
-      alert('Gagal terhubung ke server');
-    }
-  };
+            if (!result.user) {
+                alert('Respons tidak berisi data user. Hubungi administrator.');
+                return;
+            }
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Profil</h1>
-      </div>
+            const normalizedUser = {
+                ...result.user,
+                profileImage: result.user.profileImage || result.user.foto_path || null,
+                role: result.user.role || 'guru kelas'
+            };
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Foto Profil */}
-        <div className="lg:w-56 flex-shrink-0">
-          <div className="bg-white rounded-lg shadow-sm p-5">
-            <div className="flex flex-col items-center text-center">
-              {/* Avatar */}
-              <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
-                {previewImage ? (
-                  <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                ) : profileImage ? (
-                  <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
-                    {(formData.nama || '??')
-                      .split(' ')
-                      .slice(0, 2)
-                      .map((word) => word[0]?.toUpperCase() || '')
-                      .join('') || '??'}
-                  </span>
-                )}
-              </div>
+            localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
+            window.dispatchEvent(new Event('userDataUpdated'));
 
-              {/* Tombol Ganti Foto */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
-              >
-                <Camera size={14} />
-                {isUploading ? 'Mengupload...' : 'Ganti Foto'}
-              </button>
+            alert('✅ Profil berhasil diperbarui!');
+            window.location.reload(); // Reload setelah simpan
+        } catch (err: any) {
+            console.error('Error update profil:', err);
+            alert('Gagal terhubung ke server: ' + (err.message || ''));
+        }
+    };
 
-              {/* Input File Hidden */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleUploadPhoto}
-                accept="image/*"
-                className="hidden"
-                disabled={isUploading}
-              />
+    // === Ganti Password ===
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setPasswordData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { oldPassword, newPassword, confirmPassword } = passwordData;
+
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            alert('Semua kolom wajib diisi');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert('Kata sandi baru dan konfirmasi tidak cocok');
+            return;
+        }
+        if (newPassword.length < 8) {
+            alert('Kata sandi baru minimal 8 karakter');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Sesi login tidak valid');
+            return;
+        }
+
+        try {
+            // ✅ Ganti ke endpoint guru-kelas
+            const res = await fetch(`${API_URL}/api/guru-kelas/ganti-password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ oldPassword, newPassword })
+            });
+
+            const result = await res.json();
+            if (res.ok) {
+                alert('✅ Kata sandi berhasil diubah!');
+                setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                window.location.href = '/login';
+            } else {
+                alert(result.message || 'Gagal mengubah kata sandi');
+            }
+        } catch (err) {
+            console.error('Error ganti password:', err);
+            alert('Gagal terhubung ke server');
+        }
+    };
+
+    return (
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Profil</h1>
             </div>
-          </div>
-        </div>
 
-        {/* Form Profil & Password */}
-        <div className="flex-1 space-y-8">
-          {/* Edit Profil */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-5">Edit Profil</h2>
-            <form onSubmit={handleSubmitProfile}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nama <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="nama"
-                      value={formData.nama}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NUPTK</label>
-                    <input
-                      type="text"
-                      name="nuptk"
-                      value={formData.nuptk}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NIY</label>
-                    <input
-                      type="text"
-                      name="niy"
-                      value={formData.niy}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Jenis Kelamin <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="jenisKelamin"
-                      value={formData.jenisKelamin}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="Laki-laki">Laki-laki</option>
-                      <option value="Perempuan">Perempuan</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
-                    <input
-                      type="tel"
-                      name="telepon"
-                      value={formData.telepon}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                <textarea
-                  name="alamat"
-                  value={formData.alamat}
-                  onChange={handleChange}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-5 pt-4 border-t border-gray-200">
-                <input
-                  type="checkbox"
-                  id="confirm"
-                  checked={isConfirmed}
-                  onChange={(e) => setIsConfirmed(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="confirm" className="text-sm text-gray-700">
-                  Saya yakin akan mengubah data tersebut
-                </label>
-              </div>
-              <div className="mt-5">
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition disabled:opacity-70"
-                >
-                  Simpan Profil
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="flex flex-col lg:flex-row gap-6">
+                {/* Foto Profil */}
+                <div className="lg:w-56 flex-shrink-0">
+                    <div className="bg-white rounded-lg shadow-sm p-5">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
+                                {previewImage ? (
+                                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                                ) : profileImage ? (
+                                    <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
+                                        {(formData.nama || '??')
+                                            .split(' ')
+                                            .slice(0, 2)
+                                            .map((word) => word[0]?.toUpperCase() || '')
+                                            .join('') || '??'}
+                                    </span>
+                                )}
+                            </div>
 
-          {/* Ganti Kata Sandi */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Ganti Kata Sandi</h2>
-            <form onSubmit={handlePasswordSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Lama</label>
-                  <input
-                    type="password"
-                    name="oldPassword"
-                    value={passwordData.oldPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Masukkan kata sandi lama"
-                  />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
+                            >
+                                <Camera size={14} />
+                                {isUploading ? 'Mengupload...' : 'Ganti Foto'}
+                            </button>
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleUploadPhoto}
+                                accept="image/*"
+                                className="hidden"
+                                disabled={isUploading}
+                            />
+                        </div>
+                    </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Baru</label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Minimal 8 karakter"
-                  />
+
+                {/* Form Profil & Password */}
+                <div className="flex-1 space-y-8">
+                    {/* Edit Profil */}
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h2 className="text-lg font-semibold mb-5">Edit Profil</h2>
+                        <form onSubmit={handleSubmitProfile}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Nama <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="nama"
+                                            value={formData.nama}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">NUPTK</label>
+                                        <input
+                                            type="text"
+                                            name="nuptk"
+                                            value={formData.nuptk}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">NIY</label>
+                                        <input
+                                            type="text"
+                                            name="niy"
+                                            value={formData.niy}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Jenis Kelamin <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="jenisKelamin"
+                                            value={formData.jenisKelamin}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            required
+                                        >
+                                            <option value="Laki-laki">Laki-laki</option>
+                                            <option value="Perempuan">Perempuan</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                                        <input
+                                            type="tel"
+                                            name="telepon"
+                                            value={formData.telepon}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            readOnly
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                                <textarea
+                                    name="alamat"
+                                    value={formData.alamat}
+                                    onChange={handleChange}
+                                    rows={2}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 mt-5 pt-4 border-t border-gray-200">
+                                <input
+                                    type="checkbox"
+                                    id="confirm"
+                                    checked={isConfirmed}
+                                    onChange={(e) => setIsConfirmed(e.target.checked)}
+                                    className="w-4 h-4"
+                                />
+                                <label htmlFor="confirm" className="text-sm text-gray-700">
+                                    Saya yakin akan mengubah data tersebut
+                                </label>
+                            </div>
+                            <div className="mt-5">
+                                <button
+                                    type="submit"
+                                    disabled={isUploading}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded text-sm transition disabled:opacity-70"
+                                >
+                                    Simpan Profil
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Ganti Kata Sandi */}
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h2 className="text-lg font-semibold mb-4">Ganti Kata Sandi</h2>
+                        <form onSubmit={handlePasswordSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Lama</label>
+                                    <input
+                                        type="password"
+                                        name="oldPassword"
+                                        value={passwordData.oldPassword}
+                                        onChange={handlePasswordChange}
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Masukkan kata sandi lama"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi Baru</label>
+                                    <input
+                                        type="password"
+                                        name="newPassword"
+                                        value={passwordData.newPassword}
+                                        onChange={handlePasswordChange}
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Minimal 8 karakter"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Kata Sandi Baru</label>
+                                    <input
+                                        type="password"
+                                        name="confirmPassword"
+                                        value={passwordData.confirmPassword}
+                                        onChange={handlePasswordChange}
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Ulangi kata sandi baru"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-4">
+                                <button
+                                    type="submit"
+                                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded text-sm transition"
+                                >
+                                    Simpan Kata Sandi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Kata Sandi Baru</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ulangi kata sandi baru"
-                  />
-                </div>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded text-sm transition"
-                >
-                  Simpan Kata Sandi
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default ProfilePage;

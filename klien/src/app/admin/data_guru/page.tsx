@@ -14,6 +14,7 @@ interface Guru {
   alamat?: string;
   no_telepon?: string;
   statusGuru?: string;
+  profileImage?: string; // ✅ Pastikan ini ada
   roles?: string[];
 }
 
@@ -80,8 +81,6 @@ export default function DataGuruPage() {
     jenisKelamin: '',
     status: ''
   });
-
-  // === Temporary filter for modal (agar X bisa cancel) ===
   const [tempFilterValues, setTempFilterValues] = useState(filterValues);
 
   // === Fetch Guru ===
@@ -100,14 +99,11 @@ export default function DataGuruPage() {
         const validRoles = ['guru kelas', 'guru bidang studi'];
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => {
-            // Normalisasi status
             let normalizedStatus = 'aktif';
             if (typeof g.status === 'string') {
               normalizedStatus = g.status.trim().toLowerCase();
               if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
             }
-
-            // Normalisasi roles: pastikan jadi array dan hanya ambil role valid
             let roles: string[] = [];
             if (g.roles) {
               const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
@@ -115,7 +111,6 @@ export default function DataGuruPage() {
                 .map((r: any) => String(r).toLowerCase().trim())
                 .filter((r: string) => validRoles.includes(r));
             }
-
             return {
               id: g.id_user || g.id,
               nama: g.nama_lengkap || g.nama,
@@ -129,6 +124,7 @@ export default function DataGuruPage() {
               no_telepon: g.no_telepon || '',
               statusGuru: normalizedStatus,
               roles: roles,
+              profileImage: g.profileImage || null, // ✅ Ambil profileImage dari API
             };
           })
           : [];
@@ -163,7 +159,6 @@ export default function DataGuruPage() {
     statusGuru: 'aktif',
     confirmData: false
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleDetail = (guru: Guru) => {
@@ -288,7 +283,6 @@ export default function DataGuruPage() {
       alert("Tidak ada perubahan data.");
       return;
     }
-
     if (!validate(true)) return;
     const token = localStorage.getItem('token');
     if (!token) {
@@ -388,16 +382,12 @@ export default function DataGuruPage() {
       guru.nuptk?.includes(query) ||
       guru.tempat_lahir?.toLowerCase().includes(query) ||
       guru.no_telepon?.includes(query);
-
     const matchesRole = !filterValues.role ||
       (guru.roles && guru.roles.includes(filterValues.role));
-
     const matchesJenisKelamin = !filterValues.jenisKelamin ||
       (guru.jenisKelamin?.toLowerCase() === filterValues.jenisKelamin.toLowerCase());
-
     const matchesStatus = !filterValues.status ||
       (guru.statusGuru?.toLowerCase() === filterValues.status.toLowerCase());
-
     return matchesSearch && matchesRole && matchesJenisKelamin && matchesStatus;
   });
 
@@ -435,7 +425,6 @@ export default function DataGuruPage() {
     setTempFilterValues(empty);
   };
 
-  // === MODAL FILTER HANDLING ===
   const openFilterModal = () => {
     setTempFilterValues(filterValues);
     setShowFilter(true);
@@ -610,7 +599,7 @@ export default function DataGuruPage() {
                   </button>
                 )}
               </div>
-              {/* Filter — GANTI onClick ke openFilterModal */}
+              {/* Filter */}
               <button
                 onClick={openFilterModal}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -715,7 +704,7 @@ export default function DataGuruPage() {
         </div>
       </div>
 
-      {/* Modal Detail */}
+      {/* ✅ MODAL DETAIL DENGAN FOTO/INISIAL */}
       {showDetail && selectedGuru && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'
@@ -751,24 +740,34 @@ export default function DataGuruPage() {
               </button>
             </div>
             <div className="p-4 sm:p-6">
+              {/* ✅ AVATAR FOTO/INISIAL */}
               <div className="flex flex-col items-center mb-6">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full flex items-center justify-center mb-3 flex-shrink-0">
-                  <svg
-                    className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                      clipRule="evenodd"
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 overflow-hidden mb-3 flex-shrink-0 flex items-center justify-center">
+                  {selectedGuru.profileImage ? (
+                    <img
+                      src={`http://localhost:5000${selectedGuru.profileImage.startsWith('/') ? selectedGuru.profileImage : '/' + selectedGuru.profileImage}`}
+                      alt="Foto Profil"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                     />
-                  </svg>
+                  ) : (
+                    <span className="text-gray-700 text-xl sm:text-2xl font-bold">
+                      {selectedGuru.nama
+                        .split(' ')
+                        .slice(0, 2)
+                        .map(word => word[0]?.toUpperCase() || '')
+                        .join('') || '??'}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">
                   {selectedGuru.nama}
                 </h3>
               </div>
+              {/* Detail lain tetap sama */}
               <div className="space-y-2 sm:space-y-3">
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                   <span className="font-semibold text-xs sm:text-sm col-span-1 sm:col-span-1">

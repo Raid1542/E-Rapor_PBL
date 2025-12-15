@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -13,6 +13,32 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // ✅ State untuk data sekolah
+  const [namaSekolah, setNamaSekolah] = useState("Sekolah");
+  const [logoSekolah, setLogoSekolah] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+
+  // ✅ Ambil data sekolah saat halaman dimuat
+  useEffect(() => {
+    const fetchSekolah = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/sekolah/publik");
+
+        if (res.ok) {
+          const data = await res.json();
+          setNamaSekolah(data.nama_sekolah || 'Sekolah');
+          if (data.logo_path) {
+            setLogoSekolah(`http://localhost:5000${data.logo_path}`);
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal memuat data sekolah publik');
+      }
+    };
+
+    fetchSekolah();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,28 +73,18 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Ambil role dari form (lebih aman dan konsisten)
         const selectedRole = formData.role;
-
         const normalizedUser = {
           ...data.user,
-          // Pastikan role selalu ada dan sesuai pilihan user
           role: selectedRole,
-          // Normalisasi foto ke field `profileImage`
           profileImage: data.user.profileImage || data.user.foto_path || null,
         };
 
         localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
         localStorage.setItem("token", data.token);
-
-        // Beri tahu Header bahwa data user sudah update
-        window.dispatchEvent(new Event('userDataUpdated'));
+        window.dispatchEvent(new Event("userDataUpdated"));
       }
 
-      // ✅ PENTING: Beri tahu aplikasi bahwa user data sudah tersedia
-      window.dispatchEvent(new Event('userDataUpdated'));
-
-      // ✅ Redirect sesuai role
       if (role === "admin") {
         router.push("/admin/dashboard");
       } else if (role === "guru kelas") {
@@ -87,7 +103,7 @@ export default function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
-    setFormData({ ...formData, [name]: trimmedValue });
+    setFormData(prev => ({ ...prev, [name]: trimmedValue }));
   };
 
   return (
@@ -112,26 +128,32 @@ export default function LoginPage() {
         <div className="absolute inset-0 glass-overlay"></div>
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-3xl shadow-2xl p-8">
-              {/* Logo */}
+            <div className="bg-white rounded-xl shadow-xl p-8">
+              {/* ✅ Logo Sekolah Dinamis */}
               <div className="flex justify-center mb-6">
-                <div className="transform hover:scale-105 transition-all duration-300">
-                  <img
-                    src="/images/LogoUA.jpg"
-                    alt="Logo SDIT Ulil Albab"
-                    className="w-24 h-24 object-contain"
-                  />
-                </div>
+                {logoSekolah && !logoError ? (
+                  <div className="transform hover:scale-105 transition-all duration-300">
+                    <img
+                      src={logoSekolah}
+                      alt={namaSekolah}
+                      className="w-32 h-32 object-contain"
+                      onError={() => setLogoError(true)}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl font-bold text-orange-700">
+                      {namaSekolah.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Title */}
+              {/* ✅ Judul Dinamis — tanpa teks "Login pada akun terdaftar" */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-black mb-2 tracking-tight">
-                  E-RAPOR SDIT ULIL ALBAB
+                  E-RAPOR {namaSekolah}
                 </h1>
-                <p className="text-black text-sm font-light">
-                  Login pada akun terdaftar
-                </p>
               </div>
 
               {/* Error */}
@@ -143,11 +165,10 @@ export default function LoginPage() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Email */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     Email
                   </label>
@@ -162,7 +183,6 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Password */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +201,6 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Role */}
                 <div>
                   <label className="flex items-center text-black text-sm font-medium mb-2.5">
                     <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +222,6 @@ export default function LoginPage() {
                   </select>
                 </div>
 
-                {/* Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -213,10 +231,9 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Footer */}
               <div className="text-center mt-6">
                 <p className="text-xs text-black font-light drop-shadow">
-                  © 2025 SDIT Ulil Albab. All rights reserved.
+                  © 2025 {namaSekolah}. All rights reserved.
                 </p>
               </div>
             </div>

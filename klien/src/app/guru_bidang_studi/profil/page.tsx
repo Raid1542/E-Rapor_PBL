@@ -29,7 +29,6 @@ const ProfilePage = () => {
         alamat: ''
     });
 
-    const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
     const [passwordData, setPasswordData] = useState({
         oldPassword: '',
         newPassword: '',
@@ -37,13 +36,14 @@ const ProfilePage = () => {
     });
 
     const [isConfirmed, setIsConfirmed] = useState(false);
-    const [roleLabel, setRoleLabel] = useState('Guru Bidang Studi');
+    const [roleLabel, setRoleLabel] = useState('Guru Bidang Studi'); // ✅ Ubah default
 
     // Foto profil
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
 
     // === Muat data user dari localStorage ===
     useEffect(() => {
@@ -68,13 +68,19 @@ const ProfilePage = () => {
             setInitialFormData(initialData);
 
             if (user.profileImage) {
-                setProfileImage(`${API_URL}/${user.profileImage}`);
+                // ✅ Tambahkan slash jika perlu (pastikan konsisten dengan backend)
+                const imgUrl = user.profileImage.startsWith('/')
+                    ? `${API_URL}${user.profileImage}`
+                    : `${API_URL}/${user.profileImage}`;
+                setProfileImage(imgUrl);
             }
 
+            // ✅ Perbarui roleMap untuk "guru bidang studi"
             const roleMap: Record<string, string> = {
                 admin: 'Admin',
                 guru: 'Guru',
                 'guru bidang studi': 'Guru Bidang Studi',
+                'guru_kelas': 'Guru Kelas' // opsional, untuk backward compatibility
             };
             setRoleLabel(roleMap[user.role] || 'Guru');
         } catch (e) {
@@ -86,17 +92,6 @@ const ProfilePage = () => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    // === Validasi Respons Aman ===
-    const safeParseResponse = async (res: Response) => {
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await res.text();
-            console.error('Respons bukan JSON:', text);
-            throw new Error('Server mengembalikan error. Silakan coba lagi.');
-        }
-        return await res.json();
     };
 
     // === Upload Foto Profil ===
@@ -129,30 +124,46 @@ const ProfilePage = () => {
         formDataUpload.append('foto', file);
 
         try {
+            // ✅ Ubah endpoint ke guru-bidang-studi
             const response = await fetch(`${API_URL}/api/guru-bidang-studi/upload_foto`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formDataUpload
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await safeParseResponse(response);
-                throw new Error(errorData.message || 'Upload gagal');
+                throw new Error(result.message || 'Upload gagal');
             }
 
-            const result = await safeParseResponse(response);
-
-            // ✅ Ambil dari result.user (sesuai backend baru)
-            const updatedUser = result.user;
-            if (!updatedUser) {
-                throw new Error('Respons tidak berisi data user');
+            let updatedUser;
+            if (result.user) {
+                updatedUser = {
+                    ...result.user,
+                    profileImage: result.user.profileImage || result.user.foto_path || null,
+                    role: result.user.role || 'guru bidang studi' // ✅ default role
+                };
+            } else if (result.fotoPath) {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    const userData = JSON.parse(storedUser);
+                    userData.profileImage = result.fotoPath;
+                    updatedUser = userData;
+                } else {
+                    throw new Error('Sesi user tidak valid');
+                }
+            } else {
+                throw new Error('Respons tidak berisi data foto atau user');
             }
 
-            // Simpan ke localStorage
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             window.dispatchEvent(new Event('userDataUpdated'));
 
-            setProfileImage(`${API_URL}/${updatedUser.profileImage}`);
+            const imgUrl = updatedUser.profileImage.startsWith('/')
+                ? `${API_URL}${updatedUser.profileImage}`
+                : `${API_URL}/${updatedUser.profileImage}`;
+            setProfileImage(imgUrl);
             setPreviewImage(null);
             alert('✅ Foto profil berhasil diupload!');
         } catch (err: any) {
@@ -168,7 +179,6 @@ const ProfilePage = () => {
     const handleSubmitProfile = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // ✅ Cek apakah ada perubahan
         if (initialFormData && JSON.stringify(initialFormData) === JSON.stringify(formData)) {
             alert('Tidak ada perubahan data.');
             return;
@@ -186,7 +196,8 @@ const ProfilePage = () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/guru-bidang-studi/profil`, {
+            // ✅ Ubah endpoint ke guru-bidang-studi
+            const res = await fetch(`${API_URL}/api/guru-bidang-studi/profil`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -203,33 +214,33 @@ const ProfilePage = () => {
                 })
             });
 
-            if (!response.ok) {
-                const errorData = await safeParseResponse(response);
-                alert(errorData.message || 'Gagal memperbarui profil');
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.message || 'Gagal memperbarui profil');
                 return;
             }
 
-            const result = await safeParseResponse(response);
-            const updatedUser = result.user;
+            const result = await res.json();
 
-            if (!updatedUser) {
-                throw new Error('Respons tidak berisi data user');
+            if (!result.user) {
+                alert('Respons tidak berisi data user. Hubungi administrator.');
+                return;
             }
 
-            // ✅ Simpan user lengkap ke localStorage
-            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            const normalizedUser = {
+                ...result.user,
+                profileImage: result.user.profileImage || result.user.foto_path || null,
+                role: result.user.role || 'guru bidang studi' // ✅
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
             window.dispatchEvent(new Event('userDataUpdated'));
 
-            alert('Profil berhasil diperbarui!');
-            window.location.reload(); // Refresh untuk sinkronisasi penuh
-
+            alert('✅ Profil berhasil diperbarui!');
+            window.location.reload(); // ✅ Tetap reload seperti yang Anda inginkan
         } catch (err: any) {
-            console.error('Error simpan profil:', err);
-            if (err.message?.includes('fetch')) {
-                alert('Tidak bisa terhubung ke server. Pastikan backend berjalan.');
-            } else {
-                alert('Terjadi kesalahan: ' + (err.message || 'Cek konsol untuk detail'));
-            }
+            console.error('Error update profil:', err);
+            alert('Gagal terhubung ke server: ' + (err.message || ''));
         }
     };
 
@@ -263,7 +274,8 @@ const ProfilePage = () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/guru-bidang-studi/ganti-password`, {
+            // ✅ Ubah endpoint ke guru-bidang-studi
+            const res = await fetch(`${API_URL}/api/guru-bidang-studi/ganti-password`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -272,18 +284,19 @@ const ProfilePage = () => {
                 body: JSON.stringify({ oldPassword, newPassword })
             });
 
-            const result = response.ok ? await safeParseResponse(response) : await safeParseResponse(response);
-            if (response.ok) {
+            const result = await res.json();
+            if (res.ok) {
                 alert('✅ Kata sandi berhasil diubah!');
+                setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
                 window.location.href = '/login';
             } else {
                 alert(result.message || 'Gagal mengubah kata sandi');
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error ganti password:', err);
-            alert('Gagal terhubung ke server: ' + (err.message || ''));
+            alert('Gagal terhubung ke server');
         }
     };
 
