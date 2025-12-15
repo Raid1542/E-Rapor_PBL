@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, X, Search } from 'lucide-react';
+import { Pencil, X, Search } from 'lucide-react';
 
 interface SiswaCatatan {
   id: number;
@@ -9,9 +9,8 @@ interface SiswaCatatan {
   nis: string;
   nisn: string;
   jenis_kelamin: string;
-  catatan_pts: string;
-  catatan_pas: string;
-  naik_tingkat: 'ya' | 'tidak';
+  catatan_wali_kelas: string;
+  naik_tingkat: 'ya' | 'tidak' | null;
 }
 
 export default function DataCatatanWaliKelasPage() {
@@ -21,24 +20,22 @@ export default function DataCatatanWaliKelasPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editData, setEditData] = useState<{
-    catatan_pts: string;
-    catatan_pas: string;
-    naik_tingkat: 'ya' | 'tidak';
+    catatan_wali_kelas: string;
+    naik_tingkat: 'ya' | 'tidak' | null;
   }>({
-    catatan_pts: '',
-    catatan_pas: '',
-    naik_tingkat: 'tidak'
+    catatan_wali_kelas: '',
+    naik_tingkat: null
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
+  const [semester, setSemester] = useState<'Ganjil' | 'Genap'>('Ganjil');
   const [editClosing, setEditClosing] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
   const [originalData, setOriginalData] = useState<{
-    catatan_pts: string;
-    catatan_pas: string;
-    naik_tingkat: 'ya' | 'tidak';
+    catatan_wali_kelas: string;
+    naik_tingkat: 'ya' | 'tidak' | null;
   } | null>(null);
 
   const closeEdit = () => {
@@ -71,9 +68,8 @@ export default function DataCatatanWaliKelasPage() {
             const siswa = data.data || [];
             setSiswaList(siswa);
             setFilteredSiswa(siswa);
-            if (siswa.length > 0) {
-              setKelasNama(data.kelas || 'Kelas Anda');
-            }
+            setKelasNama(data.kelas || 'Kelas Anda');
+            setSemester(data.semester || 'Ganjil');
           } else {
             alert(data.message || 'Gagal memuat data catatan wali kelas');
           }
@@ -92,7 +88,6 @@ export default function DataCatatanWaliKelasPage() {
     fetchCatatan();
   }, []);
 
-  // Filter pencarian
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredSiswa(siswaList);
@@ -110,8 +105,7 @@ export default function DataCatatanWaliKelasPage() {
 
   const handleEdit = (siswa: SiswaCatatan) => {
     const data = {
-      catatan_pts: siswa.catatan_pts,
-      catatan_pas: siswa.catatan_pas,
+      catatan_wali_kelas: siswa.catatan_wali_kelas || '',
       naik_tingkat: siswa.naik_tingkat
     };
     setEditId(siswa.id);
@@ -123,10 +117,8 @@ export default function DataCatatanWaliKelasPage() {
   const handleSave = async () => {
     if (!editId || !originalData) return;
 
-
     const hasChanges =
-      editData.catatan_pts !== originalData.catatan_pts ||
-      editData.catatan_pas !== originalData.catatan_pas ||
+      editData.catatan_wali_kelas !== originalData.catatan_wali_kelas ||
       editData.naik_tingkat !== originalData.naik_tingkat;
 
     if (!hasChanges) {
@@ -142,21 +134,32 @@ export default function DataCatatanWaliKelasPage() {
         return;
       }
 
+      const payload: any = {
+        catatan_wali_kelas: editData.catatan_wali_kelas
+      };
+
+      if (semester === 'Genap') {
+        if (editData.naik_tingkat !== 'ya' && editData.naik_tingkat !== 'tidak') {
+          alert('Di semester Genap, keputusan naik tingkat wajib diisi.');
+          return;
+        }
+        payload.naik_tingkat = editData.naik_tingkat;
+      }
+
       const res = await fetch(`http://localhost:5000/api/guru-kelas/catatan-wali-kelas/${editId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(editData)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         alert('Catatan wali kelas berhasil disimpan');
         closeEdit();
-        // Refresh data
         const updatedSiswa = siswaList.map(s =>
-          s.id === editId ? { ...s, ...editData } : s
+          s.id === editId ? { ...s, ...payload } : s
         );
         setSiswaList(updatedSiswa);
       } else {
@@ -170,7 +173,10 @@ export default function DataCatatanWaliKelasPage() {
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value as any }));
+    setEditData(prev => ({
+      ...prev,
+      [name]: value === '' ? null : value as any
+    }));
   };
 
   // Pagination
@@ -182,78 +188,75 @@ export default function DataCatatanWaliKelasPage() {
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
-    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
+    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
     } else {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
-      if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
+      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      if (currentPage > 3) pages.push(<span key="dots1" className="px-1 text-xs sm:px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
-      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-1 text-xs sm:px-2 text-gray-600">...</span>);
+      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
-    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
+    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-2.5 py-1 text-xs sm:px-3 sm:py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
     return pages;
   };
 
-  // Format gender
-  const formatJenisKelamin = (jk: string): string => {
-    if (!jk) return '-';
-    const s = jk.trim().toLowerCase();
-    if (s === 'l' || s === 'laki-laki' || s.includes('laki')) return 'Laki-laki';
-    if (s === 'p' || s === 'perempuan' || s.includes('peremp')) return 'Perempuan';
-    return jk;
-  };
-
   return (
-    <div className="flex-1 p-6 bg-gray-50 min-h-screen">
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Catatan Wali Kelas</h1>
-
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Catatan Wali Kelas</h1>
+        {/* Header Informasi Kelas */}
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
-              <p className="text-sm text-gray-600">Isi catatan PTS dan PAS untuk setiap siswa.</p>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
+              <p className="text-xs sm:text-sm text-gray-600">
+                Semester: <span className="font-medium">{semester}</span> <br/>
+                {semester === 'Genap'
+                  ? 'Isi catatan dan keputusan naik tingkat.'
+                  : 'Isi catatan. Keputusan naik tingkat hanya di semester Genap.'}
+              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <span className="text-gray-700 text-sm">Tampilkan</span>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {/* Tampilkan per halaman */}
+              <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                <span className="text-xs sm:text-sm text-gray-700">Tampilkan</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span className="text-gray-700 text-sm">data</span>
+                <span className="text-xs sm:text-sm text-gray-700">data</span>
               </div>
-              <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Search className="w-4 h-4 text-gray-400" />
+              {/* Pencarian */}
+              <div className="relative flex-1 min-w-[180px] sm:min-w-[240px] max-w-[400px]">
+                <div className="absolute inset-y-0 left-2.5 sm:left-3 flex items-center pointer-events-none">
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                 </div>
                 <input
                   type="text"
-                  placeholder="Pencarian"
+                  placeholder="Cari nama, NIS, atau NISN"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded pl-8 sm:pl-10 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-sm"
                 />
                 {searchQuery && (
                   <button
@@ -264,7 +267,7 @@ export default function DataCatatanWaliKelasPage() {
                     }}
                     className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                 )}
               </div>
@@ -272,29 +275,28 @@ export default function DataCatatanWaliKelasPage() {
           </div>
         </div>
 
-        {/* Tabel */}
+        {/* Tabel Responsif — Pakai overflow-x-auto */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
-          <table className="w-full min-w-[800px] table-auto text-sm">
+          <table className="w-full table-auto text-sm">
             <thead>
               <tr>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIS</th>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NISN</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold w-64">Catatan PTS</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold w-64">Catatan PAS</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Naik Tingkat</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[200px]">Catatan</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[120px]">Naik Tingkat</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[80px]">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                 </tr>
               ) : currentSiswa.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     {searchQuery ? 'Tidak ada siswa yang cocok.' : 'Belum ada siswa di kelas ini.'}
                   </td>
                 </tr>
@@ -305,25 +307,32 @@ export default function DataCatatanWaliKelasPage() {
                     className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                   >
                     <td className="px-3 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
-                    <td className="px-3 py-3 text-center align-middle font-medium">{siswa.nama}</td>
+                    <td className="px-3 py-3 text-center align-middle font-medium truncate max-w-[120px]">{siswa.nama}</td>
                     <td className="px-3 py-3 text-center align-middle">{siswa.nis}</td>
                     <td className="px-3 py-3 text-center align-middle">{siswa.nisn}</td>
-                    <td className="px-3 py-3 text-center align-middle text-xs max-w-xs">
-                      <div className="truncate">{siswa.catatan_pts || '-'}</div>
-                    </td>
-                    <td className="px-3 py-3 text-center align-middle text-xs max-w-xs">
-                      <div className="truncate">{siswa.catatan_pas || '-'}</div>
+                    <td className="px-3 py-3 text-center align-middle">
+                      <div className="truncate max-w-[200px]">
+                        {siswa.catatan_wali_kelas || <span className="text-gray-400">–</span>}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-center align-middle">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${siswa.naik_tingkat === 'ya' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {siswa.naik_tingkat === 'ya' ? 'Ya' : 'Tidak'}
-                      </span>
+                      {semester === 'Genap' ? (
+                        siswa.naik_tingkat === 'ya' ? (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Ya</span>
+                        ) : siswa.naik_tingkat === 'tidak' ? (
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">Tidak</span>
+                        ) : (
+                          <span className="text-gray-400">–</span>
+                        )
+                      ) : (
+                        <span className="text-gray-300">–</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
                       <div className="flex justify-center">
                         <button
                           onClick={() => handleEdit(siswa)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
                         >
                           <Pencil size={16} />
                           <span className="hidden sm:inline">Edit</span>
@@ -338,7 +347,7 @@ export default function DataCatatanWaliKelasPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
+        <div className="flex flex-col sm:flex-row flex-wrap justify-between items-center gap-2 sm:gap-3 mt-4">
           <div className="text-sm text-gray-600">
             Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari{' '}
             {filteredSiswa.length} data
@@ -352,70 +361,70 @@ export default function DataCatatanWaliKelasPage() {
       {/* Modal Edit */}
       {showEdit && editId !== null && (
         <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editClosing ? 'opacity-0' : 'opacity-100'} p-2 sm:p-4`}
           onClick={(e) => {
             if (e.target === e.currentTarget) closeEdit();
           }}
         >
           <div className="absolute inset-0 bg-gray-900/70"></div>
           <div
-            className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+            className={`relative bg-white rounded-lg shadow-xl w-full max-w-[400px] sm:max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
           >
-            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Edit Catatan Wali Kelas</h2>
+            <div className="sticky top-0 bg-white border-b px-3 sm:px-6 py-2.5 sm:py-4 flex justify-between items-center">
+              <h2 className="text-base sm:text-xl font-bold text-gray-800">Edit Catatan Wali Kelas</h2>
               <button
                 onClick={closeEdit}
                 className="text-gray-500 hover:text-gray-700"
                 aria-label="Tutup"
               >
-                <X size={20} />
+                <X size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-3 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan PTS</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan Wali Kelas</label>
                 <textarea
-                  name="catatan_pts"
-                  value={editData.catatan_pts}
+                  name="catatan_wali_kelas"
+                  value={editData.catatan_wali_kelas}
                   onChange={handleChange}
-                  placeholder="Catatan untuk Penilaian Tengah Semester..."
-                  rows={3}
+                  placeholder="Contoh: Anak aktif, perlu bimbingan dalam..."
+                  rows={5}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan PAS</label>
-                <textarea
-                  name="catatan_pas"
-                  value={editData.catatan_pas}
-                  onChange={handleChange}
-                  placeholder="Catatan untuk Penilaian Akhir Semester..."
-                  rows={3}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Naik Tingkat</label>
-                <select
-                  name="naik_tingkat"
-                  value={editData.naik_tingkat}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                >
-                  <option value="ya">Ya</option>
-                  <option value="tidak">Tidak</option>
-                </select>
-              </div>
-              <div className="mt-6 flex justify-end gap-2">
+
+              {semester === 'Genap' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Keputusan Naik Tingkat <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="naik_tingkat"
+                    value={editData.naik_tingkat || ''}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  >
+                    <option value="">Pilih keputusan</option>
+                    <option value="ya">Ya</option>
+                    <option value="tidak">Tidak</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                  Keputusan naik tingkat hanya diisi pada semester <strong>Genap</strong>.
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end gap-2">
                 <button
                   onClick={closeEdit}
-                  className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-xs sm:text-sm font-medium"
+                  className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-100 font-medium"
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition text-xs sm:text-sm font-medium"
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded font-medium"
                 >
                   Simpan
                 </button>

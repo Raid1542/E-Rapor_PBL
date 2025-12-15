@@ -213,11 +213,20 @@ exports.getCatatanWaliKelas = async (req, res) => {
     try {
         const userId = req.user.id;
         const guruKelas = await catatanWaliKelasModel.getGuruKelasAktif(userId);
-        if (!guruKelas) return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
+        if (!guruKelas) {
+            return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
+        }
 
         const { kelas_id, id_tahun_ajaran, nama_kelas, semester } = guruKelas;
-        const data = await catatanWaliKelasModel.getCatatanByKelas(kelas_id, id_tahun_ajaran, semester);
-        res.json({ success: true, data, kelas: nama_kelas, semester }); // kirim semester ke frontend
+        const data = await catatanWaliKelasModel.getCatatanByKelas(kelas_id, id_tahun_ajaran);
+
+        res.json({
+            success: true,
+            data,
+            kelas: nama_kelas,
+            semester // opsional: untuk info frontend
+        });
+
     } catch (err) {
         console.error('Error getCatanWaliKelas:', err);
         res.status(500).json({ success: false, message: 'Gagal mengambil data catatan' });
@@ -227,28 +236,35 @@ exports.getCatatanWaliKelas = async (req, res) => {
 exports.updateCatatanWaliKelas = async (req, res) => {
     try {
         const { siswa_id } = req.params;
-        const { catatan_pts = '', catatan_pas = '', naik_tingkat = 'tidak' } = req.body;
-
-        if (!['ya', 'tidak'].includes(naik_tingkat)) {
-            return res.status(400).json({ message: 'naik_tingkat harus "ya" atau "tidak"' });
-        }
+        const { catatan_wali_kelas = '', naik_tingkat } = req.body;
 
         const userId = req.user.id;
         const guruKelas = await catatanWaliKelasModel.getGuruKelasAktif(userId);
-        if (!guruKelas) return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
+        if (!guruKelas) {
+            return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
+        }
 
         const { kelas_id, id_tahun_ajaran, semester } = guruKelas;
 
-        // ✅ Simpan dengan semester aktif
+        let naikTingkatValue = null;
+        if (semester === 'Genap') {
+            if (naik_tingkat !== 'ya' && naik_tingkat !== 'tidak') {
+                return res.status(400).json({
+                    message: 'Di semester Genap, keputusan naik tingkat wajib diisi (ya/tidak).'
+                });
+            }
+            naikTingkatValue = naik_tingkat;
+        }
+
         await catatanWaliKelasModel.upsertCatatan(
             siswa_id,
             kelas_id,
             id_tahun_ajaran,
-            semester, // ← tambahkan ini
-            catatan_pts,
-            catatan_pas,
-            naik_tingkat
+            semester,
+            catatan_wali_kelas,
+            naikTingkatValue // bisa null
         );
+
         res.json({ success: true, message: 'Catatan wali kelas berhasil diperbarui' });
 
     } catch (err) {
