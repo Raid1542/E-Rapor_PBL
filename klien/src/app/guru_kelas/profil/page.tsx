@@ -43,6 +43,7 @@ const ProfilePage = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
 
   // === Muat data user dari localStorage ===
   useEffect(() => {
@@ -64,6 +65,7 @@ const ProfilePage = () => {
         alamat: user.alamat || ''
       };
       setFormData(initialData);
+      setInitialFormData(initialData);
 
       if (user.profileImage) {
         setProfileImage(`${API_URL}${user.profileImage}`);
@@ -123,24 +125,39 @@ const ProfilePage = () => {
       });
 
       const result = await response.json();
-      if (response.ok && result.fotoPath) {
-        // Update localStorage
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Upload gagal');
+      }
+
+      // ✅ Jika backend kembalikan `user` (disarankan), gunakan itu
+      let updatedUser;
+      if (result.user) {
+        updatedUser = {
+          ...result.user,
+          profileImage: result.user.profileImage || result.user.foto_path || null,
+          role: result.user.role || 'guru_kelas'
+        };
+      } else if (result.fotoPath) {
+        // Fallback: update hanya foto
         const storedUser = localStorage.getItem('currentUser');
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           userData.profileImage = result.fotoPath;
-          localStorage.setItem('currentUser', JSON.stringify(userData));
+          updatedUser = userData;
+        } else {
+          throw new Error('Sesi user tidak valid');
         }
-
-        // Trigger Header update (jika ada listener)
-        window.dispatchEvent(new Event('userDataUpdated'));
-
-        setProfileImage(`${API_URL}${result.fotoPath}`);
-        setPreviewImage(null);
-        alert('✅ Foto profil berhasil diupload!');
       } else {
-        throw new Error(result.message || 'Upload gagal');
+        throw new Error('Respons tidak berisi data foto atau user');
       }
+
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event('userDataUpdated'));
+
+      setProfileImage(`${API_URL}${updatedUser.profileImage}`);
+      setPreviewImage(null);
+      alert('✅ Foto profil berhasil diupload!');
     } catch (err: any) {
       console.error('Upload error:', err);
       alert('Gagal mengupload foto: ' + (err.message || 'Terjadi kesalahan'));
@@ -154,14 +171,19 @@ const ProfilePage = () => {
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ✅ Cek apakah ada perubahan
+    if (initialFormData && JSON.stringify(initialFormData) === JSON.stringify(formData)) {
+      alert('Tidak ada perubahan data.');
+      return;
+    }
+
     if (!isConfirmed) {
       alert('Harap centang konfirmasi terlebih dahulu!');
       return;
     }
 
     const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('currentUser');
-    if (!token || !storedUser) {
+    if (!token) {
       alert('Sesi login tidak valid. Silakan login ulang.');
       return;
     }
@@ -184,20 +206,42 @@ const ProfilePage = () => {
         })
       });
 
-      if (res.ok) {
-        const currentUser = JSON.parse(storedUser);
-        const updatedUser = { ...currentUser, ...formData };
-        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        alert('✅ Profil berhasil diperbarui!');
-      } else {
+      if (!res.ok) {
         const err = await res.json();
         alert(err.message || 'Gagal memperbarui profil');
+        return;
       }
-    } catch (err) {
-      console.error(err);
-      alert('Gagal terhubung ke server');
+
+      const result = await res.json();
+
+      if (!result.user) {
+        alert('Respons tidak berisi data user. Hubungi administrator.');
+        return;
+      }
+
+      const normalizedUser = {
+        ...result.user,
+        profileImage: result.user.profileImage || result.user.foto_path || null,
+        role: result.user.role || 'guru_kelas'
+      };
+
+      localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
+      window.dispatchEvent(new Event('userDataUpdated'));
+
+      alert('✅ Profil berhasil diperbarui!');
+
+      // ✅ OPSI 1: Refresh halaman penuh (sederhana & pasti jalan)
+      window.location.reload();
+
+      // ✅ OPSI 2 (alternatif): Reset initialFormData agar tidak bisa klik "simpan" lagi tanpa perubahan
+      // setInitialFormData({ ...formData });
+
+    } catch (err: any) {
+      console.error('Error update profil:', err);
+      alert('Gagal terhubung ke server: ' + (err.message || ''));
     }
   };
+
 
   // === Ganti Password ===
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {

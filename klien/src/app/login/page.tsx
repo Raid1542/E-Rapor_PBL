@@ -39,17 +39,30 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         setError(data.message || "Login gagal");
         setLoading(false);
         return;
       }
 
-      // ✅ Simpan ke localStorage
-      localStorage.setItem("token", data.token);
       if (data.user) {
-        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        // Ambil role dari form (lebih aman dan konsisten)
+        const selectedRole = formData.role;
+
+        const normalizedUser = {
+          ...data.user,
+          // Pastikan role selalu ada dan sesuai pilihan user
+          role: selectedRole,
+          // Normalisasi foto ke field `profileImage`
+          profileImage: data.user.profileImage || data.user.foto_path || null,
+        };
+
+        localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
+        localStorage.setItem("token", data.token);
+
+        // Beri tahu Header bahwa data user sudah update
+        window.dispatchEvent(new Event('userDataUpdated'));
       }
 
       // ✅ PENTING: Beri tahu aplikasi bahwa user data sudah tersedia

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const absensiModel = require('../models/absensiModel');
 const catatanWaliKelasModel = require('../models/catatanWaliKelasModel');
 const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
-const kokurikulerModel = require('../models/kokurikulerModel'); 
+const kokurikulerModel = require('../models/kokurikulerModel');
 const guruModel = require('../models/guruModel');
 
 // === KELAS & SISWA ===
@@ -107,19 +107,35 @@ exports.editProfil = async (req, res) => {
             return res.status(400).json({ message: 'Nama dan email wajib diisi' });
         }
 
+        // Update data
         await db.execute(`UPDATE user SET nama_lengkap = ?, email_sekolah = ? WHERE id_user = ?`, [nama_lengkap, email_sekolah, userId]);
         await db.execute(`UPDATE guru SET niy = ?, nuptk = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? WHERE user_id = ?`, [niy, nuptk, jenis_kelamin, no_telepon, alamat, userId]);
 
+        // Ambil data terbaru
         const [userRows] = await db.execute(`SELECT id_user, nama_lengkap, email_sekolah FROM user WHERE id_user = ?`, [userId]);
-        const [guruRows] = await db.execute(`SELECT niy, nuptk, jenis_kelamin, no_telepon, alamat FROM guru WHERE user_id = ?`, [userId]);
+        const [guruRows] = await db.execute(`SELECT niy, nuptk, jenis_kelamin, no_telepon, alamat, foto_path FROM guru WHERE user_id = ?`, [userId]);
 
         if (userRows.length === 0 || guruRows.length === 0) {
             return res.status(404).json({ message: 'Profil tidak ditemukan' });
         }
 
+        // Gabungkan & normalisasi
+        const user = {
+            id: userRows[0].id_user,
+            role: 'guru_kelas', // pastikan role ada
+            nama_lengkap: userRows[0].nama_lengkap,
+            email_sekolah: userRows[0].email_sekolah,
+            niy: guruRows[0].niy,
+            nuptk: guruRows[0].nuptk,
+            jenis_kelamin: guruRows[0].jenis_kelamin,
+            no_telepon: guruRows[0].no_telepon,
+            alamat: guruRows[0].alamat,
+            profileImage: guruRows[0].foto_path || null // untuk konsistensi frontend
+        };
+
         res.json({
             message: 'Profil berhasil diperbarui',
-            data: { ...userRows[0], ...guruRows[0] }
+            user // ✅ kirim sebagai "user"
         });
 
     } catch (err) {
@@ -225,12 +241,12 @@ exports.updateCatatanWaliKelas = async (req, res) => {
 
         // ✅ Simpan dengan semester aktif
         await catatanWaliKelasModel.upsertCatatan(
-            siswa_id, 
-            kelas_id, 
-            id_tahun_ajaran, 
+            siswa_id,
+            kelas_id,
+            id_tahun_ajaran,
             semester, // ← tambahkan ini
-            catatan_pts, 
-            catatan_pas, 
+            catatan_pts,
+            catatan_pas,
             naik_tingkat
         );
         res.json({ success: true, message: 'Catatan wali kelas berhasil diperbarui' });
@@ -433,7 +449,7 @@ exports.updateKokurikuler = async (req, res) => {
             if (typeof mutabaah_nilai_angka !== 'number' || mutabaah_nilai_angka < 0 || mutabaah_nilai_angka > 100) {
                 return res.status(400).json({ message: 'Nilai angka harus bilangan bulat 0–100' });
             }
-            if (!['A','B','C','D'].includes(mutabaah_grade)) {
+            if (!['A', 'B', 'C', 'D'].includes(mutabaah_grade)) {
                 return res.status(400).json({ message: 'Grade harus A, B, C, atau D' });
             }
 

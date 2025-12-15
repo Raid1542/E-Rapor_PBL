@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 
@@ -9,80 +9,103 @@ interface UserData {
     nama_lengkap: string;
     email_sekolah: string;
     role: string;
-    // class tidak digunakan untuk guru bidang studi → dihapus
     profileImage?: string;
 }
 
-interface HeaderProps {
-    user: UserData;
-}
+const getInitials = (name: string): string => {
+    return name
+        .split(' ')
+        .slice(0, 2)
+        .map(word => word[0]?.toUpperCase() || '')
+        .join('');
+};
 
-export default function Header({ user }: HeaderProps) {
+export default function Header() {
     const router = useRouter();
+    const [user, setUser] = useState<UserData | null>(null);
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Muat foto profil
     useEffect(() => {
-        const loadProfileImage = () => {
+        const loadUserData = () => {
             try {
                 const storedUser = localStorage.getItem('currentUser');
                 if (storedUser) {
-                    const userData = JSON.parse(storedUser);
+                    const userData: UserData = JSON.parse(storedUser);
+                    setUser(userData);
                     if (userData.profileImage) {
                         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-                        setProfileImage(baseUrl + userData.profileImage);
+                        // ✅ Pastikan ada '/' antara baseUrl dan path
+                        setProfileImage(`${baseUrl}/${userData.profileImage}`);
                     } else {
                         setProfileImage(null);
                     }
+                } else {
+                    setUser(null);
+                    setProfileImage(null);
                 }
             } catch (e) {
-                console.error('Gagal memuat foto profil:', e);
+                console.error('Gagal memuat data user:', e);
+                setUser(null);
                 setProfileImage(null);
             }
         };
 
-        loadProfileImage();
+        loadUserData();
 
-        const handleProfileUpdate = () => loadProfileImage();
-        window.addEventListener('userDataUpdated', handleProfileUpdate);
+        const fallbackInterval = setInterval(() => {
+            const stored = localStorage.getItem('currentUser');
+            if (stored && !user) {
+                loadUserData();
+            }
+        }, 500);
+
+        const handleUserUpdate = () => {
+            loadUserData();
+        };
+
+        window.addEventListener('userDataUpdated', handleUserUpdate);
+        window.addEventListener('profileImageUpdated', handleUserUpdate);
 
         return () => {
-            window.removeEventListener('userDataUpdated', handleProfileUpdate);
+            window.removeEventListener('userDataUpdated', handleUserUpdate);
+            window.removeEventListener('profileImageUpdated', handleUserUpdate);
+            clearInterval(fallbackInterval);
         };
     }, []);
 
-    const toggleDropdown = () => {
-        const dropdown = dropdownRef.current;
-        if (dropdown) {
-            dropdown.classList.toggle('hidden');
-        }
+    const closeDropdown = () => {
+        const dropdown = document.getElementById('profile-dropdown');
+        if (dropdown) dropdown.classList.add('hidden');
     };
 
-    const closeDropdown = () => {
-        const dropdown = dropdownRef.current;
-        if (dropdown) {
-            dropdown.classList.add('hidden');
-        }
+    const toggleDropdown = () => {
+        const dropdown = document.getElementById('profile-dropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
     };
 
     const handleLogout = () => {
         closeDropdown();
-        localStorage.removeItem('token');
-        localStorage.removeItem('currentUser');
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
+            sessionStorage.clear();
+        }
         router.push('/login');
     };
 
-    // ✅ Arahkan ke profil guru bidang studi
     const handleProfile = () => {
         closeDropdown();
-        router.push('/guru_bidang_studi/profil');
+        router.push('/guru_bidang_studi/profil'); // ✅ Ubah rute profil
     };
 
-    // Klik di luar dropdown → tutup
+    // Tutup dropdown saat klik di luar
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target as Node)
+            ) {
                 closeDropdown();
             }
         };
@@ -93,29 +116,32 @@ export default function Header({ user }: HeaderProps) {
         };
     }, []);
 
+    if (!user) {
+        return (
+            <header className="bg-white shadow-sm border-b border-gray-200">
+                <div className="px-6 py-4">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-bold text-gray-900">Dashboard Guru Bidang Studi</h1>
+                        <div className="w-32 h-10 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                </div>
+            </header>
+        );
+    }
+
     return (
         <header className="bg-white shadow-sm border-b border-gray-200">
             <div className="px-6 py-4">
                 <div className="flex justify-between items-center">
                     <div>
-                        {/* ✅ Judul khusus guru bidang studi */}
                         <h1 className="text-2xl font-bold text-gray-900">Dashboard Guru Bidang Studi</h1>
-                        {/* Tidak ada info kelas → dihapus */}
                     </div>
 
-                    <div className="relative">
+                    <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={toggleDropdown}
-                            className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                         >
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
-                                {/* ✅ Tampilkan role dengan benar (spasi, bukan underscore) */}
-                                <p className="text-xs text-gray-500 capitalize">
-                                    {user.role === 'guru bidang studi' ? 'Guru Bidang Studi' : user.role}
-                                </p>
-                            </div>
-
                             <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                                 {profileImage ? (
                                     <img
@@ -126,31 +152,25 @@ export default function Header({ user }: HeaderProps) {
                                     />
                                 ) : (
                                     <span className="text-black text-xs font-semibold">
-                                        {(user.nama_lengkap || '??')
-                                            .split(' ')
-                                            .slice(0, 2)
-                                            .map(word => word[0]?.toUpperCase() || '')
-                                            .join('') || '??'}
+                                        {getInitials(user.nama_lengkap)}
                                     </span>
                                 )}
                             </div>
-
                             <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
 
                         <div
-                            ref={dropdownRef}
+                            id="profile-dropdown"
                             className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
                         >
                             <div className="p-4 border-b border-gray-200">
                                 <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-sm text-gray-500">{user.email_sekolah}</p>
-                                <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                                    {/* ✅ Warna & teks sesuai role */}
-                                    {user.role === 'guru bidang studi' ? 'GURU BIDANG STUDI' : user.role.toUpperCase()}
+                                <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                    {user.role.toUpperCase()}
                                 </span>
                             </div>
-                            <div className="p-2 space-y-1">
+                            <div className="p-2">
                                 <button
                                     onClick={handleProfile}
                                     className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"

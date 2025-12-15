@@ -6,7 +6,6 @@ const userModel = require('../models/userModel');
 const login = async (req, res) => {
     const { email_sekolah, password, role: selectedRole } = req.body;
 
-    // ✅ Validasi input
     if (!email_sekolah || !password || !selectedRole) {
         return res.status(400).json({
             success: false,
@@ -15,11 +14,12 @@ const login = async (req, res) => {
     }
 
     try {
-        // ✅ Cari user
+        // ✅ Query dengan join ke user_role
         const [userRows] = await db.execute(
-            `SELECT id_user, email_sekolah, password, nama_lengkap, status 
-         FROM user 
-         WHERE email_sekolah = ?`,
+            `SELECT u.id_user, u.email_sekolah, u.password, u.nama_lengkap, u.status, ur.role
+             FROM user u
+             JOIN user_role ur ON u.id_user = ur.id_user
+             WHERE u.email_sekolah = ?`,
             [email_sekolah]
         );
 
@@ -32,7 +32,6 @@ const login = async (req, res) => {
 
         const user = userRows[0];
 
-        // ✅ Cek status
         if (user.status !== 'aktif') {
             return res.status(403).json({
                 success: false,
@@ -40,7 +39,6 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Verifikasi password
         const isMatch = await comparePassword(password, user.password);
         if (!isMatch) {
             return res.status(401).json({
@@ -49,10 +47,8 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Ambil roles
-        const roles = await userModel.getRolesByUserId(user.id_user);
-
         // ✅ Validasi role
+        const roles = await userModel.getRolesByUserId(user.id_user); // ← pastikan fungsi ini ada
         if (!roles.includes(selectedRole)) {
             return res.status(403).json({
                 success: false,
@@ -60,29 +56,23 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Generate token
+        // ✅ Generate token dengan role yang benar
         const token = jwt.sign(
-            { id: user.id_user, role: selectedRole },
+            { id: user.id_user, role: selectedRole }, // ✅ Gunakan selectedRole
             process.env.JWT_SECRET,
-            { expiresIn: '5h' }
+            { expiresIn: '6h' }
         );
 
-        // ✅ Ambil data guru — PASTIKAN user.id_user VALID
-        console.log('🔍 User ID:', user.id_user); // 👈 LOG INI
-
+        // ✅ Ambil data guru
         const [guruRows] = await db.execute(
             `SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, foto_path 
-         FROM guru 
-         WHERE user_id = ?`,
+            FROM guru 
+            WHERE user_id = ?`,
             [user.id_user]
         );
 
-        console.log('📊 Guru Rows:', guruRows); // 👈 LOG INI
         const guruData = guruRows[0] || {};
 
-        console.log('📄 Guru Data:', guruData); // 👈 LOG INI
-
-        // ✅ Response
         return res.status(200).json({
             success: true,
             token,
@@ -92,7 +82,7 @@ const login = async (req, res) => {
                 roles: roles,
                 nama_lengkap: user.nama_lengkap,
                 email_sekolah: user.email_sekolah,
-                profileImage: guruData.foto_path || null, // 👈 INI HARUS BISA NILAI
+                profileImage: guruData.foto_path || null,
                 niy: guruData.niy || '',
                 nuptk: guruData.nuptk || '',
                 jenis_kelamin: guruData.jenis_kelamin || 'Laki-laki',

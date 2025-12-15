@@ -20,7 +20,7 @@ interface HeaderProps {
 export default function Header({ user }: HeaderProps) {
     const router = useRouter();
     const [profileImage, setProfileImage] = useState<string | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null); // ✅ untuk akses dropdown
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Muat foto profil
     useEffect(() => {
@@ -59,7 +59,6 @@ export default function Header({ user }: HeaderProps) {
         }
     };
 
-    // ✅ Tutup dropdown (pastikan tidak error jika sudah tertutup)
     const closeDropdown = () => {
         const dropdown = dropdownRef.current;
         if (dropdown) {
@@ -68,19 +67,18 @@ export default function Header({ user }: HeaderProps) {
     };
 
     const handleLogout = () => {
-        closeDropdown(); // Opsional: tutup dulu sebelum logout
+        closeDropdown();
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
         router.push('/login');
     };
 
-    // ✅ Tutup dropdown, lalu navigasi ke profil
     const handleProfile = () => {
         closeDropdown();
         router.push('/guru_kelas/profil');
     };
 
-    // ✅ Klik di luar dropdown → tutup
+    // Tutup dropdown saat klik di luar
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -104,15 +102,12 @@ export default function Header({ user }: HeaderProps) {
                     </div>
 
                     <div className="relative">
+                        {/* ✅ Tombol hanya berisi avatar + chevron */}
                         <button
                             onClick={toggleDropdown}
-                            className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                         >
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">{user.nama_lengkap}</p>
-                                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-                            </div>
-
+                            {/* Avatar */}
                             <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                                 {profileImage ? (
                                     <img
@@ -132,10 +127,11 @@ export default function Header({ user }: HeaderProps) {
                                 )}
                             </div>
 
+                            {/* Chevron Down */}
                             <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
 
-                        {/* ✅ Gunakan ref di sini */}
+                        {/* Dropdown */}
                         <div
                             ref={dropdownRef}
                             className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
@@ -144,7 +140,7 @@ export default function Header({ user }: HeaderProps) {
                                 <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
                                 <p className="text-sm text-gray-500">{user.email_sekolah}</p>
                                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                    {user.role.toUpperCase()} {user.class && `Kelas ${user.class}`}
+                                    {user.role.toUpperCase()} {user.class && `– Kelas ${user.class}`}
                                 </span>
                             </div>
                             <div className="p-2 space-y-1">

@@ -35,6 +35,7 @@ const ProfilePage = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null); // Preview lokal saat upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
 
 
   // State password
@@ -82,8 +83,7 @@ const ProfilePage = () => {
           setProfileImage(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${userData.profileImage}`);
         }
 
-        // Set formData
-        setFormData({
+        const initialData = {
           nama: userData.nama_lengkap || '',
           nuptk: userData.nuptk || '',
           niy: userData.niy || '',
@@ -91,7 +91,10 @@ const ProfilePage = () => {
           telepon: userData.no_telepon || '',
           email: userData.email_sekolah || '',
           alamat: userData.alamat || ''
-        });
+        };
+
+        setFormData(initialData);
+        setInitialFormData(initialData);
       } catch (e) {
         console.error('Gagal memuat data profil:', e);
       }
@@ -110,6 +113,13 @@ const ProfilePage = () => {
   // === Simpan Profil ke Backend ===
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ 1. Cek apakah ada perubahan
+    if (initialFormData && JSON.stringify(initialFormData) === JSON.stringify(formData)) {
+      alert('Tidak ada perubahan data.');
+      return;
+    }
+
     if (!isConfirmed) {
       alert('Harap centang konfirmasi terlebih dahulu!');
       return;
@@ -145,7 +155,7 @@ const ProfilePage = () => {
       });
 
       if (response.ok) {
-        // Perbarui localStorage
+        // ✅ 2. Update localStorage
         const updatedUser: UserProfile = {
           ...userData,
           nama_lengkap: formData.nama,
@@ -157,7 +167,14 @@ const ProfilePage = () => {
           alamat: formData.alamat
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        alert('Profil berhasil diperbarui!');
+
+        // ✅ 3. Beri tahu Header (jika ada)
+        window.dispatchEvent(new Event('userDataUpdated'));
+
+        alert('✅ Profil berhasil diperbarui!');
+
+        // ✅ 4. REFRESH HALAMAN SETELAH SIMPAN
+        window.location.reload();
       } else {
         const error = await response.json();
         alert(error.message || 'Gagal memperbarui profil');
