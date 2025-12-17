@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 
@@ -73,6 +74,37 @@ app.get('/debug/uploads', (req, res) => {
 // ✅ Root
 app.get('/', (req, res) => {
     res.send('Backend E-Rapor SDIT Ulil Albab berjalan!');
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('❌ Global error:', err);
+    
+    // Error dari Multer
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ 
+                message: 'Ukuran file terlalu besar (maksimal 5MB)' 
+            });
+        }
+    }
+    
+    // Error custom dari diskStorage
+    if (err.message === 'Format file tidak didukung' || 
+        err.message === 'Hanya file .png, .jpg, .jpeg, .webp yang diizinkan') {
+        return res.status(400).json({ message: err.message });
+    }
+    
+    // Error lainnya
+    res.status(500).json({ 
+        message: 'Terjadi kesalahan pada server',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ message: 'Endpoint tidak ditemukan' });
 });
 
 const PORT = process.env.PORT || 5000;

@@ -64,10 +64,66 @@ router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskul
 router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
 // Kokurikuler
-router.get('/kokurikuler/:jenis_penilaian', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
-router.put('/kokurikuler/:siswaId/:jenis_penilaian', authenticate, guruKelasOnly, guruKelasController.updateKokurikuler);
+router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
+
+// Validasi parameter siswaId
+router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
+    const siswaId = parseInt(req.params.siswaId);
+    if (isNaN(siswaId) || siswaId <= 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'ID siswa tidak valid' 
+        });
+    }
+    next();
+}, guruKelasController.updateKokurikuler);
 
 // Foto Profil
 router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasController.uploadFotoProfil);
+
+// Nilai
+router.get('/mapel', authenticate, guruKelasOnly, guruKelasController.getMapelForGuruKelas);
+router.get('/nilai/:mapelId', authenticate, guruKelasOnly, guruKelasController.getNilaiByMapel);
+router.post('/nilai', authenticate, guruKelasOnly, guruKelasController.simpanNilai);
+
+// ====== ATUR PENILAIAN ======
+
+// 1. Atur Kategori Nilai (Kokurikuler/Akademik)
+router.get('/atur-penilaian/kategori', authenticate, guruKelasOnly, guruKelasController.getKategoriNilai);
+router.post('/atur-penilaian/kategori', authenticate, guruKelasOnly, guruKelasController.createKategoriNilai);
+router.put('/atur-penilaian/kategori/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.updateKategoriNilai);
+router.delete('/atur-penilaian/kategori/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.deleteKategoriNilai);
+
+// 2. Atur Bobot Penilaian per Mata Pelajaran
+router.get('/atur-penilaian/bobot/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
+    const mapelId = parseInt(req.params.mapelId);
+    if (isNaN(mapelId) || mapelId <= 0) {
+        return res.status(400).json({ success: false, message: 'ID mata pelajaran tidak valid' });
+    }
+    next();
+}, guruKelasController.getBobotByMapel);
+
+router.put('/atur-penilaian/bobot/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
+    const mapelId = parseInt(req.params.mapelId);
+    if (isNaN(mapelId) || mapelId <= 0) {
+        return res.status(400).json({ success: false, message: 'ID mata pelajaran tidak valid' });
+    }
+    next();
+}, guruKelasController.updateBobotByMapel);
+
+// 3. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
+router.get('/atur-penilaian/komponen', authenticate, guruKelasOnly, guruKelasController.getKomponenPenilaian);
 
 module.exports = router;

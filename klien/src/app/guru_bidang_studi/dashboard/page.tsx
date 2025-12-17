@@ -1,96 +1,161 @@
-// app/guru_bidang_studi/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Waves } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Book, Calendar, School, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+interface UserData {
+  id: string;
+  nama_lengkap: string;
+  email_sekolah: string;
+  role: string;
+}
+
+interface MapelItem {
+  nama: string;
+  total_kelas: number;
+  total_siswa: number;
+}
+
+interface DashboardData {
+  tahun_ajaran: string;
+  semester: string;
+  mata_pelajaran_list: MapelItem[];
+}
 
 export default function GuruBidangStudiDashboard() {
-  const [user, setUser] = useState<any>(null);
-  const [kelasYangDiajar, setKelasYangDiajar] = useState<any[]>([]);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('currentUser');
-      
-      if (!token || !storedUser) return;
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('currentUser');
 
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+    if (!token || !userData) {
+      router.push('/login');
+      return;
+    }
 
-        const res = await fetch('http://localhost:5000/api/guru-bidang-studi/kelas-yang-diajar', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+    try {
+      const parsedUser: UserData = JSON.parse(userData);
 
-        if (res.ok) {
-          const result = await res.json();
-          setKelasYangDiajar(result.data || []);
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard ', err);
+      if (parsedUser.role !== 'guru bidang studi') {
+        alert('Anda tidak memiliki akses ke halaman ini');
+        router.push('/login');
+        return;
       }
-    };
 
-    fetchDashboardData();
-  }, []);
+      setUser(parsedUser);
 
-  // ✅ Ambil semua mata pelajaran untuk header
-  const allSubjects = kelasYangDiajar.map(k => k.nama_mapel).filter((v, i, a) => a.indexOf(v) === i);
+      const fetchDashboard = async () => {
+        try {
+          const res = await fetch('http://localhost:5000/api/guru-bidang-studi/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            if (result.success && result.data) {
+              setDashboard(result.data);
+            }
+          }
+        } catch (err) {
+          console.error('Gagal memuat dashboard:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchDashboard();
+    } catch (e) {
+      console.error('Error parsing user:', e);
+      router.push('/login');
+    }
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !dashboard || dashboard.mata_pelajaran_list.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <div className="bg-orange-50 text-orange-700 px-4 py-3 rounded-lg inline-block">
+          Anda belum ditugaskan mengajar mata pelajaran apapun di tahun ajaran ini.
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header Selamat Datang */}
+    <>
+      {/* Welcome Card */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
-        <h1 className="text-2xl font-bold flex items-center gap-2"> 
-          Selamat datang, {user?.nama_lengkap || 'Guru'}! 👋
-        </h1>
-        <p className="mt-2 opacity-90 text-orange-100">
-          Anda login sebagai Guru Bidang Studi. Silakan input nilai siswa.
-        </p>
-        <p className="mt-2 opacity-90 text-orange-100">
-          Guru Pengampu: 
-          {allSubjects.length > 0 ? (
-            allSubjects.join(', ')
-          ) : (
-            'Belum ada mata pelajaran'
-          )}
+        <h2 className="text-2xl font-bold mb-2">
+          Selamat Datang, {user.nama_lengkap || 'Guru'}! 👋
+        </h2>
+        <p className="text-orange-100">
+          Anda login sebagai <strong>Guru Bidang Studi</strong>. Silakan input nilai siswa berdasarkan mata pelajaran yang diampu.
         </p>
       </div>
 
-      {/* Daftar Kelas yang Diajar — STATIS */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-800">Kelas yang Diajarkan</h2>
+      {/* Flexbox for better control */}
+      <div className="flex flex-wrap gap-6">
+        {/* Card 1: Tahun Ajaran */}
+        <div className="bg-white rounded-xl shadow p-6 flex items-start space-x-4 w-full md:w-[30%] min-w-[280px]">
+          <div className="bg-orange-100 p-3 rounded-lg">
+            <Calendar className="w-6 h-6 text-orange-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Tahun Ajaran</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-gray-900">{dashboard.tahun_ajaran}</span>
+              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
+                {dashboard.semester}
+              </span>
+            </div>
+          </div>
+        </div>
 
-        {kelasYangDiajar.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {kelasYangDiajar.map((kelas) => (
-              <div
-                key={kelas.pembelajaran_id} 
-                className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{kelas.nama_kelas}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Fase {kelas.fase} • {kelas.nama_mapel}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {kelas.kurikulum}
-                    </p>
-                  </div>
+        {/* Cards Per Mata Pelajaran */}
+        {dashboard.mata_pelajaran_list.map((mapel, index) => (
+          <div key={index} className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-200 p-6 w-full md:w-[30%] min-w-[280px]">
+            <div className="flex items-start space-x-4">
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <Book className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">{mapel.nama}</p>
+                <h3 className="text-3xl font-bold text-gray-900">{mapel.total_siswa}</h3>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                    {mapel.total_kelas} Kelas
+                  </span>
+                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                    {mapel.total_siswa} Siswa
+                  </span>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-lg p-6 text-center text-gray-500 border border-gray-200">
-            Belum ada kelas yang diajar.
+        ))}
+
+        {/* Jika hanya 1 mapel, tambahkan placeholder */}
+        {dashboard.mata_pelajaran_list.length === 1 && (
+          <div className="bg-white rounded-xl shadow p-6 w-full md:w-[30%] min-w-[280px] flex items-center justify-center text-gray-400">
+            <p className="text-sm">-</p>
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

@@ -177,3 +177,77 @@ exports.uploadFotoProfil = async (req, res) => {
         res.status(500).json({ message: 'Gagal mengupload foto' });
     }
 };
+
+// =========== DASHBOARD ===========
+exports.getDashboardData = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Ambil tahun ajaran aktif
+        const [taRows] = await db.execute(
+            `SELECT id_tahun_ajaran, tahun_ajaran, semester 
+       FROM tahun_ajaran 
+       WHERE status = 'aktif' 
+       LIMIT 1`
+        );
+
+        if (taRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tahun ajaran aktif tidak ditemukan.'
+            });
+        }
+
+        const { id_tahun_ajaran, tahun_ajaran, semester } = taRows[0];
+
+        // 2. Ambil semua mata pelajaran yang diajar oleh guru ini,
+        //    beserta jumlah kelas & jumlah siswa **per mata pelajaran**
+        const [mapelRows] = await db.execute(
+            `
+      SELECT 
+        mp.nama_mapel AS nama,
+        COUNT(DISTINCT p.kelas_id) AS total_kelas,
+        COUNT(sk.siswa_id) AS total_siswa
+      FROM pembelajaran p
+      INNER JOIN mata_pelajaran mp ON p.mata_pelajaran_id = mp.id_mata_pelajaran
+      LEFT JOIN siswa_kelas sk 
+        ON p.kelas_id = sk.kelas_id 
+        AND sk.tahun_ajaran_id = ?
+      WHERE p.user_id = ? 
+        AND p.tahun_ajaran_id = ?
+      GROUP BY mp.id_mata_pelajaran, mp.nama_mapel
+      ORDER BY mp.nama_mapel
+      `,
+            [id_tahun_ajaran, userId, id_tahun_ajaran]
+        );
+
+        if (mapelRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Guru belum ditugaskan mengajar mata pelajaran apapun di tahun ajaran ini.'
+            });
+        }
+
+        const mataPelajaranList = mapelRows.map(row => ({
+            nama: row.nama,
+            total_kelas: Number(row.total_kelas),
+            total_siswa: Number(row.total_siswa)
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                tahun_ajaran,
+                semester,
+                mata_pelajaran_list: mataPelajaranList
+            }
+        });
+
+    } catch (err) {
+        console.error('Error di getDashboardData:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal memuat data dashboard.'
+        });
+    }
+};

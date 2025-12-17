@@ -45,4 +45,7 @@ router.put('/profil', authenticate, guruBidangStudiOnly, controller.editProfil);
 router.put('/ganti-password', authenticate, guruBidangStudiOnly, controller.gantiPassword);
 router.put('/upload_foto', authenticate, guruBidangStudiOnly, upload.single('foto'), controller.uploadFotoProfil);
 
+// Dashbaord
+router.get('/dashboard', authenticate, guruBidangStudiOnly, controller.getDashboardData);
+
 module.exports = router;
