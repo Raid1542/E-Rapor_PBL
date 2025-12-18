@@ -1,736 +1,627 @@
-// src/app/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import {
-    ChevronRight,
-    Menu,
-    X,
-    LogOut,
-    User,
-    Edit,
-    Trash2,
-    Plus,
-    Home,
-    Pencil,
-} from 'lucide-react';
+import { useState, useEffect, ReactNode } from 'react';
+import { Pencil, Eye, Search, X } from 'lucide-react';
 
-interface ProfileData {
-    name: string;
-    role: string;
-    subject: string;
-    email: string;
-    phone: string;
-    nip: string;
+// ====== TYPES ======
+interface Mapel {
+    mata_pelajaran_id: number;
+    nama_mapel: string;
+    jenis: 'wajib' | 'pilihan';
+    bisa_input: boolean;
 }
 
 interface Kelas {
-    id: number;
-    name: string;
-    tingkat: number;
-    studentCount: number;
+    kelas_id: number;
+    nama_kelas: string;
 }
 
-interface Siswa {
+interface NilaiSiswa {
     id: number;
+    nama: string;
     nis: string;
-    name: string;
-    uh1: number;
-    uh2: number;
-    uh3: number;
-    uh4: number;
-    uh5: number;
-    pts: number;
-    pas: number;
+    nisn: string;
+    nilai_rapor: number;
     deskripsi: string;
+    nilai: Record<number, number | null>;
 }
 
-export default function GuruBidangStudiDashboard() {
-    const [currentPage, setCurrentPage] = useState<'dashboard' | 'input-nilai'>('dashboard');
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [profileOpen, setProfileOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState(1);
-    const [editingStudent, setEditingStudent] = useState<Siswa | null>(null);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newStudent, setNewStudent] = useState<{
-        uh1: number;
-        uh2: number;
-        uh3: number;
-        uh4: number;
-        uh5: number;
-        pts: number;
-        pas: number;
-    }>({
-        uh1: 0,
-        uh2: 0,
-        uh3: 0,
-        uh4: 0,
-        uh5: 0,
-        pts: 0,
-        pas: 0,
-    });
+interface Komponen {
+    id_komponen: number;
+    nama_komponen: string;
+}
 
-    const [profileData, setProfileData] = useState<ProfileData>({
-        name: 'Noir Prince S.Pd.',
-        role: 'Guru Bidang Studi',
-        subject: 'Matematika',
-        email: 'noir.prince@sditulilalbab.sch.id',
-        phone: '+6281234567890',
-        nip: '198507122010011005',
-    });
+// ====== MAIN COMPONENT ======
+export default function DataInputNilaiGuruBidangStudiPage() {
+    // ====== STATE ======
+    const [mapelList, setMapelList] = useState<Mapel[]>([]);
+    const [kelasList, setKelasList] = useState<Kelas[]>([]);
+    const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
+    const [selectedKelasId, setSelectedKelasId] = useState<number | null>(null);
+    const [siswaList, setSiswaList] = useState<NilaiSiswa[]>([]);
+    const [filteredSiswa, setFilteredSiswa] = useState<NilaiSiswa[]>([]);
+    const [komponenList, setKomponenList] = useState<Komponen[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loadingMapel, setLoadingMapel] = useState(true);
+    const [loadingKelas, setLoadingKelas] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [kelasNama, setKelasNama] = useState<string>('');
+    const [editingSiswa, setEditingSiswa] = useState<NilaiSiswa | null>(null);
+    const [editingNilai, setEditingNilai] = useState<Record<number, number | null>>({});
+    const [showDetail, setShowDetail] = useState(false);
+    const [detailSiswa, setDetailSiswa] = useState<NilaiSiswa | null>(null);
+    const [detailClosing, setDetailClosing] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    // ✅ Kelas 1A sampai 6E (30 kelas)
-    const [classes] = useState<Kelas[]>([
-        // Kelas 1
-        { id: 1, name: 'Kelas 1A', tingkat: 1, studentCount: 1 },
-        { id: 2, name: 'Kelas 1B', tingkat: 1, studentCount: 1 },
-        { id: 3, name: 'Kelas 1C', tingkat: 1, studentCount: 1 },
-        { id: 4, name: 'Kelas 1D', tingkat: 1, studentCount: 1 },
-        { id: 5, name: 'Kelas 1E', tingkat: 1, studentCount: 1 },
-        // Kelas 2
-        { id: 6, name: 'Kelas 2A', tingkat: 2, studentCount: 1 },
-        { id: 7, name: 'Kelas 2B', tingkat: 2, studentCount: 1 },
-        { id: 8, name: 'Kelas 2C', tingkat: 2, studentCount: 1 },
-        { id: 9, name: 'Kelas 2D', tingkat: 2, studentCount: 1 },
-        { id: 10, name: 'Kelas 2E', tingkat: 2, studentCount: 1 },
-        // Kelas 3
-        { id: 11, name: 'Kelas 3A', tingkat: 3, studentCount: 1 },
-        { id: 12, name: 'Kelas 3B', tingkat: 3, studentCount: 1 },
-        { id: 13, name: 'Kelas 3C', tingkat: 3, studentCount: 1 },
-        { id: 14, name: 'Kelas 3D', tingkat: 3, studentCount: 1 },
-        { id: 15, name: 'Kelas 3E', tingkat: 3, studentCount: 1 },
-        // Kelas 4
-        { id: 16, name: 'Kelas 4A', tingkat: 4, studentCount: 1 },
-        { id: 17, name: 'Kelas 4B', tingkat: 4, studentCount: 1 },
-        { id: 18, name: 'Kelas 4C', tingkat: 4, studentCount: 1 },
-        { id: 19, name: 'Kelas 4D', tingkat: 4, studentCount: 1 },
-        { id: 20, name: 'Kelas 4E', tingkat: 4, studentCount: 1 },
-        // Kelas 5
-        { id: 21, name: 'Kelas 5A', tingkat: 5, studentCount: 1 },
-        { id: 22, name: 'Kelas 5B', tingkat: 5, studentCount: 1 },
-        { id: 23, name: 'Kelas 5C', tingkat: 5, studentCount: 1 },
-        { id: 24, name: 'Kelas 5D', tingkat: 5, studentCount: 1 },
-        { id: 25, name: 'Kelas 5E', tingkat: 5, studentCount: 1 },
-        // Kelas 6
-        { id: 26, name: 'Kelas 6A', tingkat: 6, studentCount: 1 },
-        { id: 27, name: 'Kelas 6B', tingkat: 6, studentCount: 1 },
-        { id: 28, name: 'Kelas 6C', tingkat: 6, studentCount: 1 },
-        { id: 29, name: 'Kelas 6D', tingkat: 6, studentCount: 1 },
-        { id: 30, name: 'Kelas 6E', tingkat: 6, studentCount: 1 },
-    ]);
-
-    // ✅ Satu siswa unik per kelas
-    const [classStudents, setClassStudents] = useState<Record<number, Siswa[]>>(() => {
-        const names = [
-            'Ariel Putra', 'Bunga Sari', 'Candra Wijaya', 'Dinda Permata', 'Eka Prasetya',
-            'Fajar Nugroho', 'Gina Lestari', 'Hendra Gunawan', 'Intan Cahaya', 'Joko Santoso',
-            'Karina Dewi', 'Lukman Hakim', 'Mira Anggraini', 'Nanda Pratama', 'Olivia Rahayu',
-            'Pandu Wirawan', 'Qori Amalia', 'Raka Adhitama', 'Salsa Firdaus', 'Taufik Hidayat',
-            'Ulya Maharani', 'Vino Darmawan', 'Winda Kusuma', 'Xavier Andika', 'Yuniarti Putri',
-            'Zahra Maulida', 'Abimanyu', 'Bella Safira', 'Cinta Rani', 'Dimas Arya'
-        ];
-        const initial: Record<number, Siswa[]> = {};
-        for (let i = 0; i < 30; i++) {
-            const id = i + 1;
-            const nilaiDasar = 70 + (i % 20); // variasi nilai
-            initial[id] = [{
-                id: id,
-                nis: `NIS2024${String(id).padStart(3, '0')}`,
-                name: names[i],
-                uh1: nilaiDasar,
-                uh2: nilaiDasar + 2,
-                uh3: nilaiDasar - 1,
-                uh4: nilaiDasar + 3,
-                uh5: nilaiDasar + 1,
-                pts: nilaiDasar + 2,
-                pas: nilaiDasar + 4,
-                deskripsi: '', // akan diisi otomatis
-            }];
-        }
-        return initial;
-    });
-
-    const [selectedClass, setSelectedClass] = useState<Kelas | null>(null);
-
-    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
+    // ====== FETCH MAPEL & KELAS ======
     useEffect(() => {
-        if (!showAddModal) {
-            inputRefs.current = [];
-        } else {
-            setTimeout(() => {
-                if (inputRefs.current[0]) inputRefs.current[0].focus();
-            }, 100);
-        }
-    }, [showAddModal]);
+        const fetchData = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Token tidak ditemukan');
+                return;
+            }
 
-    const calculateRapor = (student: Siswa) => {
-        const { uh1, uh2, uh3, uh4, uh5, pts, pas } = student;
-        const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
-        return parseFloat((total / 7).toFixed(1));
-    };
+            try {
+                setLoadingMapel(true);
+                setLoadingKelas(true);
 
-    const getGradeAndDescription = (average: number): { grade: string; description: string } => {
-        if (average >= 90) return { grade: 'A', description: 'Sangat Baik' };
-        if (average >= 80) return { grade: 'B', description: 'Baik' };
-        if (average >= 70) return { grade: 'C', description: 'Cukup' };
-        if (average >= 60) return { grade: 'D', description: 'Kurang' };
-        return { grade: 'E', description: 'Sangat Kurang' };
-    };
+                // Ambil daftar mata pelajaran
+                const resMapel = await fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/mapel', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (resMapel.ok) {
+                    const dataMapel = await resMapel.json();
+                    setMapelList(dataMapel.data || []);
+                }
 
-    const handleViewDetail = (classData: Kelas) => {
-        setSelectedClass(classData);
-        setCurrentPage('input-nilai');
-    };
+                // Ambil daftar kelas
+                const resKelas = await fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/kelas', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (resKelas.ok) {
+                    const dataKelas = await resKelas.json();
+                    setKelasList(dataKelas.data || []);
+                }
+            } catch (err) {
+                console.error('Error fetch mapel/kelas:', err);
+                alert('Gagal memuat data awal');
+            } finally {
+                setLoadingMapel(false);
+                setLoadingKelas(false);
+            }
+        };
 
-    const handleEdit = (student: Siswa) => {
-        setEditingStudent({ ...student });
-    };
+        fetchData();
+    }, []);
 
-    const handleSaveEdit = () => {
-        if (!editingStudent || !selectedClass) return;
-
-        const { uh1, uh2, uh3, uh4, uh5, pts, pas } = editingStudent;
-        const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
-        const average = total / 7;
-        const { description } = getGradeAndDescription(average);
-
-        setClassStudents(prev => ({
-            ...prev,
-            [selectedClass.id]: prev[selectedClass.id].map(s =>
-                s.id === editingStudent.id ? { ...editingStudent, deskripsi: description } : s
-            )
-        }));
-
-        setEditingStudent(null);
-    };
-
-    const handleDelete = (id: number) => {
-        if (!selectedClass) return;
-        if (window.confirm('Hapus data siswa ini?')) {
-            setClassStudents(prev => ({
-                ...prev,
-                [selectedClass.id]: prev[selectedClass.id].filter(s => s.id !== id)
-            }));
-        }
-    };
-
-    const handleAddStudent = () => {
-        if (!selectedClass) return;
-
-        const { uh1, uh2, uh3, uh4, uh5, pts, pas } = newStudent;
-        const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
-        if (total === 0) {
-            alert('Masukkan minimal satu nilai!');
+    // ====== FETCH NILAI SAAT MAPEL & KELAS DIPILIH ======
+    useEffect(() => {
+        if (selectedMapelId === null || selectedKelasId === null) {
+            setSiswaList([]);
+            setFilteredSiswa([]);
+            setKomponenList([]);
+            setKelasNama('');
             return;
         }
 
-        const average = total / 7;
-        const { description } = getGradeAndDescription(average);
+        const fetchNilai = async () => {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('Token tidak ditemukan');
 
-        const currentList = classStudents[selectedClass.id] || [];
-        const id = currentList.length > 0 ? Math.max(...currentList.map(s => s.id)) + 1 : 1;
+                const res = await fetch(
+                    `http://localhost:5000/api/guru-bidang-studi/nilai/${selectedMapelId}/${selectedKelasId}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
 
-        const newSiswa: Siswa = {
-            id,
-            nis: `NIS2024${String(id).padStart(3, '0')}`,
-            name: `Siswa Baru ${selectedClass.name}`,
-            uh1,
-            uh2,
-            uh3,
-            uh4,
-            uh5,
-            pts,
-            pas,
-            deskripsi: description,
+                if (!res.ok) throw new Error('Gagal mengambil data nilai');
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message || 'Operasi gagal');
+
+                setSiswaList(data.siswaList || []);
+                setFilteredSiswa(data.siswaList || []);
+                setKomponenList(data.komponen || []);
+                setKelasNama(data.kelas || '');
+            } catch (err) {
+                console.error('Error fetch nilai:', err);
+                alert('Gagal memuat data nilai');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setClassStudents(prev => ({
-            ...prev,
-            [selectedClass.id]: [...(prev[selectedClass.id] || []), newSiswa]
-        }));
+        fetchNilai();
+    }, [selectedMapelId, selectedKelasId]);
 
-        setShowAddModal(false);
-        setNewStudent({ uh1: 0, uh2: 0, uh3: 0, uh4: 0, uh5: 0, pts: 0, pas: 0 });
-    };
+    // ====== FILTER SISWA ======
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setFilteredSiswa(siswaList);
+        } else {
+            const q = searchQuery.toLowerCase().trim();
+            const filtered = siswaList.filter(s =>
+                s.nama.toLowerCase().includes(q) ||
+                s.nis.includes(q) ||
+                s.nisn.includes(q)
+            );
+            setFilteredSiswa(filtered);
+        }
+    }, [searchQuery, siswaList]);
 
-    const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const nextIndex = index + 1;
-            if (inputRefs.current[nextIndex]) {
-                inputRefs.current[nextIndex]?.focus();
+    // ====== SIMPAN NILAI ======
+    const simpanNilai = async () => {
+    if (!editingSiswa || !selectedMapelId || !selectedKelasId) return;
+
+    setSaving(true);
+    try {
+        const token = localStorage.getItem('token');
+        const promises = [];
+
+        for (const [komponenId, nilai] of Object.entries(editingNilai)) {
+            if (nilai !== null) {
+                const promise = fetch('http://localhost:5000/api/guru-bidang-studi/nilai', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        siswa_id: editingSiswa.id,
+                        mapel_id: selectedMapelId,
+                        komponen_id: Number(komponenId),
+                        nilai: nilai
+                    })
+                });
+                promises.push(promise);
             }
         }
+
+        const responses = await Promise.all(promises);
+        const allSuccess = responses.every(res => res.ok);
+        if (!allSuccess) {
+            throw new Error('Salah satu nilai gagal disimpan');
+        }
+
+        const res = await fetch(
+            `http://localhost:5000/api/guru-bidang-studi/nilai/${selectedMapelId}/${selectedKelasId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (res.ok) {
+            const data = await res.json();
+            setSiswaList(data.siswaList || []);
+            setFilteredSiswa(data.siswaList || []);
+        }
+
+        setEditingSiswa(null);
+        alert('Nilai berhasil disimpan');
+    } catch (err) {
+        console.error('Error simpan nilai:', err);
+        alert('Gagal menyimpan nilai. Silakan coba lagi.');
+    } finally {
+        setSaving(false);
+    }
+};
+
+    const handleDetail = (siswa: NilaiSiswa) => {
+        setDetailSiswa(siswa);
+        setShowDetail(true);
     };
 
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const filteredClasses = classes.filter((c) => c.tingkat === activeTab);
-    const currentStudents = selectedClass ? classStudents[selectedClass.id] || [] : [];
+    // ====== PAGINATION ======
+    const itemsPerPage = 10;
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil(filteredSiswa.length / itemsPerPage));
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentSiswa = filteredSiswa.slice(startIndex, endIndex);
 
-    // Hitung deskripsi awal untuk semua siswa (saat load)
-    useEffect(() => {
-        const updated: Record<number, Siswa[]> = {};
-        Object.entries(classStudents).forEach(([kelasId, siswaList]) => {
-            updated[parseInt(kelasId)] = siswaList.map(s => {
-                const avg = calculateRapor(s);
-                const { description } = getGradeAndDescription(avg);
-                return { ...s, deskripsi: description };
-            });
-        });
-        setClassStudents(updated);
-    }, []);
+    const renderPagination = () => {
+        const pages: ReactNode[] = [];
+        const maxVisible = 5;
+        if (currentPage > 1) {
+            pages.push(<button key="prev" onClick={() => setCurrentPage(c => Math.max(1, c - 1))} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
+        }
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{i}</button>);
+            }
+        } else {
+            pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>1</button>);
+            if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            for (let i = start; i <= end; i++) {
+                pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{i}</button>);
+            }
+            if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+            pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{totalPages}</button>);
+        }
+        if (currentPage < totalPages) {
+            pages.push(<button key="next" onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
+        }
+        return pages;
+    };
 
+    // ====== RENDER ======
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 p-4 z-10">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                        <img
-                            src="/images/logoUA.jpg"
-                            alt="Logo SDIT Ulil Albab"
-                            className="w-12 h-12 object-contain"
-                        />
+        <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai Siswa</h1>
+
+                <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                    {/* Dropdown Mapel & Kelas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                E-Rapor SDIT Ulil Albab
-                            </h1>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Pilih Mata Pelajaran
+                            </label>
+                            {loadingMapel ? (
+                                <div className="text-gray-500">Memuat...</div>
+                            ) : (
+                                <select
+                                    value={selectedMapelId ?? ''}
+                                    onChange={(e) => setSelectedMapelId(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                >
+                                    <option value="">-- Pilih Mata Pelajaran --</option>
+                                    {mapelList.map((mapel) => (
+                                        <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
+                                            {mapel.nama_mapel} ({mapel.jenis})
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Pilih Kelas
+                            </label>
+                            {loadingKelas ? (
+                                <div className="text-gray-500">Memuat...</div>
+                            ) : (
+                                <select
+                                    value={selectedKelasId ?? ''}
+                                    onChange={(e) => setSelectedKelasId(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                >
+                                    <option value="">-- Pilih Kelas --</option>
+                                    {kelasList.map((kelas) => (
+                                        <option key={kelas.kelas_id} value={kelas.kelas_id}>
+                                            {kelas.nama_kelas}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
                     </div>
 
-                    <div className="relative">
-                        <button
-                            onClick={() => setProfileOpen(!profileOpen)}
-                            className="flex items-center space-x-3 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                        >
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">{profileData.name}</p>
-                                <p className="text-xs text-gray-500">{profileData.nip}</p>
-                            </div>
-                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                                <User size={16} className="text-white" />
-                            </div>
-                            <ChevronRight size={16} className="text-gray-600 rotate-90" />
-                        </button>
-
-                        {profileOpen && (
-                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                                <div className="p-4 border-b border-gray-200">
-                                    <p className="font-semibold text-gray-900">{profileData.name}</p>
-                                    <p className="text-sm text-gray-500">{profileData.email}</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                            {profileData.role}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="p-2">
-                                    <button
-                                        onClick={() => {
-                                            setProfileOpen(false);
-                                            setShowProfileModal(true);
-                                        }}
-                                        className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
-                                    >
-                                        <User size={16} />
-                                        <span className="text-sm">Profil Saya</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setProfileOpen(false);
-                                            localStorage.removeItem('token');
-                                            localStorage.removeItem('user');
-                                            window.location.href = '/login';
-                                        }}
-                                        className="w-full flex items-center space-x-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                    >
-                                        <LogOut size={16} />
-                                        <span className="text-sm">Logout</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
-
-            <div className="flex flex-1 overflow-hidden">
-                {/* SIDEBAR */}
-                <div
-                    className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white text-gray-800 border-r border-gray-200 transition-all duration-300 flex flex-col flex-shrink-0 shadow-lg`}
-                >
-                    <div className="p-4 flex items-center justify-between border-b border-gray-200">
-                        <button
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-2 hover:bg-gray-200 rounded"
-                        >
-                            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-                        </button>
-                    </div>
-                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                        <button
-                            onClick={() => {
-                                setCurrentPage('dashboard');
-                                setSelectedClass(null);
-                            }}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${currentPage === 'dashboard'
-                                    ? 'bg-orange-500 text-white'
-                                    : 'text-gray-800 hover:bg-orange-100'
-                                } ${!sidebarOpen && 'justify-center'}`}
-                        >
-                            <Home className="w-5 h-5" />
-                            {sidebarOpen && <span className="text-sm font-medium">Dashboard</span>}
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('input-nilai')}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${currentPage === 'input-nilai'
-                                    ? 'bg-orange-500 text-white'
-                                    : 'text-gray-800 hover:bg-orange-100'
-                                } ${!sidebarOpen && 'justify-center'}`}
-                        >
-                            <Edit className="w-5 h-5" />
-                            {sidebarOpen && <span className="text-sm font-medium">Input Nilai</span>}
-                        </button>
-                    </nav>
-                </div>
-
-                <main className="flex-1 overflow-auto p-6">
-                    {currentPage === 'dashboard' ? (
+                    {/* Tampilan Utama */}
+                    {selectedMapelId && selectedKelasId ? (
                         <>
-                            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-6 text-white">
-                                <h2 className="text-2xl font-bold mb-2">
-                                    Selamat Datang, {profileData.name}! 👋
-                                </h2>
-                                <p className="text-orange-100">
-                                    NIP: {profileData.nip} • Mata Pelajaran: {profileData.subject}
-                                </p>
-                            </div>
+                            <div className="flex flex-col gap-3 mb-4 sm:mb-6">
+                                <div className="text-sm text-gray-600 flex flex-wrap items-center gap-1">
+                                    <span className="font-medium">Kelas:</span>
+                                    <span>{kelasNama}</span>
+                                    <span>•</span>
+                                    <span className="text-green-600 font-medium">Anda dapat mengedit nilai</span>
+                                </div>
 
-                            <div className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden border border-gray-200">
-                                <div className="flex border-b border-gray-200">
-                                    {[1, 2, 3, 4, 5, 6].map((tingkat) => (
+                                <div className="relative w-full sm:w-64">
+                                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                        <Search className="w-4 h-4 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Cari siswa..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                    {searchQuery && (
                                         <button
-                                            key={tingkat}
-                                            onClick={() => setActiveTab(tingkat)}
-                                            className={`flex-1 px-6 py-4 font-semibold text-center transition ${activeTab === tingkat
-                                                    ? 'bg-orange-500 text-white border-b-4 border-orange-600'
-                                                    : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
+                                            type="button"
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
                                         >
-                                            Kelas {tingkat}
+                                            <X className="w-4 h-4" />
                                         </button>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                {filteredClasses.map((classData) => (
-                                    <div
-                                        key={classData.id}
-                                        className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-shadow"
-                                        onClick={() => handleViewDetail(classData)}
-                                    >
-                                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                                            <User size={28} className="text-orange-500" />
-                                        </div>
-                                        <h3 className="text-lg font-semibold text-gray-800">{classData.name}</h3>
-                                        <p className="text-sm text-gray-600 mt-1">{classData.studentCount} siswa</p>
-                                        <button className="mt-4 text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-1 rounded-full font-medium">
-                                            Detail
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-6 text-white">
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <h3 className="text-xl font-semibold">
-                                            {selectedClass ? selectedClass.name : 'Input Nilai'}
-                                        </h3>
-                                        <p className="text-orange-100 mt-1">
-                                            Mata Pelajaran: {profileData.subject}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowAddModal(true)}
-                                        className="bg-white text-orange-600 hover:bg-gray-100 px-4 py-2 rounded-lg flex items-center space-x-2 font-medium"
-                                    >
-                                        <Plus size={20} />
-                                        <span>Tambah Nilai</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-900 text-white">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">NIS</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH1</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH2</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH3</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH4</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">UH5</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">PTS</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">PAS</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">Rapor (Grade)</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">Aksi</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase">Deskripsi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {currentStudents.map((student, index) => (
-                                                <tr key={student.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.nis}</td>
-                                                    <td className="px-4 py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.uh1}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.uh2}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.uh3}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.uh4}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.uh5}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.pts}</td>
-                                                    <td className="px-4 py-4 text-sm text-gray-900">{student.pas}</td>
-                                                    <td className="px-4 py-4 text-sm font-semibold text-gray-900">
-                                                        {calculateRapor(student).toFixed(1)} ({getGradeAndDescription(calculateRapor(student)).grade})
+                            {/* Tabel Nilai */}
+                            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6">
+                                <table className="w-full min-w-full table-auto text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[140px]">Nama</th>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[100px]">NIS</th>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[120px]">NISN</th>
+                                            {komponenList.map(k => (
+                                                <th key={k.id_komponen} className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[60px]">
+                                                    {k.nama_komponen}
+                                                </th>
+                                            ))}
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[90px]">Nilai Rapor</th>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[140px]">Deskripsi</th>
+                                            <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[100px]">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                                        ) : currentSiswa.length === 0 ? (
+                                            <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-500">Tidak ada data siswa</td></tr>
+                                        ) : (
+                                            currentSiswa.map((siswa, index) => (
+                                                <tr key={siswa.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}>
+                                                    <td className="px-3 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
+                                                    <td className="px-3 py-3 text-center align-middle font-medium truncate" title={siswa.nama}>{siswa.nama}</td>
+                                                    <td className="px-3 py-3 text-center align-middle truncate" title={siswa.nis}>{siswa.nis}</td>
+                                                    <td className="px-3 py-3 text-center align-middle truncate" title={siswa.nisn}>{siswa.nisn}</td>
+                                                    {komponenList.map(k => (
+                                                        <td key={`${siswa.id}-${k.id_komponen}`} className="px-3 py-3 text-center align-middle font-medium">
+                                                            {siswa.nilai[k.id_komponen] !== null && siswa.nilai[k.id_komponen] !== undefined ? siswa.nilai[k.id_komponen] : '-'}
+                                                        </td>
+                                                    ))}
+                                                    <td className="px-3 py-3 text-center align-middle font-medium">{siswa.nilai_rapor}</td>
+                                                    <td className="px-3 py-3 text-center align-middle truncate max-w-[150px]" title={siswa.deskripsi}>
+                                                        {siswa.deskripsi}
                                                     </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className="flex gap-2">
+                                                    <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
+                                                        <div className="flex justify-center gap-1">
                                                             <button
-                                                                onClick={() => handleEdit(student)}
-                                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-yellow-400 bg-yellow-100 text-black hover:bg-yellow-200 text-sm font-medium"
+                                                                onClick={() => handleDetail(siswa)}
+                                                                className="bg-green-400 hover:bg-green-500 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                             >
-                                                                <Pencil size={14} />
-                                                                <span>Edit</span>
+                                                                <Eye size={14} />
+                                                                Lihat
                                                             </button>
                                                             <button
-                                                                onClick={() => handleDelete(student.id)}
-                                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-red-400 bg-red-100 text-black hover:bg-red-200 text-sm font-medium"
+                                                                onClick={() => {
+                                                                    setEditingSiswa(siswa);
+                                                                    setEditingNilai({ ...siswa.nilai });
+                                                                }}
+                                                                className="px-2 py-1 rounded flex items-center gap-1 text-xs bg-yellow-400 hover:bg-yellow-500 text-gray-800"
                                                             >
-                                                                <Trash2 size={14} />
-                                                                <span>Hapus</span>
+                                                                <Pencil size={14} />
+                                                                Edit
                                                             </button>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-4 text-sm text-gray-600">{student.deskripsi}</td>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination */}
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">
+                                <div className="text-sm text-gray-600">
+                                    Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari {filteredSiswa.length} data
+                                </div>
+                                <div className="flex gap-1 flex-wrap justify-center sm:justify-end">
+                                    {renderPagination()}
                                 </div>
                             </div>
                         </>
+                    ) : (
+                        <div className="mt-6 sm:mt-8 text-center py-6 sm:py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
+                            <p className="text-gray-700 text-base sm:text-lg font-medium">
+                                Silakan pilih Mata Pelajaran dan Kelas terlebih dahulu.
+                            </p>
+                        </div>
                     )}
-                </main>
+                </div>
+
+                {/* Modal Edit */}
+                {editingSiswa && (
+                    <div
+                        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-2 sm:p-4`}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                setDetailClosing(true);
+                                setTimeout(() => {
+                                    setEditingSiswa(null);
+                                    setDetailClosing(false);
+                                }, 200);
+                            }
+                        }}
+                    >
+                        <div className="absolute inset-0 bg-gray-900/70"></div>
+                        <div
+                            className={`relative bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                        >
+                            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Edit Nilai: {editingSiswa.nama}</h2>
+                                <button
+                                    onClick={() => {
+                                        setDetailClosing(true);
+                                        setTimeout(() => {
+                                            setEditingSiswa(null);
+                                            setDetailClosing(false);
+                                        }, 200);
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="p-4 sm:p-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    {komponenList.map(k => (
+                                        <div key={k.id_komponen} className="flex items-center gap-2">
+                                            <label className="w-20 sm:w-24 font-medium">{k.nama_komponen}:</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={editingNilai[k.id_komponen] ?? ''}
+                                                onChange={(e) => {
+                                                    const val = e.target.value === '' ? null : Number(e.target.value);
+                                                    setEditingNilai(prev => ({ ...prev, [k.id_komponen]: val }));
+                                                }}
+                                                className="border border-gray-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi:</label>
+                                    <div className="p-2 bg-gray-100 rounded border border-gray-300 text-sm min-h-[60px]">
+                                        {editingSiswa?.deskripsi || 'Belum ada deskripsi'}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setDetailClosing(true);
+                                            setTimeout(() => {
+                                                setEditingSiswa(null);
+                                                setDetailClosing(false);
+                                            }, 200);
+                                        }}
+                                        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={simpanNilai}
+                                        disabled={saving}
+                                        className={`px-4 py-2 rounded ${saving
+                                            ? 'bg-blue-300 cursor-not-allowed'
+                                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                            }`}
+                                    >
+                                        {saving ? 'Menyimpan...' : 'Simpan'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Detail */}
+                {showDetail && detailSiswa && (
+                    <div
+                        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                setDetailClosing(true);
+                                setTimeout(() => {
+                                    setShowDetail(false);
+                                    setDetailClosing(false);
+                                }, 200);
+                            }
+                        }}
+                    >
+                        <div className="absolute inset-0 bg-gray-900/70"></div>
+                        <div
+                            className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                        >
+                            <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Siswa</h2>
+                                <button
+                                    onClick={() => {
+                                        setDetailClosing(true);
+                                        setTimeout(() => {
+                                            setShowDetail(false);
+                                            setDetailClosing(false);
+                                        }, 200);
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-4 sm:p-6">
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm min-w-[80px]">Nama</span>
+                                        <span className="text-sm">:</span>
+                                        <span className="text-sm flex-1 break-words">{detailSiswa.nama}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm min-w-[80px]">NIS</span>
+                                        <span className="text-sm">:</span>
+                                        <span className="text-sm flex-1 break-words">{detailSiswa.nis}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm min-w-[80px]">NISN</span>
+                                        <span className="text-sm">:</span>
+                                        <span className="text-sm flex-1 break-words">{detailSiswa.nisn}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm min-w-[80px]">Nilai Rapor</span>
+                                        <span className="text-sm">:</span>
+                                        <span className="text-sm font-medium">{detailSiswa.nilai_rapor}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm min-w-[80px]">Deskripsi</span>
+                                        <span className="text-sm">:</span>
+                                        <span className="text-sm flex-1 break-words">{detailSiswa.deskripsi}</span>
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h3 className="font-semibold text-sm mb-3">Nilai Komponen:</h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                        {komponenList.map(k => (
+                                            <div key={k.id_komponen} className="bg-gray-50 rounded px-3 py-2">
+                                                <div className="text-xs font-medium text-gray-600">{k.nama_komponen}</div>
+                                                <div className="text-sm font-bold mt-1">
+                                                    {detailSiswa.nilai[k.id_komponen] !== null && detailSiswa.nilai[k.id_komponen] !== undefined
+                                                        ? detailSiswa.nilai[k.id_komponen]
+                                                        : '-'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 flex flex-col sm:flex-row sm:justify-end sm:gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setDetailClosing(true);
+                                            setTimeout(() => {
+                                                setShowDetail(false);
+                                                setDetailClosing(false);
+                                            }, 200);
+                                        }}
+                                        className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-sm font-medium"
+                                    >
+                                        Tutup
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setEditingSiswa(detailSiswa);
+                                            setEditingNilai({ ...detailSiswa.nilai });
+                                            setDetailClosing(true);
+                                            setTimeout(() => {
+                                                setShowDetail(false);
+                                                setDetailClosing(false);
+                                            }, 200);
+                                        }}
+                                        className="px-4 sm:px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded transition text-sm font-medium"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* MODAL TAMBAH */}
-            {showAddModal && (
-                <div
-                    className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
-                    onClick={() => setShowAddModal(false)}
-                >
-                    <div
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="text-xl font-semibold mb-4">Tambah Nilai</h3>
-                        <div className="space-y-4">
-                            {(['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'] as const).map((field, idx) => (
-                                <div key={field}>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        {field.toUpperCase()}
-                                    </label>
-                                    <input
-                                        ref={(el) => {
-                                            inputRefs.current[idx] = el;
-                                        }}
-                                        type="number"
-                                        value={newStudent[field]}
-                                        onChange={(e) => {
-                                            const val = e.target.value ? parseInt(e.target.value, 10) || 0 : 0;
-                                            setNewStudent(prev => ({ ...prev, [field]: val }));
-                                        }}
-                                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                    />
-                                </div>
-                            ))}
-                            {/* Preview deskripsi otomatis */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Otomatis</label>
-                                {(() => {
-                                    const { uh1, uh2, uh3, uh4, uh5, pts, pas } = newStudent;
-                                    const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
-                                    if (total === 0) return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">-</div>;
-                                    const avg = total / 7;
-                                    const { description } = getGradeAndDescription(avg);
-                                    return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">{description}</div>;
-                                })()}
-                            </div>
-                        </div>
-                        <div className="flex space-x-3 mt-6">
-                            <button
-                                onClick={handleAddStudent}
-                                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
-                            >
-                                Tambah
-                            </button>
-                            <button
-                                onClick={() => setShowAddModal(false)}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL EDIT */}
-            {editingStudent && (
-                <div
-                    className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
-                    onClick={() => setEditingStudent(null)}
-                >
-                    <div
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="text-xl font-semibold mb-4">Edit Nilai - {editingStudent.name}</h3>
-                        <div className="space-y-4">
-                            {(['uh1', 'uh2', 'uh3', 'uh4', 'uh5', 'pts', 'pas'] as const).map((field, idx) => (
-                                <div key={field}>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        {field.toUpperCase()}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={editingStudent[field]}
-                                        onChange={(e) => {
-                                            const val = e.target.value ? parseInt(e.target.value, 10) : 0;
-                                            setEditingStudent(prev => prev ? { ...prev, [field]: val } : null);
-                                        }}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                        min="0"
-                                        max="100"
-                                    />
-                                </div>
-                            ))}
-                            {/* Preview deskripsi otomatis */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Otomatis</label>
-                                {(() => {
-                                    if (!editingStudent) return <div>-</div>;
-                                    const { uh1, uh2, uh3, uh4, uh5, pts, pas } = editingStudent;
-                                    const total = uh1 + uh2 + uh3 + uh4 + uh5 + pts + pas;
-                                    const avg = total / 7;
-                                    const { description } = getGradeAndDescription(avg);
-                                    return <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">{description}</div>;
-                                })()}
-                            </div>
-                        </div>
-                        <div className="flex space-x-3 mt-6">
-                            <button
-                                onClick={handleSaveEdit}
-                                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
-                            >
-                                Simpan
-                            </button>
-                            <button
-                                onClick={() => setEditingStudent(null)}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL PROFIL */}
-            {showProfileModal && (
-                <div
-                    className="fixed top-0 left-0 w-full h-screen flex items-center justify-center z-50"
-                    onClick={() => setShowProfileModal(false)}
-                >
-                    <div
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="text-xl font-semibold mb-4">Ubah Profil</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                                <input
-                                    type="text"
-                                    value={profileData.name}
-                                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">NIP</label>
-                                <input
-                                    type="text"
-                                    value={profileData.nip}
-                                    onChange={(e) => setProfileData({ ...profileData, nip: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    type="email"
-                                    value={profileData.email}
-                                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
-                                <input
-                                    type="text"
-                                    value={profileData.phone}
-                                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex space-x-3 mt-6">
-                            <button
-                                onClick={() => {
-                                    alert(`Profil berhasil diperbarui!\nNama: ${profileData.name}\nNIP: ${profileData.nip}`);
-                                    setShowProfileModal(false);
-                                }}
-                                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg"
-                            >
-                                Simpan
-                            </button>
-                            <button
-                                onClick={() => setShowProfileModal(false)}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {profileOpen && (
-                <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setProfileOpen(false)} />
-            )}
         </div>
     );
 }

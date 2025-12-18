@@ -5,6 +5,7 @@ import {
     Home,
     Edit,
     Menu,
+    Settings,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -22,11 +23,11 @@ export default function Sidebar({ user }: SidebarProps) {
     const pathname = usePathname();
     const [isExpanded, setIsExpanded] = useState(true);
 
-    // ✅ State untuk logo dan nama sekolah
+    // State untuk logo dan nama sekolah
     const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
     const [schoolName, setSchoolName] = useState<string>('SDIT Ulil Albab');
 
-    // ✅ Fetch data sekolah
+    // Fetch data sekolah
     const fetchSchoolData = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -93,6 +94,11 @@ export default function Sidebar({ user }: SidebarProps) {
             name: 'Input Nilai',
             url: '/guru_bidang_studi/input_nilai',
             icon: Edit,
+        },
+        {
+            name: 'Atur Penilaian',
+            url: '/guru_bidang_studi/atur_penilaian',
+            icon: Settings,
         },
     ];
 

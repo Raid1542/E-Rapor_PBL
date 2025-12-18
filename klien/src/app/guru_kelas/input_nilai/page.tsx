@@ -162,7 +162,7 @@ export default function DataInputNilaiPage() {
     }
   }, [searchQuery, siswaList]);
 
-  // ✅ SIMPAN NILAI + PERBARUI STATE LOKAL + PERBAIKAN ERROR HANDLING
+  //  SIMPAN NILAI + PERBARUI STATE LOKAL + PERBAIKAN ERROR HANDLING
   const simpanNilai = async () => {
     if (!editingSiswa || !selectedMapelId) return;
 
@@ -190,16 +190,13 @@ export default function DataInputNilaiPage() {
         }
       }
 
-      // Tunggu semua request selesai
       const responses = await Promise.all(promises);
-
-      // Cek apakah semua request sukses
       const allSuccess = responses.every(res => res.ok);
       if (!allSuccess) {
         throw new Error('Salah satu nilai gagal disimpan');
       }
 
-      // ✅ PERBARUI STATE LOKAL LANGSUNG
+      //  PERBARUI STATE LOKAL
       setSiswaList(prev =>
         prev.map(siswa =>
           siswa.id === editingSiswa.id
@@ -216,7 +213,6 @@ export default function DataInputNilaiPage() {
         )
       );
 
-      // ✅ TUTUP MODAL SETELAH SIMPAN
       setEditingSiswa(null);
       alert('Nilai berhasil disimpan');
 
@@ -224,7 +220,7 @@ export default function DataInputNilaiPage() {
       console.error('Error simpan nilai:', err);
       alert('Gagal menyimpan nilai. Silakan coba lagi.');
     } finally {
-      setSaving(false); // ✅ PASTIKAN SETSAVING FALSE DI SINI
+      setSaving(false);
     }
   };
 

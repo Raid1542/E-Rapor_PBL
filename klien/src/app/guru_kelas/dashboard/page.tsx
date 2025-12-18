@@ -104,45 +104,45 @@ export default function GuruKelasDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* 1. Data Siswa */}
-        <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">Data Siswa</p>
-            <p className="text-3xl font-bold text-gray-900">{kelasInfo.jumlah_siswa}</p>
-          </div>
-          <div className="bg-orange-100 p-3 rounded-lg">
-            <Users className="w-6 h-6 text-orange-600" />
-          </div>
-        </div>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto px-4">
+  {/* 1. Data Siswa */}
+  <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between max-w-[320px] w-full md:w-auto">
+    <div>
+      <p className="text-sm text-gray-600 mb-1">Data Siswa</p>
+      <p className="text-3xl font-bold text-gray-900">{kelasInfo.jumlah_siswa}</p>
+    </div>
+    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
+      <Users className="w-6 h-6 text-orange-600" />
+    </div>
+  </div>
 
-        {/* 2. Kelas Anda */}
-        <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">Kelas Anda</p>
-            <p className="text-3xl font-bold text-gray-900">{kelasInfo.kelas}</p>
-          </div>
-          <div className="bg-orange-100 p-3 rounded-lg">
-            <User className="w-6 h-6 text-orange-600" />
-          </div>
-        </div>
+  {/* 2. Kelas Anda */}
+  <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between max-w-[320px] w-full md:w-auto">
+    <div>
+      <p className="text-sm text-gray-600 mb-1">Kelas Anda</p>
+      <p className="text-3xl font-bold text-gray-900">{kelasInfo.kelas}</p>
+    </div>
+    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
+      <User className="w-6 h-6 text-orange-600" />
+    </div>
+  </div>
 
-        {/* 3. Tahun Ajaran + Semester */}
-        <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">Tahun Ajaran</p>
-            <div className="flex items-center space-x-2">
-              <p className="text-3xl font-bold text-gray-900">{kelasInfo.tahun_ajaran}</p>
-              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
-                {kelasInfo.semester}
-              </span>
-            </div>
-          </div>
-          <div className="bg-orange-100 p-3 rounded-lg">
-            <Calendar className="w-6 h-6 text-orange-600" />
-          </div>
-        </div>
-      </div>
+  {/* 3. Tahun Ajaran + Semester (Semester di Bawah) */}
+  <div className="bg-white rounded-xl shadow p-6 flex items-start gap-4 max-w-[350px] w-full md:w-auto">
+    <div className="flex-1 min-w-0">
+      <p className="text-sm text-gray-600 mb-1">Tahun Ajaran</p>
+      <p className="text-3xl font-bold text-gray-900 truncate">
+        {kelasInfo.tahun_ajaran}
+      </p>
+      <span className="mt-2 inline-block text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
+        {kelasInfo.semester}
+      </span>
+    </div>
+    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
+      <Calendar className="w-6 h-6 text-orange-600" />
+    </div>
+  </div>
+</div>
     </>
   );
 }
