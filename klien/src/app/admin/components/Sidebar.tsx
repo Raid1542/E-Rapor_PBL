@@ -30,7 +30,6 @@ export default function Sidebar({ user }: SidebarProps) {
   const [openDropdowns, setOpenDropdowns] = useState({
     pengguna: false,
     administrasi: false,
-    rapor: false,
   });
 
   const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
@@ -91,7 +90,7 @@ export default function Sidebar({ user }: SidebarProps) {
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
     if (isExpanded) {
-      setOpenDropdowns({ pengguna: false, administrasi: false, rapor: false });
+      setOpenDropdowns({ pengguna: false, administrasi: false });
     }
   };
 
@@ -100,7 +99,6 @@ export default function Sidebar({ user }: SidebarProps) {
     setOpenDropdowns((prev) => ({
       pengguna: menu === 'pengguna' ? !prev.pengguna : false,
       administrasi: menu === 'administrasi' ? !prev.administrasi : false,
-      rapor: menu === 'rapor' ? !prev.rapor : false,
     }));
   };
 
@@ -120,18 +118,15 @@ export default function Sidebar({ user }: SidebarProps) {
     { name: 'Data Pembelajaran', url: '/admin/data_pembelajaran' },
   ];
 
-  const raporSubmenu = [
-    { name: 'Leger Nilai', url: '/admin/leger_nilai' },
-    { name: 'Unduh Rapor', url: '/admin/unduh_rapor' },
-  ];
+  const raporSubmenu = [{ name: 'Unduh Rapor', url: '/admin/unduh_rapor' }];
 
   // Active state
   const isDashboardActive = pathname === '/admin/dashboard';
   const isTahunAjaranActive = pathname === '/admin/data_tahun_ajaran';
   const isEkskulActive = pathname === '/admin/ekstrakurikuler';
+  const isRaporActive = pathname === '/admin/unduh_rapor';
   const isPenggunaActive = penggunaSubmenu.some((item) => item.url === pathname);
   const isAdministrasiActive = administrasiSubmenu.some((item) => item.url === pathname);
-  const isRaporActive = raporSubmenu.some((item) => item.url === pathname);
 
   useEffect(() => {
     if (isPenggunaActive) setOpenDropdowns((prev) => ({ ...prev, pengguna: true }));
@@ -141,9 +136,8 @@ export default function Sidebar({ user }: SidebarProps) {
 
   return (
     <div
-      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${
-        isExpanded ? 'w-64' : 'w-20'
-      }`}
+      className={`flex flex-col h-screen bg-white shadow-lg transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'
+        }`}
     >
       <div className="flex items-center justify-between p-4 border-b">
         {isExpanded ? (
@@ -180,11 +174,10 @@ export default function Sidebar({ user }: SidebarProps) {
       <div className="flex-1 overflow-y-auto p-4">
         <button
           onClick={() => handleNavigation('/admin/dashboard')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
-            isDashboardActive
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isDashboardActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
         >
           <Home className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Dashboard</span>}
@@ -196,11 +189,10 @@ export default function Sidebar({ user }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/admin/data_tahun_ajaran')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
-            isTahunAjaranActive
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isTahunAjaranActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
         >
           <Calendar className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Tahun Ajaran</span>}
@@ -209,11 +201,10 @@ export default function Sidebar({ user }: SidebarProps) {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('pengguna')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isPenggunaActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isPenggunaActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 flex-shrink-0" />
@@ -232,11 +223,10 @@ export default function Sidebar({ user }: SidebarProps) {
                 <button
                   key={idx}
                   onClick={() => handleNavigation(item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    item.url === pathname
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${item.url === pathname
                       ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </button>
@@ -248,11 +238,10 @@ export default function Sidebar({ user }: SidebarProps) {
         <div className="mb-2">
           <button
             onClick={() => toggleDropdown('administrasi')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isAdministrasiActive
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isAdministrasiActive
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-3">
               <FileText className="w-5 h-5 flex-shrink-0" />
@@ -271,11 +260,10 @@ export default function Sidebar({ user }: SidebarProps) {
                 <button
                   key={idx}
                   onClick={() => handleNavigation(item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    item.url === pathname
+                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${item.url === pathname
                       ? 'bg-orange-400 text-white'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </button>
@@ -286,54 +274,25 @@ export default function Sidebar({ user }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/admin/ekstrakurikuler')}
-          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${
-            isEkskulActive
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isEkskulActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-          }`}
+            }`}
         >
           <Award className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="font-medium">Ekstrakurikuler</span>}
         </button>
 
-        <div className="mb-2">
-          <button
-            onClick={() => toggleDropdown('rapor')}
-            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-              isRaporActive
-                ? 'bg-orange-500 text-white'
-                : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
+        <button
+          onClick={() => handleNavigation('/admin/unduh_rapor')}
+          className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isRaporActive
+              ? 'bg-orange-500 text-white'
+              : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
             }`}
-          >
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-5 h-5 flex-shrink-0" />
-              {isExpanded && <span className="font-medium">Rapor</span>}
-            </div>
-            {isExpanded &&
-              (openDropdowns.rapor ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              ))}
-          </button>
-          {isExpanded && openDropdowns.rapor && (
-            <div className="ml-6 mt-1 space-y-1">
-              {raporSubmenu.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleNavigation(item.url)}
-                  className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${
-                    item.url === pathname
-                      ? 'bg-orange-400 text-white'
-                      : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                  }`}
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        >
+          <BookOpen className="w-5 h-5 flex-shrink-0" />
+          {isExpanded && <span className="font-medium">Rapor</span>}
+        </button>
       </div>
 
       <div className="p-4 border-t">

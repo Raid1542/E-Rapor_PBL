@@ -3,20 +3,14 @@ import "../globals.css";
 import Layout from "@/app/admin/components/Layout"; // ⬅️ penting!
 
 export const metadata: Metadata = {
-  title: "E-Rapor SDIT Ulil Albab Batam",
+  title: "E-Rapor Admin",
   description: "Dashboard Admin E-Rapor",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
- <Layout>{children}</Layout>
-      </body>
-    </html>
+    <Layout>
+      {children}
+    </Layout>
   );
 }

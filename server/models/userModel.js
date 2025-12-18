@@ -6,8 +6,22 @@ const findByEmail = async (email) => {
 };
 
 const findById = async (id) => {
-    const [rows] = await db.execute('SELECT * FROM user WHERE id_user = ?', [id]);
-    return rows[0];
+    const [rows] = await db.execute(`
+        SELECT 
+            u.*,
+            g.niy,
+            g.nuptk,
+            g.tempat_lahir,
+            g.tanggal_lahir,
+            g.jenis_kelamin,
+            g.alamat,
+            g.no_telepon,
+            g.foto_path  
+        FROM user u
+        LEFT JOIN guru g ON u.id_user = g.user_id
+        WHERE u.id_user = ?
+    `, [id]);
+    return rows[0] || null;
 };
 
 const createUser = async (data) => {
@@ -42,25 +56,26 @@ const getRolesByUserId = async (id_user) => {
 
 const getAdminList = async () => {
     const [rows] = await db.execute(`
-    SELECT 
-        u.id_user AS id, 
-        u.email_sekolah AS email, 
-        u.nama_lengkap AS nama, 
-        u.status AS statusAdmin,
-        g.niy, 
-        g.nuptk, 
-        g.tempat_lahir, 
-        g.tanggal_lahir, 
-        g.jenis_kelamin, 
-        g.alamat, 
-        g.no_telepon
-    FROM user u
-    LEFT JOIN guru g ON u.id_user = g.user_id
-    WHERE u.id_user IN (
-        SELECT id_user FROM user_role WHERE role = 'admin'
-    )
-    ORDER BY u.id_user
-  `);
+        SELECT 
+            u.id_user AS id, 
+            u.email_sekolah AS email, 
+            u.nama_lengkap AS nama, 
+            u.status AS statusAdmin,
+            g.niy, 
+            g.nuptk, 
+            g.tempat_lahir, 
+            g.tanggal_lahir, 
+            g.jenis_kelamin, 
+            g.alamat, 
+            g.no_telepon,
+            g.foto_path  
+        FROM user u
+        LEFT JOIN guru g ON u.id_user = g.user_id
+        WHERE u.id_user IN (
+            SELECT id_user FROM user_role WHERE role = 'admin'
+        )
+        ORDER BY u.id_user
+    `);
     return rows;
 };
 

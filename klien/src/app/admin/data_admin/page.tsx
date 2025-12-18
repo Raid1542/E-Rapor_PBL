@@ -16,6 +16,7 @@ interface Admin {
   alamat?: string;
   no_telepon?: string;
   lp?: string;
+  profileImage?: string | null;
 }
 
 interface FormDataType {
@@ -77,6 +78,14 @@ export default function DataAdminPage() {
     }).format(date);
   };
 
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .slice(0, 2)
+      .map(word => word[0]?.toUpperCase() || '')
+      .join('');
+  };
+
   const [adminList, setAdminList] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
@@ -131,7 +140,8 @@ export default function DataAdminPage() {
           tanggal_lahir: admin.tanggal_lahir || admin.tanggalLahir || '',
           jenis_kelamin: admin.jenis_kelamin || admin.jenisKelamin || '',
           alamat: admin.alamat,
-          no_telepon: admin.no_telepon || admin.noTelepon || ''
+          no_telepon: admin.no_telepon || admin.noTelepon || '',
+          profileImage: admin.profileImage || null
         }));
 
         console.log('🚀 Final normalized data:', normalizedAdmins);
@@ -779,10 +789,23 @@ export default function DataAdminPage() {
             </div>
             <div className="p-4 sm:p-6">
               <div className="flex flex-col items-center mb-6">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full flex items-center justify-center mb-3 flex-shrink-0">
-                  <svg className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
+                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full flex items-center justify-center mb-3 flex-shrink-0 relative overflow-hidden">
+                  {selectedAdmin.profileImage ? (
+                    <img
+                      src={`http://localhost:5000${selectedAdmin.profileImage}`}
+                      alt="Foto Profil"
+                      className="w-full h-full object-cover rounded-full"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = ''; // fallback ke inisial
+                        target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-black text-xl font-semibold">
+                      {getInitials(selectedAdmin.nama || '??')}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">{selectedAdmin.nama}</h3>
               </div>
@@ -825,7 +848,7 @@ export default function DataAdminPage() {
                   <span className="font-semibold text-xs sm:text-sm">Tanggal Lahir</span>
                   <span className="text-xs sm:text-sm">:</span>
                   <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">
-                    {formatTanggalIndo(selectedAdmin.tanggal_lahir)} 
+                    {formatTanggalIndo(selectedAdmin.tanggal_lahir)}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">

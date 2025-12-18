@@ -37,7 +37,8 @@ const getAdmin = async (req, res) => {
                 tanggal_lahir: tanggal_lahir,
                 jenis_kelamin: row.jenis_kelamin || '',
                 alamat: row.alamat || '',
-                no_telepon: row.no_telepon || ''
+                no_telepon: row.no_telepon || '',
+                profileImage: row.foto_path || null
             };
         });
         res.json({ success: true, data: adminList });
@@ -53,7 +54,7 @@ const getAdminById = async (req, res) => {
         const admin = await userModel.findById(id);
         if (!admin) return res.status(404).json({ message: 'Admin tidak ditemukan' });
         const [guruRows] = await db.execute(
-            'SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon FROM guru WHERE user_id = ?',
+            'SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, foto_path FROM guru WHERE user_id = ?',
             [id]
         );
         const guru = guruRows[0] || {};
@@ -70,7 +71,8 @@ const getAdminById = async (req, res) => {
                 alamat: guru.alamat || '',
                 no_telepon: guru.no_telepon || '',
                 tempat_lahir: guru.tempat_lahir || '',
-                tanggal_lahir: guru.tanggal_lahir || null
+                tanggal_lahir: guru.tanggal_lahir || null,
+                profileImage: guru.foto_path || null
             }
         });
     } catch (err) {
@@ -170,6 +172,7 @@ const getGuru = async (req, res) => {
         g.jenis_kelamin,
         g.alamat,
         g.no_telepon,
+        g.foto_path,
         GROUP_CONCAT(ur.role) AS roles
       FROM user u
       INNER JOIN guru g ON u.id_user = g.user_id
@@ -181,7 +184,8 @@ const getGuru = async (req, res) => {
 
         const guruList = rows.map(row => ({
             ...row,
-            roles: row.roles ? row.roles.split(',') : []
+            roles: row.roles ? row.roles.split(',') : [],
+            profileImage: row.foto_path || null
         }));
 
         res.json({ success: true, data: guruList });
@@ -896,7 +900,7 @@ const tambahMataPelajaran = async (req, res) => {
         if (!kode_mapel || !nama_mapel || !jenis || !kurikulum || !tahun_ajaran_id) {
             return res.status(400).json({ message: 'Semua field wajib diisi' });
         }
-        const allowedJenis = ['wajib', 'bidang studi'];
+        const allowedJenis = ['wajib', 'pilihan'];
         if (!allowedJenis.includes(jenis)) {
             return res.status(400).json({ message: 'Jenis tidak valid' });
         }
@@ -944,9 +948,9 @@ const editMataPelajaran = async (req, res) => {
         if (!trimmedKodeMapel || !trimmedNamaMapel || !trimmedJenis || !trimmedKurikulum) {
             return res.status(400).json({ message: 'Semua field wajib diisi' });
         }
-        const allowedJenis = ['wajib', 'bidang studi'];
+        const allowedJenis = ['wajib', 'pilihan'];
         if (!allowedJenis.includes(trimmedJenis)) {
-            return res.status(400).json({ message: 'Jenis tidak valid. Harus "wajib" atau "bidang studi".' });
+            return res.status(400).json({ message: 'Jenis tidak valid. Harus "wajib" atau "pilihan".' });
         }
         const [oldMapel] = await db.execute(
             'SELECT tahun_ajaran_id FROM mata_pelajaran WHERE id_mata_pelajaran = ?',
@@ -1407,6 +1411,35 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
+const uploadFotoProfil = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'File foto diperlukan' });
+        }
+
+        const userId = req.user.id; // Dari JWT middleware
+        const fotoPath = `/uploads/${req.file.filename}`;
+
+        // Simpan path ke database
+        const success = await guruModel.updateFoto(userId, fotoPath);
+
+        if (!success) {
+            return res.status(404).json({ message: 'Guru tidak ditemukan' });
+        }
+
+        // Perbarui localStorage di frontend nanti
+        res.json({
+            success: true,
+            message: 'Foto profil berhasil diupload',
+            fotoPath
+        });
+
+    } catch (err) {
+        console.error('Error upload foto profil:', err);
+        res.status(500).json({ message: 'Gagal mengupload foto profil' });
+    }
+};
+
 module.exports = {
     getAdmin, getAdminById, tambahAdmin, editAdmin, gantiPasswordAdmin,
     getGuru, getGuruById, tambahGuru, editGuru, importGuru,
@@ -1418,5 +1451,5 @@ module.exports = {
     getMataPelajaran, getMataPelajaranById, tambahMataPelajaran, editMataPelajaran, hapusMataPelajaran,
     getPembelajaran, getDropdownPembelajaran, tambahPembelajaran, editPembelajaran, hapusPembelajaran,
     getEkskul, tambahEkskul, editEkskul, hapusEkskul, getPesertaByEkskul, getEkskulBySiswa,
-    getDashboardStats
+    getDashboardStats, uploadFotoProfil
 };

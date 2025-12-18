@@ -44,6 +44,33 @@ const uploadExcel = multer({
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
+// ✅ Storage untuk foto profil
+const fotoProfilStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+            return cb(new Error('Hanya file .png, .jpg, .jpeg, .webp yang diizinkan'));
+        }
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `profil_${uniqueSuffix}${ext}`);
+    }
+});
+
+const uploadFoto = multer({
+    storage: fotoProfilStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // max 5MB
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+            return cb(new Error('Format file tidak didukung'), false);
+        }
+        cb(null, true);
+    }
+});
+
 const adminController = require('../controllers/adminController');
 const router = express.Router();
 
@@ -69,6 +96,7 @@ router.put('/siswa/:id', adminOnlyWithTahunAjaran, adminController.editSiswa);
 router.get('/admin', adminOnly, adminController.getAdmin);
 router.get('/admin/:id', adminOnly, adminController.getAdminById);
 router.post('/admin', adminOnly, adminController.tambahAdmin);
+router.put('/admin/upload-foto', adminOnly, uploadFoto.single('foto'), adminController.uploadFotoProfil);
 router.put('/admin/ganti-password', adminOnly, adminController.gantiPasswordAdmin);
 router.put('/admin/:id', adminOnly, adminController.editAdmin);
 
@@ -124,9 +152,3 @@ router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulByS
 router.get('/dashboard/stats', adminOnlyWithTahunAjaran, adminController.getDashboardStats);
 
 module.exports = router;
-
-
-// CRUD Peserta Ekstrakurikuler (Anggota)
-/*router.post('/ekstrakurikuler/:id/anggota', adminOnlyWithTahunAjaran, adminController.addPesertaEkskul);
-router.put('/ekstrakurikuler/anggota/:id', adminOnly, adminController.updateDeskripsiPeserta);
-router.delete('/ekstrakurikuler/anggota/:id', adminOnly, adminController.removePesertaEkskul);*/

@@ -4,7 +4,31 @@ const db = require('../config/db');
 
 const router = express.Router();
 
-// Gunakan root path '/' karena base path sudah '/api/sekolah'
+// Endpoint PUBIK — untuk halaman login (TANPA authenticate)
+router.get('/publik', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT nama_sekolah, logo_path FROM sekolah WHERE id = 1');
+        if (rows.length > 0) {
+            res.json({
+                nama_sekolah: rows[0].nama_sekolah || 'Sekolah',
+                logo_path: rows[0].logo_path || null
+            });
+        } else {
+            res.json({
+                nama_sekolah: 'Sekolah',
+                logo_path: null
+            });
+        }
+    } catch (err) {
+        console.error('Error getSekolahPublik:', err);
+        res.json({
+            nama_sekolah: 'Sekolah',
+            logo_path: null
+        });
+    }
+});
+
+// Enpoint TERPROTEKSI
 router.get('/', authenticate, async (req, res) => {
     try {
         const [rows] = await db.execute('SELECT nama_sekolah, logo_path FROM sekolah WHERE id = 1');

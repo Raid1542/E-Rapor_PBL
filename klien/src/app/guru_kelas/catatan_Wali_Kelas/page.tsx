@@ -1,17 +1,16 @@
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, X, Search } from 'lucide-react';
+import { Pencil, X, Search } from 'lucide-react';
 
 interface SiswaCatatan {
-  id: number;
+  id_siswa: number;
   nama: string;
   nis: string;
   nisn: string;
   jenis_kelamin: string;
-  catatan_pts: string;
-  catatan_pas: string;
-  naik_tingkat: 'ya' | 'tidak';
+  catatan_wali_kelas: string;
+  naik_tingkat: 'ya' | 'tidak' | null;
 }
 
 export default function DataCatatanWaliKelasPage() {
@@ -21,24 +20,21 @@ export default function DataCatatanWaliKelasPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editData, setEditData] = useState<{
-    catatan_pts: string;
-    catatan_pas: string;
-    naik_tingkat: 'ya' | 'tidak';
+    catatan_wali_kelas: string;
+    naik_tingkat: 'ya' | 'tidak' | null;
   }>({
-    catatan_pts: '',
-    catatan_pas: '',
-    naik_tingkat: 'tidak'
+    catatan_wali_kelas: '',
+    naik_tingkat: null
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
+  const [semester, setSemester] = useState<'Ganjil' | 'Genap'>('Ganjil');
   const [editClosing, setEditClosing] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-
   const [originalData, setOriginalData] = useState<{
-    catatan_pts: string;
-    catatan_pas: string;
-    naik_tingkat: 'ya' | 'tidak';
+    catatan_wali_kelas: string;
+    naik_tingkat: 'ya' | 'tidak' | null;
   } | null>(null);
 
   const closeEdit = () => {
@@ -51,6 +47,7 @@ export default function DataCatatanWaliKelasPage() {
     }, 200);
   };
 
+  // Fetch data
   useEffect(() => {
     const fetchCatatan = async () => {
       setLoading(true);
@@ -62,18 +59,19 @@ export default function DataCatatanWaliKelasPage() {
         }
 
         const res = await fetch('http://localhost:5000/api/guru-kelas/catatan-wali-kelas', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
 
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
             const siswa = data.data || [];
+
+            
             setSiswaList(siswa);
             setFilteredSiswa(siswa);
-            if (siswa.length > 0) {
-              setKelasNama(data.kelas || 'Kelas Anda');
-            }
+            setKelasNama(data.kelas || 'Kelas Anda');
+            setSemester(data.semester || 'Ganjil');
           } else {
             alert(data.message || 'Gagal memuat data catatan wali kelas');
           }
@@ -108,69 +106,90 @@ export default function DataCatatanWaliKelasPage() {
     setCurrentPage(1);
   }, [searchQuery, siswaList]);
 
+  // Buka modal edit
   const handleEdit = (siswa: SiswaCatatan) => {
     const data = {
-      catatan_pts: siswa.catatan_pts,
-      catatan_pas: siswa.catatan_pas,
+      catatan_wali_kelas: siswa.catatan_wali_kelas || '',
       naik_tingkat: siswa.naik_tingkat
     };
-    setEditId(siswa.id);
+    setEditId(siswa.id_siswa);
     setEditData(data);
     setOriginalData(data);
     setShowEdit(true);
   };
 
-  const handleSave = async () => {
-    if (!editId || !originalData) return;
+  // Simpan perubahan
+const handleSave = async () => {
+  if (!editId || !originalData) return;
 
+  // Perbaikan: Di semester Ganjil, bandingkan semua field yang bisa diubah
+  const hasChanges = semester === 'Ganjil'
+    ? editData.catatan_wali_kelas !== originalData.catatan_wali_kelas
+    : (
+        editData.catatan_wali_kelas !== originalData.catatan_wali_kelas ||
+        editData.naik_tingkat !== originalData.naik_tingkat
+      );
 
-    const hasChanges =
-      editData.catatan_pts !== originalData.catatan_pts ||
-      editData.catatan_pas !== originalData.catatan_pas ||
-      editData.naik_tingkat !== originalData.naik_tingkat;
+  if (!hasChanges) {
+    alert('Tidak ada perubahan yang dilakukan.');
+    closeEdit();
+    return;
+  }
 
-    if (!hasChanges) {
-      alert('Tidak ada perubahan yang dilakukan.');
-      closeEdit();
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login habis.');
       return;
     }
 
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Sesi login habis.');
+    const payload: any = {
+      catatan_wali_kelas: editData.catatan_wali_kelas
+    };
+
+    if (semester === 'Ganjil') {
+      // Di semester Ganjil, naik_tingkat bisa null atau diisi
+      payload.naik_tingkat = editData.naik_tingkat;
+    } else if (semester === 'Genap') {
+      // Di semester Genap, naik_tingkat wajib diisi
+      if (editData.naik_tingkat !== 'ya' && editData.naik_tingkat !== 'tidak') {
+        alert('Di semester Genap, keputusan naik tingkat wajib diisi.');
         return;
       }
-
-      const res = await fetch(`http://localhost:5000/api/guru-kelas/catatan-wali-kelas/${editId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(editData)
-      });
-
-      if (res.ok) {
-        alert('Catatan wali kelas berhasil disimpan');
-        closeEdit();
-        // Refresh data
-        const updatedSiswa = siswaList.map(s =>
-          s.id === editId ? { ...s, ...editData } : s
-        );
-        setSiswaList(updatedSiswa);
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menyimpan catatan wali kelas');
-      }
-    } catch (err) {
-      alert('Gagal terhubung ke server');
+      payload.naik_tingkat = editData.naik_tingkat;
     }
-  };
+
+    const res = await fetch(`http://localhost:5000/api/guru-kelas/catatan-wali-kelas/${editId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      alert('Catatan wali kelas berhasil disimpan');
+      closeEdit();
+      const updatedSiswa = siswaList.map(s =>
+        s.id_siswa === editId ? { ...s, ...payload } : s
+      );
+      setSiswaList(updatedSiswa);
+    } else {
+      const err = await res.json();
+      alert(err.message || 'Gagal menyimpan catatan wali kelas');
+    }
+  } catch (err) {
+    alert('Gagal terhubung ke server');
+  }
+};
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value as any }));
+    setEditData(prev => ({
+      ...prev,
+      [name]: value === '' ? null : value as any
+    }));
   };
 
   // Pagination
@@ -179,36 +198,28 @@ export default function DataCatatanWaliKelasPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentSiswa = filteredSiswa.slice(startIndex, endIndex);
 
+  // Render pagination — aman dari error key
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
     if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
     } else {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      pages.push(<button key="page-1" onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
       if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
       }
       if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+      pages.push(<button key={`page-${totalPages}`} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
     }
     if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
     return pages;
-  };
-
-  // Format gender
-  const formatJenisKelamin = (jk: string): string => {
-    if (!jk) return '-';
-    const s = jk.trim().toLowerCase();
-    if (s === 'l' || s === 'laki-laki' || s.includes('laki')) return 'Laki-laki';
-    if (s === 'p' || s === 'perempuan' || s.includes('peremp')) return 'Perempuan';
-    return jk;
   };
 
   return (
@@ -216,12 +227,16 @@ export default function DataCatatanWaliKelasPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Catatan Wali Kelas</h1>
 
-        {/* Header */}
+        {/* Header — Mirip Ekstrakurikuler */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
-              <p className="text-sm text-gray-600">Isi catatan PTS dan PAS untuk setiap siswa.</p>
+              <p className="text-sm text-gray-600">
+                {semester === 'Genap'
+                  ? 'Isi catatan dan keputusan naik tingkat.'
+                  : 'Isi catatan. Keputusan naik tingkat hanya di semester Genap.'}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
               <div className="flex items-center gap-2 whitespace-nowrap">
@@ -272,7 +287,7 @@ export default function DataCatatanWaliKelasPage() {
           </div>
         </div>
 
-        {/* Tabel */}
+        {/* Tabel Responsif */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full min-w-[800px] table-auto text-sm">
             <thead>
@@ -281,51 +296,57 @@ export default function DataCatatanWaliKelasPage() {
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIS</th>
                 <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NISN</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold w-64">Catatan PTS</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold w-64">Catatan PAS</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Naik Tingkat</th>
-                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[200px]">Catatan</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[120px]">Naik Tingkat</th>
+                <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[80px]">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                <tr key="loading">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                 </tr>
               ) : currentSiswa.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                <tr key="empty">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     {searchQuery ? 'Tidak ada siswa yang cocok.' : 'Belum ada siswa di kelas ini.'}
                   </td>
                 </tr>
               ) : (
                 currentSiswa.map((siswa, index) => (
                   <tr
-                    key={siswa.id}
+                    key={siswa.id_siswa}
                     className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                   >
                     <td className="px-3 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                     <td className="px-3 py-3 text-center align-middle font-medium">{siswa.nama}</td>
                     <td className="px-3 py-3 text-center align-middle">{siswa.nis}</td>
                     <td className="px-3 py-3 text-center align-middle">{siswa.nisn}</td>
-                    <td className="px-3 py-3 text-center align-middle text-xs max-w-xs">
-                      <div className="truncate">{siswa.catatan_pts || '-'}</div>
-                    </td>
-                    <td className="px-3 py-3 text-center align-middle text-xs max-w-xs">
-                      <div className="truncate">{siswa.catatan_pas || '-'}</div>
+                    <td className="px-3 py-3 text-center align-middle">
+                      <div className="truncate max-w-xs mx-auto">
+                        {siswa.catatan_wali_kelas || <span className="text-gray-400">—</span>}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-center align-middle">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${siswa.naik_tingkat === 'ya' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {siswa.naik_tingkat === 'ya' ? 'Ya' : 'Tidak'}
-                      </span>
+                      {semester === 'Genap' ? (
+                        siswa.naik_tingkat === 'ya' ? (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Ya</span>
+                        ) : siswa.naik_tingkat === 'tidak' ? (
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">Tidak</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
-                    <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
+                    <td className="px-3 py-3 text-center align-middle">
                       <div className="flex justify-center">
                         <button
                           onClick={() => handleEdit(siswa)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                          className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm min-w-[64px]"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={14} />
                           <span className="hidden sm:inline">Edit</span>
                         </button>
                       </div>
@@ -373,44 +394,46 @@ export default function DataCatatanWaliKelasPage() {
             </div>
             <div className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan PTS</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Catatan Wali Kelas
+                </label>
                 <textarea
-                  name="catatan_pts"
-                  value={editData.catatan_pts}
+                  name="catatan_wali_kelas"
+                  value={editData.catatan_wali_kelas}
                   onChange={handleChange}
-                  placeholder="Catatan untuk Penilaian Tengah Semester..."
-                  rows={3}
+                  placeholder="Contoh: Anak aktif, perlu bimbingan dalam..."
+                  rows={5}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan PAS</label>
-                <textarea
-                  name="catatan_pas"
-                  value={editData.catatan_pas}
-                  onChange={handleChange}
-                  placeholder="Catatan untuk Penilaian Akhir Semester..."
-                  rows={3}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Naik Tingkat</label>
-                <select
-                  name="naik_tingkat"
-                  value={editData.naik_tingkat}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                >
-                  <option value="ya">Ya</option>
-                  <option value="tidak">Tidak</option>
-                </select>
-              </div>
+
+              {semester === 'Genap' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Keputusan Naik Tingkat <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="naik_tingkat"
+                    value={editData.naik_tingkat || ''}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  >
+                    <option value="">Pilih keputusan</option>
+                    <option value="ya">Ya</option>
+                    <option value="tidak">Tidak</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                  Keputusan naik tingkat hanya diisi pada semester <strong>Genap</strong>.
+                </div>
+              )}
+
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   onClick={closeEdit}
                   className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-xs sm:text-sm font-medium"
-                >
+              >
                   Batal
                 </button>
                 <button

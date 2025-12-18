@@ -18,6 +18,7 @@ const getAllGuru = async () => {
         g.jenis_kelamin,
         g.alamat,
         g.no_telepon,
+        g.foto_path,
         CASE WHEN u.status = 'aktif' THEN 'AKTIF' ELSE 'NONAKTIF' END AS statusGuru,
         GROUP_CONCAT(ur.role) AS roles
     FROM user u
@@ -31,7 +32,8 @@ const getAllGuru = async () => {
 
     return rows.map(row => ({
         ...row,
-        roles: row.roles ? row.roles.split(',') : []
+        roles: row.roles ? row.roles.split(',') : [],
+        profileImage: row.foto_path || null
     }));
 };
 
@@ -52,6 +54,7 @@ const getGuruById = async (id) => {
         g.jenis_kelamin,
         g.alamat,
         g.no_telepon,
+        g.foto_path,
         GROUP_CONCAT(ur.role) AS roles
     FROM user u
     INNER JOIN guru g ON u.id_user = g.user_id
@@ -65,7 +68,8 @@ const getGuruById = async (id) => {
 
     return {
         ...row,
-        roles: row.roles ? row.roles.split(',') : []
+        roles: row.roles ? row.roles.split(',') : [],
+        profileImage: row.foto_path || null
     };
 };
 
@@ -215,9 +219,18 @@ const updateGuru = async (id, userData, guruData, roles = null) => {
     }
 };
 
+const updateFoto = async (userId, fotoPath) => {
+    const [result] = await db.execute(
+        'UPDATE guru SET foto_path = ? WHERE user_id = ?',
+        [fotoPath, userId]
+    );
+    return result.affectedRows > 0; // true jika ada baris yang diupdate
+};
+
 module.exports = {
     getAllGuru,
     getGuruById,
     createGuru,
-    updateGuru
+    updateGuru,
+    updateFoto
 };

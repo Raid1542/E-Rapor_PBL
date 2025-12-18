@@ -1,20 +1,59 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const guruModel = require('../models/guruModel');
 
-//  Perbaiki role sesuai database (spasi, bukan underscore)
-const ensureGuruBidangStudi = (req, res) => {
+// Role Bidang Studi
+const ensureGuruBidangStudi = (req, res, next) => {
     if (req.user.role !== 'guru bidang studi') {
         return res.status(403).json({ message: 'Akses ditolak: hanya untuk guru bidang studi' });
     }
-    return null;
+    next();
 };
 
-exports.editProfil = async (req, res) => {
-    const roleError = ensureGuruBidangStudi(req, res);
-    if (roleError) return;
-
+// Profil
+exports.getProfil = async (req, res) => {
     try {
         const userId = req.user.id;
+        const [userRows] = await db.execute(
+            `SELECT id_user, nama_lengkap, email_sekolah FROM user WHERE id_user = ?`,
+            [userId]
+        );
+        const [guruRows] = await db.execute(
+            `SELECT niy, nuptk, jenis_kelamin, no_telepon, alamat, foto_path FROM guru WHERE user_id = ?`,
+            [userId]
+        );
+
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'User tidak ditemukan' });
+        }
+
+        const user = {
+            id: userRows[0].id_user,
+            role: 'guru bidang studi',
+            nama_lengkap: userRows[0].nama_lengkap,
+            email_sekolah: userRows[0].email_sekolah,
+            niy: guruRows[0]?.niy || null,
+            nuptk: guruRows[0]?.nuptk || null,
+            jenis_kelamin: guruRows[0]?.jenis_kelamin || null,
+            no_telepon: guruRows[0]?.no_telepon || null,
+            alamat: guruRows[0]?.alamat || null,
+            profileImage: guruRows[0]?.foto_path || null
+        };
+
+        res.json({ user });
+    } catch (err) {
+        console.error('Error get profil:', err);
+        res.status(500).json({ message: 'Gagal mengambil profil' });
+    }
+};
+
+// Edit profil
+exports.editProfil = async (req, res) => {
+    try {
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({ message: 'Request body tidak valid' });
+        }
+
         const {
             nama_lengkap,
             email_sekolah,
@@ -29,133 +68,186 @@ exports.editProfil = async (req, res) => {
             return res.status(400).json({ message: 'Nama dan email wajib diisi' });
         }
 
+        const userId = req.user.id;
+
+        // Update tabel user
         await db.execute(
             `UPDATE user SET nama_lengkap = ?, email_sekolah = ? WHERE id_user = ?`,
             [nama_lengkap, email_sekolah, userId]
         );
 
+        // Update tabel guru
         await db.execute(
             `UPDATE guru SET niy = ?, nuptk = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? WHERE user_id = ?`,
             [niy, nuptk, jenis_kelamin, no_telepon, alamat, userId]
         );
 
+        // Ambil data terbaru
         const [userRows] = await db.execute(
             `SELECT id_user, nama_lengkap, email_sekolah FROM user WHERE id_user = ?`,
             [userId]
         );
         const [guruRows] = await db.execute(
-            `SELECT niy, nuptk, jenis_kelamin, no_telepon, alamat FROM guru WHERE user_id = ?`,
+            `SELECT niy, nuptk, jenis_kelamin, no_telepon, alamat, foto_path FROM guru WHERE user_id = ?`,
             [userId]
         );
 
-        if (userRows.length === 0 || guruRows.length === 0) {
-            return res.status(404).json({ message: 'Profil tidak ditemukan' });
-        }
+        const user = {
+            id: userRows[0].id_user,
+            role: 'guru bidang studi',
+            nama_lengkap: userRows[0].nama_lengkap,
+            email_sekolah: userRows[0].email_sekolah,
+            niy: guruRows[0].niy,
+            nuptk: guruRows[0].nuptk,
+            jenis_kelamin: guruRows[0].jenis_kelamin,
+            no_telepon: guruRows[0].no_telepon,
+            alamat: guruRows[0].alamat,
+            profileImage: guruRows[0].foto_path
+        };
 
-        const updatedData = { ...userRows[0], ...guruRows[0] };
-
-        res.json({
-            message: 'Profil berhasil diperbarui',
-            data: updatedData
-        });
-
+        res.json({ message: 'Profil berhasil diperbarui', user });
     } catch (err) {
-        console.error('Error edit profil guru:', err);
+        console.error('Error edit profil:', err);
         res.status(500).json({ message: 'Gagal memperbarui profil' });
     }
 };
 
+// Ganti password
 exports.gantiPassword = async (req, res) => {
-    const roleError = ensureGuruBidangStudi(req, res);
-    if (roleError) return;
-
     try {
-        const userId = req.user.id;
         const { oldPassword, newPassword } = req.body;
+        const userId = req.user.id;
 
-        if (!oldPassword || !newPassword) {
-            return res.status(400).json({ message: 'Kata sandi lama dan baru wajib diisi' });
-        }
-        if (newPassword.length < 8) {
-            return res.status(400).json({ message: 'Kata sandi baru minimal 8 karakter' });
+        if (!oldPassword || !newPassword || newPassword.length < 8) {
+            return res.status(400).json({ message: 'Password lama & baru wajib, min. 8 karakter' });
         }
 
-        const [rows] = await db.execute(
-            'SELECT password FROM user WHERE id_user = ?',
-            [userId]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'User tidak ditemukan' });
-        }
+        const [rows] = await db.execute('SELECT password FROM user WHERE id_user = ?', [userId]);
+        if (rows.length === 0) return res.status(404).json({ message: 'User tidak ditemukan' });
 
         const isMatch = await bcrypt.compare(oldPassword, rows[0].password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Kata sandi lama salah' });
-        }
+        if (!isMatch) return res.status(400).json({ message: 'Kata sandi lama salah' });
 
         const newHashedPassword = await bcrypt.hash(newPassword, 10);
-        await db.execute(
-            'UPDATE user SET password = ? WHERE id_user = ?',
-            [newHashedPassword, userId]
-        );
+        await db.execute('UPDATE user SET password = ? WHERE id_user = ?', [newHashedPassword, userId]);
 
         res.json({ message: 'Kata sandi berhasil diubah' });
-
     } catch (err) {
-        console.error('Error ganti password guru:', err);
+        console.error('Error ganti password:', err);
         res.status(500).json({ message: 'Gagal mengubah kata sandi' });
     }
 };
 
-//  Perbaiki query sesuai diagram database
-exports.getKelasYangDiajar = async (req, res) => {
-    const roleError = ensureGuruBidangStudi(req, res);
-    if (roleError) return;
-
-    const userId = req.user.id;
-
+// Upload foto
+exports.uploadFotoProfil = async (req, res) => {
     try {
-        const query = `
-        SELECT 
-        p.id AS pembelajaran_id,
-        p.kelas_id,
-        k.nama_kelas,
-        k.fase,
-        mp.nama_mapel,
-        mp.jenis,
-        mp.kurikulum,
-        p.tahun_ajaran_id
-        FROM pembelajaran p
-        JOIN kelas k ON p.kelas_id = k.id_kelas
-        JOIN mata_pelajaran mp ON p.mata_pelajaran_id = mp.id_mata_pelajaran
-        WHERE p.user_id = ?
-    `;
+        if (!req.file) {
+            return res.status(400).json({ message: 'File foto diperlukan' });
+        }
 
-        const [rows] = await db.execute(query, [userId]);
+        const userId = req.user.id;
+        const fotoPath = `uploads/${req.file.filename}`;
 
-        const kelasList = rows.map(row => ({
-            pembelajaran_id: row.pembelajaran_id,
-            kelas_id: row.kelas_id,
-            nama_kelas: row.nama_kelas,
-            fase: row.fase,
-            nama_mapel: row.nama_mapel,
-            jenis: row.jenis,
-            kurikulum: row.kurikulum,
-            tahun_ajaran_id: row.tahun_ajaran_id
+        const success = await guruModel.updateFoto(userId, fotoPath);
+        if (!success) {
+            return res.status(404).json({ message: 'Guru tidak ditemukan' });
+        }
+
+        // Ambil data terbaru
+        const [userRows] = await db.execute(
+            `SELECT id_user, nama_lengkap, email_sekolah FROM user WHERE id_user = ?`,
+            [userId]
+        );
+        const [guruRows] = await db.execute(
+            `SELECT foto_path FROM guru WHERE user_id = ?`,
+            [userId]
+        );
+
+        const user = {
+            id: userRows[0].id_user,
+            role: 'guru bidang studi',
+            nama_lengkap: userRows[0].nama_lengkap,
+            email_sekolah: userRows[0].email_sekolah,
+            profileImage: guruRows[0].foto_path
+        };
+
+        res.json({ message: 'Foto profil berhasil diupload', user });
+    } catch (err) {
+        console.error('Error upload foto:', err);
+        res.status(500).json({ message: 'Gagal mengupload foto' });
+    }
+};
+
+// =========== DASHBOARD ===========
+exports.getDashboardData = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Ambil tahun ajaran aktif
+        const [taRows] = await db.execute(
+            `SELECT id_tahun_ajaran, tahun_ajaran, semester 
+       FROM tahun_ajaran 
+       WHERE status = 'aktif' 
+       LIMIT 1`
+        );
+
+        if (taRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tahun ajaran aktif tidak ditemukan.'
+            });
+        }
+
+        const { id_tahun_ajaran, tahun_ajaran, semester } = taRows[0];
+
+        // 2. Ambil semua mata pelajaran yang diajar oleh guru ini,
+        //    beserta jumlah kelas & jumlah siswa **per mata pelajaran**
+        const [mapelRows] = await db.execute(
+            `
+      SELECT 
+        mp.nama_mapel AS nama,
+        COUNT(DISTINCT p.kelas_id) AS total_kelas,
+        COUNT(sk.siswa_id) AS total_siswa
+      FROM pembelajaran p
+      INNER JOIN mata_pelajaran mp ON p.mata_pelajaran_id = mp.id_mata_pelajaran
+      LEFT JOIN siswa_kelas sk 
+        ON p.kelas_id = sk.kelas_id 
+        AND sk.tahun_ajaran_id = ?
+      WHERE p.user_id = ? 
+        AND p.tahun_ajaran_id = ?
+      GROUP BY mp.id_mata_pelajaran, mp.nama_mapel
+      ORDER BY mp.nama_mapel
+      `,
+            [id_tahun_ajaran, userId, id_tahun_ajaran]
+        );
+
+        if (mapelRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Guru belum ditugaskan mengajar mata pelajaran apapun di tahun ajaran ini.'
+            });
+        }
+
+        const mataPelajaranList = mapelRows.map(row => ({
+            nama: row.nama,
+            total_kelas: Number(row.total_kelas),
+            total_siswa: Number(row.total_siswa)
         }));
 
-        // Ambil subject dari data pertama
-        const subject = kelasList.length > 0 ? kelasList[0].nama_mapel : '';
-
         res.json({
-            message: 'Kelas yang diajar berhasil diambil',
-            subject,
-            data: kelasList
+            success: true,
+            data: {
+                tahun_ajaran,
+                semester,
+                mata_pelajaran_list: mataPelajaranList
+            }
         });
 
     } catch (err) {
-        console.error('Error get kelas yang diajar:', err);
-        res.status(500).json({ message: 'Gagal mengambil data kelas yang diajar' });
+        console.error('Error di getDashboardData:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal memuat data dashboard.'
+        });
     }
 };

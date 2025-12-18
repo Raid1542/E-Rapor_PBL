@@ -31,6 +31,12 @@ const ProfilePage = () => {
     alamat: ''
   });
 
+  const [profileImage, setProfileImage] = useState<string | null>(null); // URL foto dari server
+  const [previewImage, setPreviewImage] = useState<string | null>(null); // Preview lokal saat upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+
   // State password
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
@@ -40,12 +46,53 @@ const ProfilePage = () => {
 
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  // === Ambil data user dari localStorage saat mount ===
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('currentUser');
+
+      if (!token || !storedUser) {
+        window.location.href = '/login';
+        return;
+      }
+
       try {
         const userData: UserProfile = JSON.parse(storedUser);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+        // Jika tidak ada profileImage di localStorage, ambil dari API
+        if (!userData.profileImage || !userData.profileImage.trim()) {
+          const res = await fetch(`http://localhost:5000/api/admin/admin/${userData.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const apiResponse = await res.json();
+            const freshData = apiResponse.data;
+
+            // Simpan kembali ke localStorage
+            const updatedUser = {
+              ...userData,
+              profileImage: freshData.profileImage || null
+            };
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+            // Set state hanya jika ada foto
+            if (freshData.profileImage && freshData.profileImage.trim()) {
+              setProfileImage(`${baseUrl}${freshData.profileImage}`);
+            } else {
+              setProfileImage(null);
+            }
+          }
+        } else {
+          // Jika ada di localStorage, langsung pakai (tapi pastikan valid)
+          if (userData.profileImage && userData.profileImage.trim()) {
+            setProfileImage(`${baseUrl}${userData.profileImage}`);
+          } else {
+            setProfileImage(null);
+          }
+        }
+
+        // Set formData
         setFormData({
           nama: userData.nama_lengkap || '',
           nuptk: userData.nuptk || '',
@@ -58,7 +105,9 @@ const ProfilePage = () => {
       } catch (e) {
         console.error('Gagal memuat data profil:', e);
       }
-    }
+    };
+
+    fetchProfile();
   }, []);
 
   // === Handler Profil ===
@@ -119,6 +168,8 @@ const ProfilePage = () => {
         };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         alert('Profil berhasil diperbarui!');
+        window.location.reload();
+
       } else {
         const error = await response.json();
         alert(error.message || 'Gagal memperbarui profil');
@@ -186,6 +237,73 @@ const ProfilePage = () => {
     }
   };
 
+  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi file
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Hanya file JPG, PNG, atau WebP yang diizinkan');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      alert('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    // Preview lokal
+    const reader = new FileReader();
+    reader.onloadend = () => setPreviewImage(reader.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload ke server
+    setIsUploading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Sesi login tidak valid.');
+      setIsUploading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('foto', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/admin/upload-foto', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      const result = await response.json();
+      if (response.ok && result.fotoPath) {
+        // ✅ Update localStorage dengan path baru
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          userData.profileImage = result.fotoPath;
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+        }
+        window.dispatchEvent(new Event('profileImageUpdated'));
+
+        // Update state dengan URL lengkap
+        setProfileImage(`http://localhost:5000${result.fotoPath}`);
+        setPreviewImage(null);
+        alert('Foto profil berhasil diupload!');
+
+      } else {
+        throw new Error(result.message || 'Upload gagal');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Gagal mengupload foto');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
@@ -194,25 +312,51 @@ const ProfilePage = () => {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Profile Card */}
-<div className="lg:w-56 flex-shrink-0">
-  <div className="bg-white rounded-lg shadow-sm p-5">
-    <div className="flex flex-col items-center text-center">
-      {/* Avatar berbasis inisial */}
-      <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center mb-3">
-        <span className="text-black text-lg font-semibold">
-          {(formData.nama || '??')
-            .split(' ')
-            .slice(0, 2)
-            .map(word => word[0]?.toUpperCase() || '')
-            .join('') || '??'}
-        </span>
-      </div>
-      {/* <p className="text-xs text-gray-400 mb-3">Klik untuk ubah foto</p> */}
-      <h2 className="text-lg font-bold text-gray-900">{formData.nama || 'Admin'}</h2>
-      <p className="text-gray-500 text-xs">Admin</p>
-    </div>
-  </div>
-</div>
+        <div className="lg:w-56 flex-shrink-0">
+          <div className="bg-white rounded-lg shadow-sm p-5">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center">
+                {/* Avatar */}
+                <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
+                  {previewImage ? (
+                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                  ) : profileImage ? (
+                    <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
+                      {(formData.nama || '??')
+                        .split(' ')
+                        .slice(0, 2)
+                        .map((word) => word[0]?.toUpperCase() || '')
+                        .join('') || '??'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Tombol Ganti Foto */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
+                >
+                  <Camera size={14} />
+                  {isUploading ? 'Mengupload...' : 'Ganti Foto'}
+                </button>
+
+                {/* Input File Hidden */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleUploadPhoto}
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isUploading}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Form Profil & Password */}
         <div className="flex-1 space-y-8">

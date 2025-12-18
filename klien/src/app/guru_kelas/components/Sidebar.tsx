@@ -102,7 +102,9 @@ export default function Sidebar({ user }: SidebarProps) {
     // Submenu
     const kelolaDataSubmenu = [
         { name: 'Data Siswa', url: '/guru_kelas/data_siswa' },
-        { name: 'Nilai', url: '/guru_kelas/input_nilai' },
+        { name: 'Atur Penilaian', url: '/guru_kelas/atur_penilaian' },
+        { name: 'Input Nilai', url: '/guru_kelas/input_nilai' },
+        { name: 'Rekapan Nilai', url: '/guru_kelas/rekapan_nilai' },
         { name: 'Absensi', url: '/guru_kelas/absensi_siswa' },
         { name: 'Kokurikuler', url: '/guru_kelas/kokurikuler' },
         { name: 'Ekstrakurikuler', url: '/guru_kelas/ekstrakurikuler' },
