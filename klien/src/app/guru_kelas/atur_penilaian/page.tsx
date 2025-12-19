@@ -5,6 +5,11 @@ import { Pencil, X, Plus, Trash2 } from 'lucide-react';
 
 // ====== TYPES ======
 
+interface AspekKokurikuler {
+    id_aspek_kokurikuler: number;
+    nama: string;
+}
+
 // Tipe untuk Kategori Akademik (TANPA GRADE)
 interface KategoriAkademik {
     id: number;
@@ -22,6 +27,7 @@ interface KategoriKokurikuler {
     grade: string;
     deskripsi: string;
     urutan: number;
+    id_aspek_kokurikuler: number;
 }
 
 interface KomponenPenilaian {
@@ -56,19 +62,22 @@ export default function AturPenilaianPage() {
     const [showEditKategori, setShowEditKategori] = useState(false);
     const [editKategoriId, setEditKategoriId] = useState<number | null>(null);
     const [editKategoriClosing, setEditKategoriClosing] = useState(false);
-    // Gunakan tipe terpisah untuk form
     const [editKategoriData, setEditKategoriData] = useState<{
         min_nilai: number;
         max_nilai: number;
-        grade?: string; // Optional karena akademik tidak pakai
+        grade?: string;
         deskripsi: string;
+        id_aspek_kokurikuler?: number; // ✅ Tambahkan untuk kokurikuler
     }>({
         min_nilai: 0,
         max_nilai: 100,
         deskripsi: ''
     });
 
-    // Bobot (sama seperti sebelumnya)
+    // Aspek Kokurikuler
+    const [aspekList, setAspekList] = useState<AspekKokurikuler[]>([]);
+
+    // Bobot
     const [mapelList, setMapelList] = useState<MapelItem[]>([]);
     const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
     const [komponenList, setKomponenList] = useState<KomponenPenilaian[]>([]);
@@ -76,7 +85,7 @@ export default function AturPenilaianPage() {
     const [bobotLoading, setBobotLoading] = useState(false);
     const [initialBobotList, setInitialBobotList] = useState<BobotItem[]>([]);
 
-    // ====== FETCH DATA PENDUKUNG (KOMPONEN & MAPEL) ======
+    // ====== FETCH SEMUA DATA DUKUNGAN DI SATU useEffect ======
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -85,22 +94,31 @@ export default function AturPenilaianPage() {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
 
-                const [resKomponen, resMapel] = await Promise.all([
+                const endpoints = [
                     fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/komponen', {
                         headers: { Authorization: `Bearer ${token}` }
                     }),
                     fetch('http://localhost:5000/api/guru-kelas/mapel', {
                         headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/aspek-kokurikuler', {
+                        headers: { Authorization: `Bearer ${token}` }
                     })
-                ]);
+                ];
 
-                if (!resKomponen.ok || !resMapel.ok) throw new Error('Gagal mengambil data pendukung');
+                const [resKomponen, resMapel, resAspek] = await Promise.all(endpoints);
+
+                if (!resKomponen.ok || !resMapel.ok || !resAspek.ok) {
+                    throw new Error('Gagal mengambil data pendukung');
+                }
 
                 const komponenData = await resKomponen.json();
                 const mapelData = await resMapel.json();
+                const aspekData = await resAspek.json();
 
                 setKomponenList(komponenData.data || []);
                 setMapelList([...(mapelData.wajib || []), ...(mapelData.pilihan || [])]);
+                setAspekList(aspekData.data || []);
             } catch (err: any) {
                 console.error('Error fetch data:', err);
                 setError(err.message || 'Gagal memuat data');
@@ -143,7 +161,7 @@ export default function AturPenilaianPage() {
         fetchKategori();
     }, [activeTab]);
 
-    // ====== FETCH BOBOT (TIDAK BERUBAH) ======
+    // ====== FETCH BOBOT JIKA DIPILIH MAPEL ======
     useEffect(() => {
         if (selectedMapelId === null || activeTab !== 'bobot') {
             setBobotList([]);
@@ -169,7 +187,7 @@ export default function AturPenilaianPage() {
                     const fullBobot = komponenList.map(k => ({
                         komponen_id: k.id_komponen,
                         bobot: bobotMap.get(k.id_komponen) || 0,
-                        is_active: true // atau sesuaikan logika Anda
+                        is_active: true
                     }));
 
                     setBobotList(fullBobot);
@@ -193,7 +211,8 @@ export default function AturPenilaianPage() {
                 min_nilai: kategori.min_nilai,
                 max_nilai: kategori.max_nilai,
                 grade: 'grade' in kategori ? kategori.grade : undefined,
-                deskripsi: kategori.deskripsi
+                deskripsi: kategori.deskripsi,
+                id_aspek_kokurikuler: 'id_aspek_kokurikuler' in kategori ? kategori.id_aspek_kokurikuler : undefined
             });
         } else {
             setEditKategoriId(null);
@@ -201,7 +220,8 @@ export default function AturPenilaianPage() {
                 min_nilai: 0,
                 max_nilai: 100,
                 grade: activeTab === 'kokurikuler' ? 'A' : undefined,
-                deskripsi: ''
+                deskripsi: '',
+                id_aspek_kokurikuler: undefined
             });
         }
         setShowEditKategori(true);
@@ -225,21 +245,30 @@ export default function AturPenilaianPage() {
                 ? 'atur-penilaian/kategori-akademik'
                 : 'atur-penilaian/kategori-kokurikuler';
 
-            // Siapkan payload sesuai jenis
-            const payload = isAkademik
-                ? {
+            let payload: any;
+
+            if (isAkademik) {
+                payload = {
                     min_nilai: editKategoriData.min_nilai,
                     max_nilai: editKategoriData.max_nilai,
                     deskripsi: editKategoriData.deskripsi,
                     urutan: 0
+                };
+            } else {
+                // Validasi aspek untuk kokurikuler
+                if (editKategoriData.id_aspek_kokurikuler == null) {
+                    alert('Pilih aspek kokurikuler terlebih dahulu');
+                    return;
                 }
-                : {
+                payload = {
                     min_nilai: editKategoriData.min_nilai,
                     max_nilai: editKategoriData.max_nilai,
                     grade: editKategoriData.grade,
                     deskripsi: editKategoriData.deskripsi,
-                    urutan: 0
+                    urutan: 0,
+                    id_aspek_kokurikuler: editKategoriData.id_aspek_kokurikuler
                 };
+            }
 
             const url = editKategoriId
                 ? `http://localhost:5000/api/guru-kelas/${endpoint}/${editKategoriId}`
@@ -298,7 +327,7 @@ export default function AturPenilaianPage() {
         }
     };
 
-    // ====== BOBOT: HANDLE CHANGE & SIMPAN (SAMA SEPERTI SEBELUMNYA) ======
+    // ====== BOBOT: HANDLE CHANGE & SIMPAN ======
     const handleBobotChange = (komponenId: number, value: string) => {
         const newValue = parseFloat(value) || 0;
         setBobotList(prev =>
@@ -413,7 +442,10 @@ export default function AturPenilaianPage() {
                                 <thead>
                                     <tr>
                                         {activeTab === 'kokurikuler' && (
-                                            <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Grade</th>
+                                            <>
+                                                <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Aspek</th>
+                                                <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Grade</th>
+                                            </>
                                         )}
                                         <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Range Nilai</th>
                                         <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Deskripsi</th>
@@ -423,7 +455,7 @@ export default function AturPenilaianPage() {
                                 <tbody>
                                     {kategoriList.length === 0 ? (
                                         <tr>
-                                            <td colSpan={activeTab === 'kokurikuler' ? 4 : 3} className="px-4 py-6 text-center text-gray-500">
+                                            <td colSpan={activeTab === 'kokurikuler' ? 5 : 3} className="px-4 py-6 text-center text-gray-500">
                                                 Belum ada kategori
                                             </td>
                                         </tr>
@@ -431,7 +463,14 @@ export default function AturPenilaianPage() {
                                         kategoriList.map((kategori) => (
                                             <tr key={kategori.id} className="border-b hover:bg-gray-50">
                                                 {activeTab === 'kokurikuler' && (
-                                                    <td className="px-3 py-3 text-center font-medium">{(kategori as KategoriKokurikuler).grade}</td>
+                                                    <>
+                                                        <td className="px-3 py-3 text-center text-sm">
+                                                            {aspekList.find(a => a.id_aspek_kokurikuler === (kategori as KategoriKokurikuler).id_aspek_kokurikuler)?.nama || '-'}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center font-medium">
+                                                            {(kategori as KategoriKokurikuler).grade}
+                                                        </td>
+                                                    </>
                                                 )}
                                                 <td className="px-3 py-3 text-center">
                                                     {kategori.min_nilai} – {kategori.max_nilai}
@@ -565,17 +604,35 @@ export default function AturPenilaianPage() {
                         </div>
                         <div className="p-4 space-y-4">
                             {activeTab === 'kokurikuler' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
-                                    <input
-                                        type="text"
-                                        value={editKategoriData.grade || ''}
-                                        onChange={(e) => setEditKategoriData({ ...editKategoriData, grade: e.target.value.toUpperCase() })}
-                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                                        maxLength={2}
-                                        placeholder="A, B+, dst."
-                                    />
-                                </div>
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Aspek Kokurikuler</label>
+                                        <select
+                                            value={editKategoriData.id_aspek_kokurikuler || ''}
+                                            onChange={(e) => setEditKategoriData({ ...editKategoriData, id_aspek_kokurikuler: Number(e.target.value) })}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                            required
+                                        >
+                                            <option value="">-- Pilih Aspek --</option>
+                                            {aspekList.map(aspek => (
+                                                <option key={aspek.id_aspek_kokurikuler} value={aspek.id_aspek_kokurikuler}>
+                                                    {aspek.nama}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                                        <input
+                                            type="text"
+                                            value={editKategoriData.grade || ''}
+                                            onChange={(e) => setEditKategoriData({ ...editKategoriData, grade: e.target.value.toUpperCase() })}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                            maxLength={2}
+                                            placeholder="A, B+, dst."
+                                        />
+                                    </div>
+                                </>
                             )}
 
                             <div className="grid grid-cols-2 gap-3">

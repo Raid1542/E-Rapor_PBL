@@ -64,7 +64,7 @@ router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskul
 router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
 // Kokurikuler
-router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKokurikuler);
+router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getNilaiKokurikuler);
 
 // Validasi parameter siswaId
 router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
@@ -76,7 +76,7 @@ router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next
         });
     }
     next();
-}, guruKelasController.updateKokurikuler);
+}, guruKelasController.updateNilaiKokurikuler);
 
 // Foto Profil
 router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasController.uploadFotoProfil);
@@ -123,6 +123,9 @@ router.put('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnl
     next();
 }, guruKelasController.updateBobotAkademikByMapel);
 
+// Setiap aspek kokurikuler
+router.get('/atur-penilaian/aspek-kokurikuler', authenticate, guruKelasOnly, guruKelasController.getAspekKokurikuler);
+
 // 3. Atur Kategori Nilai Non-Akademik (Kokurikuler - MENGGUNAKAN GRADE)
 router.get('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKategoriNilaiKokurikuler);
 router.post('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiKokurikuler);
@@ -140,6 +143,18 @@ router.delete('/atur-penilaian/kategori-kokurikuler/:id', authenticate, guruKela
     }
     next();
 }, guruKelasController.deleteKategoriNilaiKokurikuler);
+
+// Ambil nilai kokurikuler spesifik untuk satu siswa
+router.get('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
+    const siswaId = parseInt(req.params.siswaId);
+    if (isNaN(siswaId) || siswaId <= 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'ID siswa tidak valid' 
+        });
+    }
+    next();
+}, guruKelasController.getNilaiKokurikulerBySiswa);
 
 // 4. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
 router.get('/atur-penilaian/komponen', authenticate, guruKelasOnly, guruKelasController.getKomponenPenilaian);

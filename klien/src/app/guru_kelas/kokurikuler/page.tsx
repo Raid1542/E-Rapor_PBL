@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, ReactNode, useMemo } from 'react';
-import { Pencil, X, Search, AlertCircle, Award } from 'lucide-react';
+import { Pencil, X, Search, Award } from 'lucide-react';
 
 interface KokurikulerData {
   mutabaah_nilai: number | null;
@@ -19,7 +19,7 @@ interface KokurikulerData {
   judul_proyek_nilai: number | null;
   judul_proyek_grade: string | null;
   judul_proyek_deskripsi: string | null;
-  nama_judul_proyek: string | null; // ✅ Nama proyek teks bebas
+  nama_judul_proyek: string | null;
 }
 
 interface SiswaKokurikuler {
@@ -29,6 +29,14 @@ interface SiswaKokurikuler {
   nisn: string;
   kokurikuler: KokurikulerData;
 }
+
+// Mapping ID aspek kokurikuler dari database
+const ASPEK_ID = {
+  mutabaah: 1,
+  literasi: 2,
+  bpi: 3,
+  proyek: 4,
+};
 
 export default function DataKokurikulerPage() {
   const [siswaList, setSiswaList] = useState<SiswaKokurikuler[]>([]);
@@ -41,7 +49,11 @@ export default function DataKokurikulerPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
   const [semester, setSemester] = useState<string>('');
+  const [kelasId, setKelasId] = useState<number | null>(null);
+  const [tahunAjaranId, setTahunAjaranId] = useState<number | null>(null);
+  const [gradeConfig, setGradeConfig] = useState<any[]>([]);
 
+  // Fetch data kokurikuler siswa
   const fetchKokurikuler = async () => {
     setLoading(true);
     try {
@@ -53,7 +65,7 @@ export default function DataKokurikulerPage() {
       }
 
       const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -62,6 +74,8 @@ export default function DataKokurikulerPage() {
           setSiswaList(data.data || []);
           setKelasNama(data.kelas || 'Kelas Anda');
           setSemester(data.semester || '');
+          setKelasId(data.kelasId || null);
+          setTahunAjaranId(data.tahunAjaranId || null);
         } else {
           alert(data.message || 'Gagal memuat data kokurikuler');
         }
@@ -77,8 +91,42 @@ export default function DataKokurikulerPage() {
     }
   };
 
+  // Fetch konfigurasi grade dari "Atur Penilaian"
+  const fetchGradeConfig = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/kategori-kokurikuler', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setGradeConfig(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Gagal ambil konfigurasi grade:', err);
+    }
+  };
+
+  // Hitung grade & deskripsi berdasarkan nilai dan id_aspek
+  const getGradeByNilai = (nilai: number | null, aspekId: number) => {
+    if (nilai === null) return { grade: null, deskripsi: null };
+
+    const configForAspek = gradeConfig.filter((c) => c.id_aspek_kokurikuler === aspekId);
+    for (const c of configForAspek) {
+      if (nilai >= c.min_nilai && nilai <= c.max_nilai) {
+        return { grade: c.grade, deskripsi: c.deskripsi };
+      }
+    }
+    // Jika tidak cocok (seharusnya tidak terjadi), kembalikan null
+    console.warn(`⚠️ Tidak ditemukan konfigurasi untuk aspek ${aspekId}, nilai: ${nilai}`);
+    return { grade: null, deskripsi: null };
+  };
+
   useEffect(() => {
     fetchKokurikuler();
+    fetchGradeConfig();
   }, []);
 
   const handleDetail = (siswa: SiswaKokurikuler) => {
@@ -90,7 +138,7 @@ export default function DataKokurikulerPage() {
   const handleSave = async (siswaId: number) => {
     if (!detailData) return;
 
-    const originalSiswa = siswaList.find(s => s.id === siswaId);
+    const originalSiswa = siswaList.find((s) => s.id === siswaId);
     if (!originalSiswa) {
       alert('Data siswa tidak ditemukan');
       return;
@@ -120,15 +168,18 @@ export default function DataKokurikulerPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           mutabaah_nilai: detailData.mutabaah_nilai,
           bpi_nilai: detailData.bpi_nilai,
           literasi_nilai: detailData.literasi_nilai,
           judul_proyek_nilai: detailData.judul_proyek_nilai,
-          nama_judul_proyek: detailData.nama_judul_proyek 
-        })
+          nama_judul_proyek: detailData.nama_judul_proyek,
+          kelasId,
+          tahunAjaranId,
+          semester,
+        }),
       });
 
       if (res.ok) {
@@ -147,21 +198,45 @@ export default function DataKokurikulerPage() {
 
   const handleFieldChange = (field: keyof KokurikulerData, value: string) => {
     if (!detailData) return;
-    if (!field.endsWith('_nilai')) return;
 
-    const numValue = value === '' ? null : Number(value);
-    if (value === '' || (numValue !== null && !isNaN(numValue) && numValue >= 0 && numValue <= 100)) {
-      setDetailData(prev => ({ ...prev!, [field]: numValue }));
+    if (field.endsWith('_nilai')) {
+      const numValue = value === '' ? null : Number(value);
+      if (value === '' || (numValue !== null && !isNaN(numValue) && numValue >= 0 && numValue <= 100)) {
+        // Update nilai
+        setDetailData((prev) => ({ ...prev!, [field]: numValue }));
+
+        // Tentukan aspekId berdasarkan field
+        let aspekId: number | null = null;
+        if (field === 'mutabaah_nilai') aspekId = ASPEK_ID.mutabaah;
+        else if (field === 'bpi_nilai') aspekId = ASPEK_ID.bpi;
+        else if (field === 'literasi_nilai') aspekId = ASPEK_ID.literasi;
+        else if (field === 'judul_proyek_nilai') aspekId = ASPEK_ID.proyek;
+
+        if (aspekId !== null) {
+          const { grade, deskripsi } = getGradeByNilai(numValue, aspekId);
+          const gradeField = field.replace('_nilai', '_grade') as keyof KokurikulerData;
+          const descField = field.replace('_nilai', '_deskripsi') as keyof KokurikulerData;
+          setDetailData((prev) => ({
+            ...prev!,
+            [gradeField]: grade,
+            [descField]: deskripsi,
+          }));
+        }
+      }
+    } else if (field === 'nama_judul_proyek') {
+      setDetailData((prev) => ({ ...prev!, [field]: value }));
     }
   };
 
   const filteredSiswa = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return siswaList.filter((siswa) => {
-      return !query ||
+      return (
+        !query ||
         siswa.nama.toLowerCase().includes(query) ||
         siswa.nis.includes(query) ||
-        siswa.nisn.includes(query);
+        siswa.nisn.includes(query)
+      );
     });
   }, [siswaList, searchQuery]);
 
@@ -173,23 +248,82 @@ export default function DataKokurikulerPage() {
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
-    if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(c => c - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
+    if (currentPage > 1)
+      pages.push(
+        <button
+          key="prev"
+          onClick={() => setCurrentPage((c) => c - 1)}
+          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+        >
+          «
+        </button>
+      );
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(
+          <button
+            key={`page-${i}`}
+            onClick={() => setCurrentPage(i)}
+            className={`px-3 py-1 border border-gray-300 rounded ${
+              currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+            }`}
+          >
+            {i}
+          </button>
+        );
       }
     } else {
-      pages.push(<button key="page-1" onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+      pages.push(
+        <button
+          key="page-1"
+          onClick={() => setCurrentPage(1)}
+          className={`px-3 py-1 border border-gray-300 rounded ${
+            currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+          }`}
+        >
+          1
+        </button>
+      );
       if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        pages.push(<button key={`page-${i}`} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+        pages.push(
+          <button
+            key={`page-${i}`}
+            onClick={() => setCurrentPage(i)}
+            className={`px-3 py-1 border border-gray-300 rounded ${
+              currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+            }`}
+          >
+            {i}
+          </button>
+        );
       }
-      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-      pages.push(<button key={`page-${totalPages}`} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+      if (currentPage < totalPages - 2)
+        pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(
+        <button
+          key={`page-${totalPages}`}
+          onClick={() => setCurrentPage(totalPages)}
+          className={`px-3 py-1 border border-gray-300 rounded ${
+            currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+          }`}
+        >
+          {totalPages}
+        </button>
+      );
     }
-    if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(c => c + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
+    if (currentPage < totalPages)
+      pages.push(
+        <button
+          key="next"
+          onClick={() => setCurrentPage((c) => c + 1)}
+          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+        >
+          »
+        </button>
+      );
     return pages;
   };
 
@@ -202,7 +336,9 @@ export default function DataKokurikulerPage() {
   return (
     <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Nilai Kokurikuler Siswa</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">
+          Nilai Kokurikuler Siswa
+        </h1>
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -281,7 +417,9 @@ export default function DataKokurikulerPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 sm:py-8 text-center text-gray-500">Memuat data...</td>
+                  <td colSpan={9} className="px-4 py-6 sm:py-8 text-center text-gray-500">
+                    Memuat data...
+                  </td>
                 </tr>
               ) : currentSiswa.length === 0 ? (
                 <tr>
@@ -293,7 +431,9 @@ export default function DataKokurikulerPage() {
                 currentSiswa.map((siswa, index) => (
                   <tr
                     key={siswa.id}
-                    className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
+                    className={`border-b ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    } hover:bg-blue-50 transition`}
                   >
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle font-medium">
                       {startIndex + index + 1}
@@ -303,8 +443,6 @@ export default function DataKokurikulerPage() {
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle text-sm">{siswa.nis}</td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle text-sm">{siswa.nisn}</td>
-
-                    {/* Mutaba’ah, BPI, Literasi → tampilkan nilai angka */}
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle">
                       {siswa.kokurikuler.mutabaah_nilai != null ? (
                         <span className="font-medium">{siswa.kokurikuler.mutabaah_nilai}</span>
@@ -326,8 +464,6 @@ export default function DataKokurikulerPage() {
                         <span className="text-gray-400">–</span>
                       )}
                     </td>
-
-                    {/* Judul Proyek → tampilkan NAMA PROYEK (bukan nilai) */}
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle">
                       {siswa.kokurikuler.nama_judul_proyek ? (
                         <span className="text-sm">{siswa.kokurikuler.nama_judul_proyek}</span>
@@ -335,7 +471,6 @@ export default function DataKokurikulerPage() {
                         <span className="text-gray-400">–</span>
                       )}
                     </td>
-
                     <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle whitespace-nowrap">
                       <button
                         onClick={() => handleDetail(siswa)}
@@ -358,9 +493,7 @@ export default function DataKokurikulerPage() {
             Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari{' '}
             {filteredSiswa.length} data
           </div>
-          <div className="flex gap-1 flex-wrap justify-center">
-            {renderPagination()}
-          </div>
+          <div className="flex gap-1 flex-wrap justify-center">{renderPagination()}</div>
         </div>
       </div>
 
@@ -499,10 +632,12 @@ export default function DataKokurikulerPage() {
                   <label className="block text-xs text-gray-600 mb-1">Nama Kegiatan Proyek</label>
                   <input
                     type="text"
-                    value={detailData.nama_judul_proyek ?? ''}
-                    onChange={(e) => setDetailData(prev => ({ ...prev!, nama_judul_proyek: e.target.value }))}
+                    value={detailData.nama_judul_proyek ?? ''} //  <-- ini akan dipisah seharusnya
+                    onChange={(e) =>
+                      setDetailData((prev) => ({ ...prev!, nama_judul_proyek: e.target.value }))
+                    }
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    placeholder="Contoh: Kebersihan Lingkungan, Hias Alam, dll"
+                    placeholder="Contoh: Kebersihan Lingkungan"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
