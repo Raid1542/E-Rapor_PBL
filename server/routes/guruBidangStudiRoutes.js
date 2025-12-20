@@ -81,4 +81,7 @@ router.get('/nilai/:mapelId/:kelasId', authenticate, guruBidangStudiOnly, contro
 // Endpoint untuk menyimpan nilai
 router.post('/nilai', authenticate, guruBidangStudiOnly, controller.simpanNilai);
 
+// Endpoint untuk edit nilai
+router.put('/nilai-komponen/:mapelId/:siswaId', authenticate, guruBidangStudiOnly, controller.simpanNilaiKomponenBanyak);
+
 module.exports = router;

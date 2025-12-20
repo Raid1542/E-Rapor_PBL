@@ -84,12 +84,28 @@ router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasCon
 // Nilai
 router.get('/mapel', authenticate, guruKelasOnly, guruKelasController.getMapelForGuruKelas);
 router.get('/nilai/:mapelId', authenticate, guruKelasOnly, guruKelasController.getNilaiByMapel);
-router.post('/nilai', authenticate, guruKelasOnly, guruKelasController.simpanNilai);
+router.put('/nilai-komponen/:mapelId/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
+    const mapelId = parseInt(req.params.mapelId);
+    const siswaId = parseInt(req.params.siswaId);
+    if (isNaN(mapelId) || mapelId <= 0 || isNaN(siswaId) || siswaId <= 0) {
+        return res.status(400).json({ success: false, message: 'ID tidak valid' });
+    }
+    req.validatedMapelId = mapelId;
+    req.validatedSiswaId = siswaId;
+    next();
+}, guruKelasController.updateNilaiKomponen);
 
 // ====== ATUR PENILAIAN ======
 
 // 1. Atur Kategori Nilai Akademik (HANYA untuk mata pelajaran, TIDAK PAKAI GRADE)
-router.get('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, guruKelasController.getKategoriNilaiAkademik);
+router.get('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, (req, res, next) => {
+  const { mapel_id } = req.query;
+  if (!mapel_id || isNaN(Number(mapel_id))) {
+    return res.status(400).json({ success: false, message: 'mapel_id wajib diisi' });
+  }
+  req.validatedMapelId = Number(mapel_id);
+  next();
+}, guruKelasController.getKategoriNilaiAkademik);
 router.post('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiAkademik);
 router.put('/atur-penilaian/kategori-akademik/:id', authenticate, guruKelasOnly, (req, res, next) => {
     const id = parseInt(req.params.id);

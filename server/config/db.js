@@ -21,4 +21,9 @@ pool.getConnection()
         process.exit(1); // Hentikan server jika koneksi gagal
     });
 
+// Test query sederhana
+pool.execute('SELECT 1')
+    .then(() => console.log('✅ Query test berhasil'))
+    .catch(err => console.error('❌ Query test gagal:', err.message));
+
 module.exports = pool;

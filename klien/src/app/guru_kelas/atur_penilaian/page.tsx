@@ -1,16 +1,12 @@
 'use client';
-
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { Pencil, X, Plus, Trash2 } from 'lucide-react';
 
 // ====== TYPES ======
-
 interface AspekKokurikuler {
     id_aspek_kokurikuler: number;
     nama: string;
 }
-
-// Tipe untuk Kategori Akademik (TANPA GRADE)
 interface KategoriAkademik {
     id: number;
     min_nilai: number;
@@ -18,8 +14,6 @@ interface KategoriAkademik {
     deskripsi: string;
     urutan: number;
 }
-
-// Tipe untuk Kategori Kokurikuler (DENGAN GRADE)
 interface KategoriKokurikuler {
     id: number;
     min_nilai: number;
@@ -29,19 +23,16 @@ interface KategoriKokurikuler {
     urutan: number;
     id_aspek_kokurikuler: number;
 }
-
 interface KomponenPenilaian {
     id_komponen: number;
     nama_komponen: string;
     urutan: number;
 }
-
 interface BobotItem {
     komponen_id: number;
     bobot: number;
     is_active: boolean;
 }
-
 interface MapelItem {
     mata_pelajaran_id: number;
     nama_mapel: string;
@@ -50,9 +41,7 @@ interface MapelItem {
 }
 
 // ====== MAIN COMPONENT ======
-
 export default function AturPenilaianPage() {
-    // State umum
     const [activeTab, setActiveTab] = useState<'kokurikuler' | 'akademik' | 'bobot'>('kokurikuler');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -67,25 +56,33 @@ export default function AturPenilaianPage() {
         max_nilai: number;
         grade?: string;
         deskripsi: string;
-        id_aspek_kokurikuler?: number; // ✅ Tambahkan untuk kokurikuler
+        id_aspek_kokurikuler?: number;
     }>({
         min_nilai: 0,
         max_nilai: 100,
         deskripsi: ''
     });
+    const [initialEditKategoriData, setInitialEditKategoriData] = useState<{
+        min_nilai: number;
+        max_nilai: number;
+        grade?: string;
+        deskripsi: string;
+        id_aspek_kokurikuler?: number;
+    } | null>(null);
 
-    // Aspek Kokurikuler
-    const [aspekList, setAspekList] = useState<AspekKokurikuler[]>([]);
-
-    // Bobot
-    const [mapelList, setMapelList] = useState<MapelItem[]>([]);
+    // Mapel selection (untuk akademik & bobot)
+    const [selectedMapelAkademik, setSelectedMapelAkademik] = useState<number | null>(null);
     const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
+
+    // Aspek & bobot
+    const [aspekList, setAspekList] = useState<AspekKokurikuler[]>([]);
+    const [mapelList, setMapelList] = useState<MapelItem[]>([]);
     const [komponenList, setKomponenList] = useState<KomponenPenilaian[]>([]);
     const [bobotList, setBobotList] = useState<BobotItem[]>([]);
     const [bobotLoading, setBobotLoading] = useState(false);
     const [initialBobotList, setInitialBobotList] = useState<BobotItem[]>([]);
 
-    // ====== FETCH SEMUA DATA DUKUNGAN DI SATU useEffect ======
+    // ====== FETCH DATA DUKUNGAN ======
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -93,7 +90,6 @@ export default function AturPenilaianPage() {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
-
                 const endpoints = [
                     fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/komponen', {
                         headers: { Authorization: `Bearer ${token}` }
@@ -105,49 +101,48 @@ export default function AturPenilaianPage() {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                 ];
-
                 const [resKomponen, resMapel, resAspek] = await Promise.all(endpoints);
-
                 if (!resKomponen.ok || !resMapel.ok || !resAspek.ok) {
                     throw new Error('Gagal mengambil data pendukung');
                 }
-
                 const komponenData = await resKomponen.json();
                 const mapelData = await resMapel.json();
                 const aspekData = await resAspek.json();
-
                 setKomponenList(komponenData.data || []);
                 setMapelList([...(mapelData.wajib || []), ...(mapelData.pilihan || [])]);
                 setAspekList(aspekData.data || []);
             } catch (err: any) {
-                console.error('Error fetch data:', err);
+                console.error('Error fetch ', err);
                 setError(err.message || 'Gagal memuat data');
             } finally {
                 setLoading(false);
             }
         };
-
         fetchData();
     }, []);
 
-    // ====== FETCH KATEGORI SESUAI TAB ======
+    // ====== FETCH KATEGORI AKADEMIK/KOKURIKULER ======
     useEffect(() => {
         if (activeTab === 'bobot') return;
-
         const fetchKategori = async () => {
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                const endpoint = activeTab === 'akademik'
-                    ? 'atur-penilaian/kategori-akademik'
-                    : 'atur-penilaian/kategori-kokurikuler';
-
+                let endpoint = '';
+                if (activeTab === 'akademik') {
+                    if (selectedMapelAkademik === null) {
+                        setKategoriList([]);
+                        setLoading(false);
+                        return;
+                    }
+                    endpoint = `atur-penilaian/kategori-akademik?mapel_id=${selectedMapelAkademik}`;
+                } else {
+                    endpoint = 'atur-penilaian/kategori-kokurikuler';
+                }
                 const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-
                 if (!res.ok) throw new Error(`Gagal mengambil kategori ${activeTab}`);
-
                 const data = await res.json();
                 setKategoriList(data.data || []);
             } catch (err: any) {
@@ -157,17 +152,15 @@ export default function AturPenilaianPage() {
                 setLoading(false);
             }
         };
-
         fetchKategori();
-    }, [activeTab]);
+    }, [activeTab, selectedMapelAkademik]);
 
-    // ====== FETCH BOBOT JIKA DIPILIH MAPEL ======
+    // ====== FETCH BOBOT SAAT MAPSEL BERUBAH ======
     useEffect(() => {
         if (selectedMapelId === null || activeTab !== 'bobot') {
             setBobotList([]);
             return;
         }
-
         const fetchBobot = async () => {
             setBobotLoading(true);
             try {
@@ -175,87 +168,101 @@ export default function AturPenilaianPage() {
                 const res = await fetch(`http://localhost:5000/api/guru-kelas/atur-penilaian/bobot-akademik/${selectedMapelId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-
+                let bobotData = [];
                 if (res.ok) {
                     const data = await res.json();
-                    const bobotMap = new Map<number, number>();
-                    (data.data || []).forEach((b: any) => {
-                        const numBobot = typeof b.bobot === 'number' ? b.bobot : parseFloat(b.bobot);
-                        bobotMap.set(b.komponen_id, isNaN(numBobot) ? 0 : numBobot);
-                    });
-
-                    const fullBobot = komponenList.map(k => ({
-                        komponen_id: k.id_komponen,
-                        bobot: bobotMap.get(k.id_komponen) || 0,
-                        is_active: true
-                    }));
-
-                    setBobotList(fullBobot);
-                    setInitialBobotList(JSON.parse(JSON.stringify(fullBobot)));
+                    // Ambil data bobot dari API
+                    bobotData = data.data || [];
                 }
+
+                // Buat mapping bobot berdasarkan komponen_id
+                const bobotMap = new Map<number, number>();
+                bobotData.forEach((b: any) => {
+                    const numBobot = typeof b.bobot === 'number' ? b.bobot : parseFloat(b.bobot);
+                    bobotMap.set(b.komponen_id, isNaN(numBobot) ? 0 : numBobot);
+                });
+
+                // Gabungkan dengan semua komponen yang ada di `komponenList`
+                const fullBobot = komponenList.map(k => ({
+                    komponen_id: k.id_komponen,
+                    bobot: bobotMap.get(k.id_komponen) || 0, // Jika tidak ada, default 0
+                    is_active: true
+                }));
+
+                setBobotList(fullBobot);
+                setInitialBobotList(JSON.parse(JSON.stringify(fullBobot)));
             } catch (err) {
                 alert('Gagal mengambil bobot penilaian');
             } finally {
                 setBobotLoading(false);
             }
         };
-
         fetchBobot();
     }, [selectedMapelId, komponenList, activeTab]);
 
-    // ====== KATEGORI: OPEN MODAL ======
+    // ====== MODAL KATEGORI ======
     const openEditKategori = (kategori: KategoriAkademik | KategoriKokurikuler | null = null) => {
+        let newData: typeof editKategoriData;
         if (kategori) {
             setEditKategoriId(kategori.id);
-            setEditKategoriData({
+            newData = {
                 min_nilai: kategori.min_nilai,
                 max_nilai: kategori.max_nilai,
                 grade: 'grade' in kategori ? kategori.grade : undefined,
                 deskripsi: kategori.deskripsi,
                 id_aspek_kokurikuler: 'id_aspek_kokurikuler' in kategori ? kategori.id_aspek_kokurikuler : undefined
-            });
+            };
         } else {
             setEditKategoriId(null);
-            setEditKategoriData({
+            newData = {
                 min_nilai: 0,
                 max_nilai: 100,
                 grade: activeTab === 'kokurikuler' ? 'A' : undefined,
                 deskripsi: '',
                 id_aspek_kokurikuler: undefined
-            });
+            };
         }
+        setEditKategoriData(newData);
+        setInitialEditKategoriData(JSON.parse(JSON.stringify(newData)));
         setShowEditKategori(true);
     };
-
     const closeEditKategori = () => {
         setEditKategoriClosing(true);
         setTimeout(() => {
             setShowEditKategori(false);
             setEditKategoriClosing(false);
             setEditKategoriId(null);
+            setInitialEditKategoriData(null);
         }, 200);
     };
 
-    // ====== KATEGORI: SIMPAN ======
+    // ====== SIMPAN KATEGORI ======
     const handleSaveKategori = async () => {
+        if (initialEditKategoriData && JSON.stringify(editKategoriData) === JSON.stringify(initialEditKategoriData)) {
+            alert('Tidak ada perubahan data.');
+            return;
+        }
         try {
             const token = localStorage.getItem('token');
             const isAkademik = activeTab === 'akademik';
             const endpoint = isAkademik
                 ? 'atur-penilaian/kategori-akademik'
                 : 'atur-penilaian/kategori-kokurikuler';
-
             let payload: any;
 
             if (isAkademik) {
+                if (selectedMapelAkademik === null) {
+                    alert('Pilih mata pelajaran terlebih dahulu');
+                    return;
+                }
                 payload = {
                     min_nilai: editKategoriData.min_nilai,
                     max_nilai: editKategoriData.max_nilai,
                     deskripsi: editKategoriData.deskripsi,
-                    urutan: 0
+                    urutan: 0,
+                    mapel_id: selectedMapelAkademik
                 };
             } else {
-                // Validasi aspek untuk kokurikuler
                 if (editKategoriData.id_aspek_kokurikuler == null) {
                     alert('Pilih aspek kokurikuler terlebih dahulu');
                     return;
@@ -286,8 +293,14 @@ export default function AturPenilaianPage() {
             if (res.ok) {
                 alert(editKategoriId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan');
                 closeEditKategori();
-                // Reload
-                const resReload = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}`, {
+
+                // ✅ RELOAD DENGAN PARAMETER YANG SESUAI
+                let reloadUrl = `http://localhost:5000/api/guru-kelas/${endpoint}`;
+                if (isAkademik && selectedMapelAkademik) {
+                    reloadUrl += `?mapel_id=${selectedMapelAkademik}`;
+                }
+
+                const resReload = await fetch(reloadUrl, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await resReload.json();
@@ -301,21 +314,18 @@ export default function AturPenilaianPage() {
         }
     };
 
-    // ====== KATEGORI: HAPUS ======
+    // ====== HAPUS KATEGORI ======
     const handleDeleteKategori = async (id: number) => {
         if (!confirm('Hapus kategori ini?')) return;
-
         try {
             const token = localStorage.getItem('token');
             const endpoint = activeTab === 'akademik'
                 ? 'atur-penilaian/kategori-akademik'
                 : 'atur-penilaian/kategori-kokurikuler';
-
             const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
-
             if (res.ok) {
                 setKategoriList(kategoriList.filter(k => k.id !== id));
                 alert('Kategori berhasil dihapus');
@@ -327,33 +337,28 @@ export default function AturPenilaianPage() {
         }
     };
 
-    // ====== BOBOT: HANDLE CHANGE & SIMPAN ======
+    // ====== BOBOT HANDLERS ======
     const handleBobotChange = (komponenId: number, value: string) => {
         const newValue = parseFloat(value) || 0;
         setBobotList(prev =>
             prev.map(b => (b.komponen_id === komponenId ? { ...b, bobot: newValue } : b))
         );
     };
-
     const handleSaveBobot = async () => {
         if (!selectedMapelId) return;
-
         const isUnchanged = bobotList.every((b, i) =>
             b.komponen_id === initialBobotList[i]?.komponen_id &&
             b.bobot === initialBobotList[i]?.bobot
         );
-
         if (isUnchanged) {
             alert('Tidak ada perubahan data.');
             return;
         }
-
         const total = bobotList.reduce((sum, b) => sum + b.bobot, 0);
         if (Math.abs(total - 100) > 0.1) {
             alert('Total bobot harus 100%');
             return;
         }
-
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`http://localhost:5000/api/guru-kelas/atur-penilaian/bobot-akademik/${selectedMapelId}`, {
@@ -364,7 +369,6 @@ export default function AturPenilaianPage() {
                 },
                 body: JSON.stringify(bobotList)
             });
-
             if (res.ok) {
                 alert('Bobot penilaian berhasil disimpan');
                 setInitialBobotList(JSON.parse(JSON.stringify(bobotList)));
@@ -380,15 +384,14 @@ export default function AturPenilaianPage() {
     // ====== RENDER ======
     if (loading) {
         return (
-            <div className="flex-1 p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-gray-600">Memuat data...</div>
             </div>
         );
     }
-
     if (error) {
         return (
-            <div className="flex-1 p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-red-600">Error: {error}</div>
             </div>
         );
@@ -397,24 +400,24 @@ export default function AturPenilaianPage() {
     return (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian</h1>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6">
+                <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
-                        className={`px-4 py-2 font-medium text-sm ${activeTab === 'kokurikuler' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'kokurikuler' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('kokurikuler')}
                     >
                         Kategori Kokurikuler
                     </button>
                     <button
-                        className={`px-4 py-2 font-medium text-sm ${activeTab === 'akademik' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('akademik')}
                     >
                         Kategori Akademik
                     </button>
                     <button
-                        className={`px-4 py-2 font-medium text-sm ${activeTab === 'bobot' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('bobot')}
                     >
                         Atur Bobot Penilaian
@@ -422,12 +425,10 @@ export default function AturPenilaianPage() {
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'kokurikuler' || activeTab === 'akademik' ? (
+                {activeTab === 'kokurikuler' ? (
                     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800">
-                                {activeTab === 'kokurikuler' ? 'Kategori Nilai Kokurikuler' : 'Kategori Nilai Akademik'}
-                            </h2>
+                            <h2 className="text-xl font-semibold text-gray-800">Kategori Nilai Kokurikuler</h2>
                             <button
                                 onClick={() => openEditKategori()}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 text-sm"
@@ -436,62 +437,51 @@ export default function AturPenilaianPage() {
                                 Tambah Kategori
                             </button>
                         </div>
-
                         <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                            <table className="w-full min-w-[600px] table-auto text-sm">
+                            <table className="w-full min-w-[600px] table-auto text-xs sm:text-sm">
                                 <thead>
                                     <tr>
-                                        {activeTab === 'kokurikuler' && (
-                                            <>
-                                                <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Aspek</th>
-                                                <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Grade</th>
-                                            </>
-                                        )}
-                                        <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Range Nilai</th>
-                                        <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Deskripsi</th>
-                                        <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">Aksi</th>
+                                        <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Aspek</th>
+                                        <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Grade</th>
+                                        <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Range Nilai</th>
+                                        <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Deskripsi</th>
+                                        <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {kategoriList.length === 0 ? (
                                         <tr>
-                                            <td colSpan={activeTab === 'kokurikuler' ? 5 : 3} className="px-4 py-6 text-center text-gray-500">
+                                            <td colSpan={5} className="px-3 py-4 sm:px-4 sm:py-6 text-center text-gray-500">
                                                 Belum ada kategori
                                             </td>
                                         </tr>
                                     ) : (
                                         kategoriList.map((kategori) => (
                                             <tr key={kategori.id} className="border-b hover:bg-gray-50">
-                                                {activeTab === 'kokurikuler' && (
-                                                    <>
-                                                        <td className="px-3 py-3 text-center text-sm">
-                                                            {aspekList.find(a => a.id_aspek_kokurikuler === (kategori as KategoriKokurikuler).id_aspek_kokurikuler)?.nama || '-'}
-                                                        </td>
-                                                        <td className="px-3 py-3 text-center font-medium">
-                                                            {(kategori as KategoriKokurikuler).grade}
-                                                        </td>
-                                                    </>
-                                                )}
-                                                <td className="px-3 py-3 text-center">
-                                                    {kategori.min_nilai} – {kategori.max_nilai}
+                                                <td className="px-2 py-2 sm:px-3 sm:py-3 text-center text-xs sm:text-sm">
+                                                    {aspekList.find(a => a.id_aspek_kokurikuler === (kategori as KategoriKokurikuler).id_aspek_kokurikuler)?.nama || '-'}
                                                 </td>
-                                                <td className="px-3 py-3 text-center max-w-[250px] truncate" title={kategori.deskripsi}>
+                                                <td className="px-2 py-2 sm:px-3 sm:py-3 text-center font-medium text-xs sm:text-sm">
+                                                    {(kategori as KategoriKokurikuler).grade}
+                                                </td>
+                                                <td className="px-2 py-2 sm:px-3 sm:py-3 text-center text-xs sm:text-sm">{kategori.min_nilai} – {kategori.max_nilai}</td>
+                                                <td className="px-2 py-2 sm:px-3 sm:py-3 text-center max-w-[150px] sm:max-w-[250px] truncate" title={kategori.deskripsi}>
                                                     {kategori.deskripsi}
                                                 </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <div className="flex justify-center gap-2">
+                                                <td className="px-2 py-2 sm:px-3 sm:py-3 text-center">
+                                                    <div className="flex justify-center gap-1 sm:gap-2">
                                                         <button
                                                             onClick={() => openEditKategori(kategori)}
                                                             className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                         >
-                                                            <Pencil size={14} />
+                                                            <Pencil size={12} />
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteKategori(kategori.id)}
                                                             className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                         >
-                                                            <Trash2 size={14} />
+                                                            <Trash2 size={12} />
                                                             Hapus
                                                         </button>
                                                     </div>
@@ -503,79 +493,164 @@ export default function AturPenilaianPage() {
                             </table>
                         </div>
                     </div>
-                ) : (
+                ) : activeTab === 'akademik' ? (
                     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-                        <div className="mb-4 sm:mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Pilih Mata Pelajaran
-                            </label>
-                            <select
-                                value={selectedMapelId || ''}
-                                onChange={(e) => setSelectedMapelId(e.target.value ? Number(e.target.value) : null)}
-                                className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            >
-                                <option value="">-- Pilih Mata Pelajaran --</option>
-                                {mapelList.map((mapel) => (
-                                    <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
-                                        {mapel.nama_mapel} ({mapel.jenis})
-                                    </option>
-                                ))}
-                            </select>
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Kategori Nilai Akademik</h2>
+                            <div className="max-w-xs">
+                                <select
+                                    value={selectedMapelAkademik || ''}
+                                    onChange={(e) => setSelectedMapelAkademik(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="">-- Pilih Mata Pelajaran --</option>
+                                    {mapelList
+                                        .filter(m => m.jenis === 'wajib')
+                                        .map(mapel => (
+                                            <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
+                                                {mapel.nama_mapel}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
                         </div>
 
-                        {selectedMapelId && (
+                        {selectedMapelAkademik ? (
                             <>
-                                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
-                                    Atur Bobot untuk: {mapelList.find(m => m.mata_pelajaran_id === selectedMapelId)?.nama_mapel}
-                                </h2>
-
-                                {bobotLoading ? (
-                                    <div className="text-gray-500">Memuat bobot...</div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {bobotList.map((bobot) => {
-                                            const komponen = komponenList.find(k => k.id_komponen === bobot.komponen_id);
-                                            return (
-                                                <div key={bobot.komponen_id} className="flex items-center gap-4 p-3 bg-gray-50 rounded">
-                                                    <span className="font-medium min-w-[100px]">{komponen?.nama_komponen || 'Komponen'}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            value={bobot.bobot}
-                                                            onChange={(e) => handleBobotChange(bobot.komponen_id, e.target.value)}
-                                                            className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
-                                                        />
-                                                        <span className="text-gray-600">%</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-
-                                        <div className="pt-4 border-t">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-semibold">Total Bobot:</span>
-                                                <span className={`text-lg font-bold ${Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {bobotList.reduce((sum, b) => sum + b.bobot, 0).toFixed(2)}%
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end mt-6">
-                                            <button
-                                                onClick={handleSaveBobot}
-                                                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded font-medium text-sm"
-                                            >
-                                                Simpan Bobot
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                <div className="flex justify-end mb-4">
+                                    <button
+                                        onClick={() => openEditKategori()}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 text-xs sm:text-sm"
+                                    >
+                                        <Plus size={14} />
+                                        Tambah Kategori
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                    <table className="w-full min-w-[600px] table-auto text-xs sm:text-sm">
+                                        <thead>
+                                            <tr>
+                                                <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Range Nilai</th>
+                                                <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Deskripsi</th>
+                                                <th className="px-2 py-2 sm:px-3 sm:py-3 text-center bg-gray-800 text-white font-semibold">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {kategoriList.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={3} className="px-3 py-4 sm:px-4 sm:py-6 text-center text-gray-500">
+                                                        Belum ada kategori untuk mata pelajaran ini.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                kategoriList.map((kategori) => (
+                                                    <tr key={kategori.id} className="border-b hover:bg-gray-50">
+                                                        <td className="px-2 py-2 sm:px-3 sm:py-3 text-center text-xs sm:text-sm">{kategori.min_nilai} – {kategori.max_nilai}</td>
+                                                        <td className="px-2 py-2 sm:px-3 sm:py-3 text-center max-w-[150px] sm:max-w-[250px] truncate" title={kategori.deskripsi}>
+                                                            {kategori.deskripsi}
+                                                        </td>
+                                                        <td className="px-2 py-2 sm:px-3 sm:py-3 text-center">
+                                                            <div className="flex justify-center gap-1 sm:gap-2">
+                                                                <button
+                                                                    onClick={() => openEditKategori(kategori)}
+                                                                    className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded flex items-center gap-1 text-xs"
+                                                                >
+                                                                    <Pencil size={12} />
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteKategori(kategori.id)}
+                                                                    className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                    Hapus
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </>
+                        ) : (
+                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
+                                <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                            </div>
                         )}
                     </div>
-                )}
+                ) : activeTab === 'bobot' ? (
+                    <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Atur Bobot Penilaian</h2>
+                            <div className="max-w-xs">
+                                <select
+                                    value={selectedMapelId || ''}
+                                    onChange={(e) => setSelectedMapelId(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="">-- Pilih Mata Pelajaran --</option>
+                                    {mapelList
+                                        .filter(m => m.jenis === 'wajib')
+                                        .map(mapel => (
+                                            <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
+                                                {mapel.nama_mapel}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {selectedMapelId ? (
+                            bobotLoading ? (
+                                <div className="text-gray-500 text-xs sm:text-sm">Memuat bobot...</div>
+                            ) : (
+                                <div className="space-y-3 sm:space-y-4">
+                                    {bobotList.map((bobot) => {
+                                        const komponen = komponenList.find(k => k.id_komponen === bobot.komponen_id);
+                                        return (
+                                            <div key={bobot.komponen_id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 sm:p-3 bg-gray-50 rounded">
+                                                <span className="font-medium min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm">{komponen?.nama_komponen || 'Komponen'}</span>
+                                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        value={bobot.bobot}
+                                                        onChange={(e) => handleBobotChange(bobot.komponen_id, e.target.value)}
+                                                        className="w-full sm:w-20 border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm"
+                                                    />
+                                                    <span className="text-gray-600 text-xs sm:text-sm">%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="pt-3 sm:pt-4 border-t">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-xs sm:text-sm">Total Bobot:</span>
+                                            <span className={`text-sm sm:text-lg font-bold ${Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {bobotList.reduce((sum, b) => sum + b.bobot, 0).toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end mt-3 sm:mt-6">
+                                        <button
+                                            onClick={handleSaveBobot}
+                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded font-medium text-xs sm:text-sm"
+                                        >
+                                            Simpan Bobot
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        ) : (
+                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
+                                <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
             </div>
 
             {/* Modal Edit Kategori */}
@@ -586,9 +661,10 @@ export default function AturPenilaianPage() {
                         if (e.target === e.currentTarget) closeEditKategori();
                     }}
                 >
-                    <div className="absolute inset-0 bg-gray-900/70"></div>
+                    <div className="absolute inset-0 bg-gray-900/70 pointer-events-none"></div>
                     <div
                         className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKategoriClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                        style={{ pointerEvents: 'auto' }}
                     >
                         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
                             <h2 className="text-lg font-bold text-gray-800">
@@ -634,7 +710,6 @@ export default function AturPenilaianPage() {
                                     </div>
                                 </>
                             )}
-
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Min</label>
@@ -659,7 +734,6 @@ export default function AturPenilaianPage() {
                                     />
                                 </div>
                             </div>
-
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                                 <textarea
@@ -670,7 +744,6 @@ export default function AturPenilaianPage() {
                                     placeholder="Contoh: Sangat Baik, Perlu Bimbingan, dll."
                                 />
                             </div>
-
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={closeEditKategori}

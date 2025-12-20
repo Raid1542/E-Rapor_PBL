@@ -1,42 +1,34 @@
 const db = require('../config/db');
 
 // Fungsi untuk mendapatkan konfigurasi berdasarkan nilai numerik
-const getGradeDeskripsiByNilai = async (nilai) => {
-    // Pastikan nilai adalah angka
+const getDeskripsiByNilai = async (nilai, mapelId) => {
     const numNilai = Number(nilai);
     if (isNaN(numNilai) || numNilai < 0 || numNilai > 100) {
-        return { grade: null, deskripsi: 'Nilai tidak valid' };
+        return 'Nilai tidak valid';
     }
 
-    // Ambil konfigurasi dari tabel konfigurasi_nilai_rapor
     const [rows] = await db.execute(`
-        SELECT grade, deskripsi
+        SELECT deskripsi
         FROM konfigurasi_nilai_rapor
-        WHERE ? BETWEEN min_nilai AND max_nilai
-            AND is_active = 1
+        WHERE mapel_id = ?
+          AND ? BETWEEN min_nilai AND max_nilai
+          AND is_active = 1
         ORDER BY urutan ASC
         LIMIT 1
-    `, [numNilai]);
+    `, [mapelId, numNilai]);
 
-    if (rows.length === 0) {
-        return { grade: null, deskripsi: 'Tidak ada konfigurasi yang sesuai' };
-    }
-
-    return {
-        grade: rows[0].grade,
-        deskripsi: rows[0].deskripsi
-    };
+    return rows.length > 0 ? rows[0].deskripsi : 'Tidak ada deskripsi';
 };
 
+
 // Fungsi untuk mendapatkan semua kategori/rentang nilai
-const getAllKategori = async () => {
-    const [rows] = await db.execute(`
+const getAllKategori = async (mapelId = null) => {
+    let query = `
         SELECT 
-            id_config AS id, -- Alias untuk kompatibilitas dengan frontend
+            id_config AS id,
             mapel_id,
             min_nilai,
             max_nilai,
-            grade,
             deskripsi,
             urutan,
             is_active,
@@ -44,30 +36,38 @@ const getAllKategori = async () => {
             updated_at
         FROM konfigurasi_nilai_rapor
         WHERE is_active = 1
-        ORDER BY urutan ASC
-    `);
+    `;
+    const params = [];
+
+    if (mapelId !== null) {
+        query += ' AND mapel_id = ?';
+        params.push(mapelId);
+    }
+
+    query += ' ORDER BY urutan ASC';
+
+    const [rows] = await db.execute(query, params);
     return rows;
 };
 
 // Fungsi untuk membuat kategori baru (tanpa grade)
-const createKategori = async ({ mapel_id, min_nilai, max_nilai, grade, deskripsi, urutan }) => {
-    // Jika grade tidak diberikan, set default ke 'A'
-    const gradeValue = grade || 'A';
+const createKategori = async ({ mapel_id, min_nilai, max_nilai, deskripsi, urutan }) => {
+    if (mapel_id == null) {
+        throw new Error('mapel_id wajib diisi');
+    }
 
     const [result] = await db.execute(`
         INSERT INTO konfigurasi_nilai_rapor (
-            mapel_id, min_nilai, max_nilai, grade, deskripsi, urutan, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, 1)
-    `, [mapel_id, min_nilai, max_nilai, gradeValue, deskripsi, urutan || 0]);
+            mapel_id, min_nilai, max_nilai, deskripsi, urutan, is_active
+        ) VALUES (?, ?, ?, ?, ?, 1)
+    `, [mapel_id, min_nilai, max_nilai, deskripsi, urutan || 0]);
 
-    // Kembalikan data yang baru dibuat
     const [newRow] = await db.execute(`
         SELECT 
             id_config AS id,
             mapel_id,
             min_nilai,
             max_nilai,
-            grade,
             deskripsi,
             urutan,
             is_active,
@@ -81,15 +81,18 @@ const createKategori = async ({ mapel_id, min_nilai, max_nilai, grade, deskripsi
 };
 
 // Fungsi untuk memperbarui kategori (tanpa grade)
-const updateKategori = async (id, { mapel_id, min_nilai, max_nilai, grade, deskripsi, urutan }) => {
-    // Jika grade tidak diberikan, jangan ubah
+const updateKategori = async (id, { mapel_id, min_nilai, max_nilai, deskripsi, urutan }) => {
+    // Validasi: pastikan mapel_id tidak null
+    if (mapel_id == null) {
+        throw new Error('mapel_id wajib diisi');
+    }
+
     const [result] = await db.execute(`
         UPDATE konfigurasi_nilai_rapor
         SET 
             mapel_id = ?,
             min_nilai = ?,
             max_nilai = ?,
-            grade = COALESCE(?, grade),
             deskripsi = ?,
             urutan = ?,
             updated_at = NOW()
@@ -98,7 +101,6 @@ const updateKategori = async (id, { mapel_id, min_nilai, max_nilai, grade, deskr
         mapel_id,
         min_nilai,
         max_nilai,
-        grade,
         deskripsi,
         urutan || 0,
         id
@@ -119,7 +121,7 @@ const deleteKategori = async (id) => {
 };
 
 module.exports = {
-    getGradeDeskripsiByNilai,
+    getDeskripsiByNilai,
     getAllKategori,
     createKategori,
     updateKategori,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Pencil, Eye, Search, X } from 'lucide-react';
 
 // ====== TYPES ======
@@ -21,18 +21,13 @@ interface NilaiSiswa {
   nilai: Record<number, number | null>;
 }
 
-const KOMPONEN = [
-  { id: 1, nama: 'UH 1' },
-  { id: 2, nama: 'UH 2' },
-  { id: 3, nama: 'UH 3' },
-  { id: 4, nama: 'UH 4' },
-  { id: 5, nama: 'UH 5' },
-  { id: 6, nama: 'PTS' },
-  { id: 7, nama: 'PAS' },
-];
+interface Komponen {
+  id: number;
+  nama: string;
+  bobot: number;
+}
 
-// ====== MAIN COMPONENT ======
-export default function DataInputNilaiPage() {
+const DataInputNilaiPage = () => {
   // ====== STATE ======
   const [mapelList, setMapelList] = useState<Mapel[]>([]);
   const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
@@ -43,11 +38,17 @@ export default function DataInputNilaiPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [kelasNama, setKelasNama] = useState<string>('');
   const [currentMapel, setCurrentMapel] = useState<Mapel | null>(null);
-  const [editingSiswa, setEditingSiswa] = useState<NilaiSiswa | null>(null);
-  const [editingNilai, setEditingNilai] = useState<Record<number, number | null>>({});
+  const [komponenList, setKomponenList] = useState<Komponen[]>([]);
+
+  // Modal Detail
   const [showDetail, setShowDetail] = useState(false);
   const [detailSiswa, setDetailSiswa] = useState<NilaiSiswa | null>(null);
   const [detailClosing, setDetailClosing] = useState(false);
+
+  // Modal Edit Komponen (BUKAN Nilai Rapor)
+  const [editingSiswa, setEditingSiswa] = useState<NilaiSiswa | null>(null);
+  const [editingKomponenNilai, setEditingKomponenNilai] = useState<Record<number, number | null>>({});
+  const [editKomponenClosing, setEditKomponenClosing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // ====== FETCH MAPEL ======
@@ -62,20 +63,45 @@ export default function DataInputNilaiPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error('Gagal mengambil data mata pelajaran');
-
+        if (!res.ok) throw new Error('Gagal memuat mata pelajaran');
         const data = await res.json();
-        const allMapel = [...data.wajib, ...data.pilihan];
-        setMapelList(allMapel);
+        setMapelList([...data.wajib, ...data.pilihan]);
       } catch (err) {
-        console.error('Error fetch mapel:', err);
+        console.error(err);
         alert('Gagal memuat daftar mata pelajaran');
       } finally {
         setLoadingMapel(false);
       }
     };
-
     fetchMapel();
+  }, []);
+
+  // ====== FETCH KOMPONEN ======
+  useEffect(() => {
+    const fetchKomponen = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/komponen', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) throw new Error('Gagal memuat komponen penilaian');
+        const data = await res.json();
+        if (data.success) {
+          const komponen: Komponen[] = data.data.map((k: any) => ({
+            id: k.id_komponen,
+            nama: k.nama_komponen,
+            bobot: k.persentase || 0,
+          }));
+          setKomponenList(komponen);
+        }
+      } catch (err) {
+        console.error('Error fetch komponen:', err);
+      }
+    };
+    fetchKomponen();
   }, []);
 
   // ====== FETCH NILAI SAAT MAPEL DIPILIH ======
@@ -97,27 +123,40 @@ export default function DataInputNilaiPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error('Gagal mengambil data nilai');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Gagal mengambil data nilai');
+        }
 
         const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Operasi gagal');
+
+        if (!data.success) {
+          throw new Error(data.message || 'Operasi gagal');
+        }
+
+        if (!Array.isArray(data.siswaList)) {
+          throw new Error('Data siswa tidak valid');
+        }
+
+        const komponenUntukRender = komponenList.length > 0
+          ? komponenList
+          : [
+            { id: 1, nama: 'UH 1', bobot: 0 },
+            { id: 2, nama: 'UH 2', bobot: 0 },
+            { id: 3, nama: 'UH 3', bobot: 0 },
+            { id: 4, nama: 'UH 4', bobot: 0 },
+            { id: 5, nama: 'UH 5', bobot: 0 },
+            { id: 6, nama: 'PTS', bobot: 0 },
+            { id: 7, nama: 'PAS', bobot: 0 },
+          ];
 
         const siswaWithNilai = data.siswaList.map((s: any) => {
           const nilaiRecord: Record<number, number | null> = {};
-          KOMPONEN.forEach(k => {
+          komponenUntukRender.forEach(k => {
             nilaiRecord[k.id] = s.nilai?.[k.id] ?? null;
           });
 
-          let nilaiRapor = s.nilai_rapor;
-          if (typeof nilaiRapor === 'number') {
-            if (nilaiRapor % 1 === 0) {
-              nilaiRapor = Math.floor(nilaiRapor);
-            } else {
-              nilaiRapor = parseFloat(nilaiRapor.toFixed(2));
-            }
-          } else {
-            nilaiRapor = 0;
-          }
+          const nilaiRapor = typeof s.nilai_rapor === 'number' ? Math.floor(s.nilai_rapor) : 0;
 
           return {
             id: s.id,
@@ -133,19 +172,18 @@ export default function DataInputNilaiPage() {
         setSiswaList(siswaWithNilai);
         setFilteredSiswa(siswaWithNilai);
         setKelasNama(data.kelas || '');
-
         const mapel = mapelList.find(m => m.mata_pelajaran_id === selectedMapelId) || null;
         setCurrentMapel(mapel);
       } catch (err) {
         console.error('Error fetch nilai:', err);
-        alert('Gagal memuat data nilai');
+        alert('Gagal memuat data nilai: ' + (err instanceof Error ? err.message : 'Coba lagi.'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchNilai();
-  }, [selectedMapelId, mapelList]);
+  }, [selectedMapelId, komponenList]);
 
   // ====== FILTER SISWA ======
   useEffect(() => {
@@ -162,63 +200,67 @@ export default function DataInputNilaiPage() {
     }
   }, [searchQuery, siswaList]);
 
-  //  SIMPAN NILAI + PERBARUI STATE LOKAL + PERBAIKAN ERROR HANDLING
-  const simpanNilai = async () => {
+  // ====== SIMPAN NILAI KOMPONEN (BUKAN NILAI RAPOR) ======
+  const simpanNilaiKomponen = async () => {
     if (!editingSiswa || !selectedMapelId) return;
+
+    // Validasi: Pastikan semua nilai yang diisi adalah angka antara 0-100
+    for (const [idStr, nilai] of Object.entries(editingKomponenNilai)) {
+      if (nilai !== null) {
+        if (typeof nilai !== 'number' || isNaN(nilai) || nilai < 0 || nilai > 100) {
+          const komponenNama = komponenList.find(k => k.id == Number(idStr))?.nama || idStr;
+          alert(`Nilai untuk komponen "${komponenNama}" tidak valid. Harus berupa angka antara 0 dan 100.`);
+          return;
+        }
+        // Jika nilai valid, pastikan itu bilangan bulat (bulatkan ke bawah)
+        if (!Number.isInteger(nilai)) {
+          alert(`Nilai untuk komponen "${komponenNama}" harus bilangan bulat.`);
+          return;
+        }
+      }
+    }
 
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const promises = [];
+      if (!token) throw new Error('Token tidak ditemukan');
 
-      for (const [komponenId, nilai] of Object.entries(editingNilai)) {
-        if (nilai !== null) {
-          const promise = fetch('http://localhost:5000/api/guru-kelas/nilai', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              siswa_id: editingSiswa.id,
-              mapel_id: selectedMapelId,
-              komponen_id: Number(komponenId),
-              nilai: nilai
-            })
-          });
-          promises.push(promise);
+      const res = await fetch(
+        `http://localhost:5000/api/guru-kelas/nilai-komponen/${selectedMapelId}/${editingSiswa.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ nilai: editingKomponenNilai }),
         }
-      }
-
-      const responses = await Promise.all(promises);
-      const allSuccess = responses.every(res => res.ok);
-      if (!allSuccess) {
-        throw new Error('Salah satu nilai gagal disimpan');
-      }
-
-      //  PERBARUI STATE LOKAL
-      setSiswaList(prev =>
-        prev.map(siswa =>
-          siswa.id === editingSiswa.id
-            ? { ...siswa, nilai: { ...editingNilai } }
-            : siswa
-        )
       );
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Gagal menyimpan nilai komponen');
+      }
+
+      const data = await res.json();
+      const updatedSiswa = {
+        ...editingSiswa,
+        nilai: editingKomponenNilai,
+        nilai_rapor: data.nilai_rapor,
+        deskripsi: data.deskripsi,
+      };
+      setSiswaList(prev =>
+        prev.map(s => (s.id === editingSiswa.id ? updatedSiswa : s))
+      );
       setFilteredSiswa(prev =>
-        prev.map(siswa =>
-          siswa.id === editingSiswa.id
-            ? { ...siswa, nilai: { ...editingNilai } }
-            : siswa
-        )
+        prev.map(s => (s.id === editingSiswa.id ? updatedSiswa : s))
       );
 
       setEditingSiswa(null);
-      alert('Nilai berhasil disimpan');
-
+      alert('Nilai komponen berhasil disimpan');
     } catch (err) {
-      console.error('Error simpan nilai:', err);
-      alert('Gagal menyimpan nilai. Silakan coba lagi.');
+      console.error('Error simpan nilai komponen:', err);
+      alert('Gagal menyimpan: ' + (err instanceof Error ? err.message : 'Coba lagi.'));
     } finally {
       setSaving(false);
     }
@@ -229,37 +271,95 @@ export default function DataInputNilaiPage() {
     setShowDetail(true);
   };
 
+  const openEditKomponen = (siswa: NilaiSiswa) => {
+    const nilaiAwal = { ...siswa.nilai };
+    setEditingSiswa(siswa);
+    setEditingKomponenNilai(nilaiAwal);
+  };
+
   // ====== PAGINATION ======
   const itemsPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(filteredSiswa.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentSiswa = filteredSiswa.slice(startIndex, endIndex);
+  const currentSiswa = filteredSiswa.slice(startIndex, startIndex + itemsPerPage);
 
   const renderPagination = () => {
     const pages: ReactNode[] = [];
     const maxVisible = 5;
     if (currentPage > 1) {
-      pages.push(<button key="prev" onClick={() => setCurrentPage(c => Math.max(1, c - 1))} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">«</button>);
+      pages.push(
+        <button
+          key="prev"
+          onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+        >
+          «
+        </button>
+      );
     }
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{i}</button>);
+        pages.push(
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i)}
+            className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+              }`}
+          >
+            {i}
+          </button>
+        );
       }
     } else {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>1</button>);
+      pages.push(
+        <button
+          key={1}
+          onClick={() => setCurrentPage(1)}
+          className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+            }`}
+        >
+          1
+        </button>
+      );
       if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{i}</button>);
+        pages.push(
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i)}
+            className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+              }`}
+          >
+            {i}
+          </button>
+        );
       }
-      if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{totalPages}</button>);
+      if (currentPage < totalPages - 2)
+        pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+      pages.push(
+        <button
+          key={totalPages}
+          onClick={() => setCurrentPage(totalPages)}
+          className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+            }`}
+        >
+          {totalPages}
+        </button>
+      );
     }
     if (currentPage < totalPages) {
-      pages.push(<button key="next" onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100">»</button>);
+      pages.push(
+        <button
+          key="next"
+          onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+          className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+        >
+          »
+        </button>
+      );
     }
     return pages;
   };
@@ -270,9 +370,7 @@ export default function DataInputNilaiPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai Siswa</h1>
 
-        {/* CONTAINER UTAMA PUTIH */}
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-
           {/* Dropdown Mapel */}
           <div className="mb-4 sm:mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -287,16 +385,13 @@ export default function DataInputNilaiPage() {
                   const val = e.target.value;
                   setSelectedMapelId(val ? Number(val) : null);
                 }}
-                className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">-- Pilih Mata Pelajaran --</option>
                 {mapelList
                   .filter(mapel => mapel.mata_pelajaran_id != null)
                   .map((mapel) => (
-                    <option
-                      key={String(mapel.mata_pelajaran_id)}
-                      value={String(mapel.mata_pelajaran_id)}
-                    >
+                    <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
                       {mapel.nama_mapel} ({mapel.jenis})
                     </option>
                   ))}
@@ -304,123 +399,101 @@ export default function DataInputNilaiPage() {
             )}
           </div>
 
-          {/* Tampilan utama */}
           {selectedMapelId && currentMapel ? (
             <>
-              {/* INFO KELAS & PENCARIAN — RESPONSIF */}
-              <div className="flex flex-col gap-3 mb-4 sm:mb-6">
-                {/* Baris 1: Info Kelas */}
-                <div className="text-sm text-gray-600 flex flex-wrap items-center gap-1">
-                  <span className="font-medium">Kelas:</span>
-                  <span>{kelasNama}</span>
-                  <span>•</span>
-                  <span className={currentMapel.bisa_input ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                    {currentMapel.bisa_input ? 'Anda dapat mengedit nilai' : 'Hanya bisa melihat'}
-                  </span>
-                </div>
-
-                {/* Baris 2: Kontrol & Pencarian */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  {/* Dropdown "Tampilkan X data" */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap">
-                    <span>Tampilkan</span>
-                    <select className="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-                      <option>10</option>
-                      <option>25</option>
-                      <option>50</option>
-                      <option>100</option>
-                    </select>
-                    <span>data</span>
-                  </div>
-
-                  {/* Input Pencarian */}
-                  <div className="relative w-full sm:w-64">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <Search className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Pencarian"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+              <div className="text-sm text-gray-600 mb-4">
+                <span className="font-medium">Kelas:</span> {kelasNama} •{' '}
+                <span className={currentMapel.bisa_input ? 'text-green-600' : 'text-red-600'}>
+                  {currentMapel.bisa_input ? 'Anda dapat mengedit nilai' : 'Hanya bisa melihat'}
+                </span>
               </div>
 
-              {/* Tabel Nilai */}
-              <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-4 sm:mb-6">
-                <table className="w-full min-w-full table-auto text-sm">
+              {/* Pencarian */}
+              <div className="mb-4 relative w-full sm:w-64">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Cari siswa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Tabel */}
+              <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm mb-6">
+                <table className="w-full table-auto text-sm">
                   <thead>
                     <tr>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No.</th>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[140px]">Nama</th>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[100px]">NIS</th>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[120px]">NISN</th>
-                      {KOMPONEN.map(k => (
-                        <th key={k.id} className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[60px]">
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold">No.</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[140px]">Nama</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[100px]">NIS</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[120px]">NISN</th>
+                      {komponenList.map(k => (
+                        <th key={k.id} className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[60px]">
                           {k.nama}
                         </th>
                       ))}
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[90px]">Nilai Rapor</th>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[140px]">Deskripsi</th>
-                      <th className="px-3 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold min-w-[100px]">Aksi</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[90px]">Nilai Rapor</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[140px]">Deskripsi</th>
+                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[100px]">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-500">Memuat data...</td></tr>
+                      <tr>
+                        <td colSpan={8 + komponenList.length} className="px-4 py-8 text-center text-gray-500">
+                          Memuat data...
+                        </td>
+                      </tr>
                     ) : currentSiswa.length === 0 ? (
-                      <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-500">Tidak ada data siswa</td></tr>
+                      <tr>
+                        <td colSpan={8 + komponenList.length} className="px-4 py-8 text-center text-gray-500">
+                          Tidak ada data siswa
+                        </td>
+                      </tr>
                     ) : (
-                      currentSiswa.map((siswa, index) => (
-                        <tr key={siswa.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}>
-                          <td className="px-3 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
-                          <td className="px-3 py-3 text-center align-middle font-medium truncate" title={siswa.nama}>{siswa.nama}</td>
-                          <td className="px-3 py-3 text-center align-middle truncate" title={siswa.nis}>{siswa.nis}</td>
-                          <td className="px-3 py-3 text-center align-middle truncate" title={siswa.nisn}>{siswa.nisn}</td>
-                          {KOMPONEN.map(k => (
-                            <td key={`${siswa.id}-${k.id}`} className="px-3 py-3 text-center align-middle font-medium">
-                              {siswa.nilai[k.id] !== null && siswa.nilai[k.id] !== undefined ? siswa.nilai[k.id] : '-'}
+                      currentSiswa.map((siswa, idx) => (
+                        <tr key={siswa.id} className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                          <td className="px-3 py-3 text-center">{startIndex + idx + 1}</td>
+                          <td className="px-3 py-3 text-center font-medium">{siswa.nama}</td>
+                          <td className="px-3 py-3 text-center">{siswa.nis}</td>
+                          <td className="px-3 py-3 text-center">{siswa.nisn}</td>
+                          {komponenList.map(k => (
+                            <td key={`${siswa.id}-${k.id}`} className="px-3 py-3 text-center">
+                              {siswa.nilai[k.id] !== null ? siswa.nilai[k.id] : '-'}
                             </td>
                           ))}
-                          <td className="px-3 py-3 text-center align-middle font-medium">{siswa.nilai_rapor}</td>
-                          <td className="px-3 py-3 text-center align-middle truncate max-w-[150px]" title={siswa.deskripsi}>
+                          <td className="px-3 py-3 text-center font-medium">{siswa.nilai_rapor}</td>
+                          <td className="px-3 py-3 text-center max-w-[150px] truncate" title={siswa.deskripsi}>
                             {siswa.deskripsi}
                           </td>
-                          <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
+                          <td className="px-3 py-3 text-center">
                             <div className="flex justify-center gap-1">
                               <button
                                 onClick={() => handleDetail(siswa)}
-                                className="bg-green-400 hover:bg-green-500 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
+                                className="bg-green-400 hover:bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1"
                               >
-                                <Eye size={14} />
-                                Lihat
+                                <Eye size={12} /> Lihat
                               </button>
-                              <button
-                                disabled={!currentMapel.bisa_input}
-                                onClick={() => {
-                                  setEditingSiswa(siswa);
-                                  setEditingNilai({ ...siswa.nilai });
-                                }}
-                                className={`px-2 py-1 rounded flex items-center gap-1 text-xs ${currentMapel.bisa_input
-                                  ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-800'
-                                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                  }`}
-                              >
-                                <Pencil size={14} />
-                                Edit
-                              </button>
+                              {currentMapel.bisa_input && (
+                                <button
+                                  onClick={() => openEditKomponen(siswa)}
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded text-xs flex items-center gap-1"
+                                >
+                                  <Pencil size={12} /> Edit
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -430,116 +503,24 @@ export default function DataInputNilaiPage() {
                 </table>
               </div>
 
-              {/* PAGINATION & INFORMASI (SEPERTI HALAMAN ABSENSI) */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div className="text-sm text-gray-600">
-                  Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari {filteredSiswa.length} data
+                  Menampilkan {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredSiswa.length)} dari{' '}
+                  {filteredSiswa.length} data
                 </div>
-                <div className="flex gap-1 flex-wrap justify-center sm:justify-end">
-                  {renderPagination()}
-                </div>
+                <div className="flex gap-1">{renderPagination()}</div>
               </div>
 
-              {/* Modal Edit */}
-              {editingSiswa && (
-                <div
-                  className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-2 sm:p-4`}
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setDetailClosing(true);
-                      setTimeout(() => {
-                        setEditingSiswa(null);
-                        setDetailClosing(false);
-                      }, 200);
-                    }
-                  }}
-                >
-                  <div className="absolute inset-0 bg-gray-900/70"></div>
-                  <div
-                    className={`relative bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-                  >
-                    <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-800">Edit Nilai: {editingSiswa.nama}</h2>
-                      <button
-                        onClick={() => {
-                          setDetailClosing(true);
-                          setTimeout(() => {
-                            setEditingSiswa(null);
-                            setDetailClosing(false);
-                          }, 200);
-                        }}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                    <div className="p-4 sm:p-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        {KOMPONEN.map(k => (
-                          <div key={k.id} className="flex items-center gap-2">
-                            <label className="w-20 sm:w-24 font-medium">{k.nama}:</label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={editingNilai[k.id] ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? null : Number(e.target.value);
-                                setEditingNilai(prev => ({ ...prev, [k.id]: val }));
-                              }}
-                              className="border border-gray-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi:</label>
-                        <div className="p-2 bg-gray-100 rounded border border-gray-300 text-sm min-h-[60px]">
-                          {editingSiswa?.deskripsi || 'Belum ada deskripsi'}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setDetailClosing(true);
-                            setTimeout(() => {
-                              setEditingSiswa(null);
-                              setDetailClosing(false);
-                            }, 200);
-                          }}
-                          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                        >
-                          Batal
-                        </button>
-                        <button
-                          onClick={simpanNilai}
-                          disabled={saving}
-                          className={`px-4 py-2 rounded ${saving
-                            ? 'bg-blue-300 cursor-not-allowed'
-                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                            }`}
-                        >
-                          {saving ? 'Menyimpan...' : 'Simpan'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Modal Detail - Versi Super Rapi & Responsif */}
+              {/* Modal Detail */}
               {showDetail && detailSiswa && (
                 <div
-                  className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setDetailClosing(true);
-                      setTimeout(() => {
-                        setShowDetail(false);
-                        setDetailClosing(false);
-                      }, 200);
+                  className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+                  onClick={(e) => e.target === e.currentTarget && setDetailClosing(true)}
+                  onTransitionEnd={() => {
+                    if (detailClosing) {
+                      setShowDetail(false);
+                      setDetailClosing(false);
                     }
                   }}
                 >
@@ -547,113 +528,139 @@ export default function DataInputNilaiPage() {
                   <div
                     className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                   >
-                    {/* Header */}
-                    <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Siswa</h2>
-                      <button
-                        onClick={() => {
-                          setDetailClosing(true);
-                          setTimeout(() => {
-                            setShowDetail(false);
-                            setDetailClosing(false);
-                          }, 200);
-                        }}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X size={20} />
+                    <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                      <h2 className="text-xl font-bold text-gray-800">Detail Nilai</h2>
+                      <button onClick={() => setDetailClosing(true)} className="text-gray-500 hover:text-gray-700">
+                        <X size={24} />
                       </button>
                     </div>
-
-                    {/* Body */}
-                    <div className="p-4 sm:p-6">
-                      {/* Informasi Dasar */}
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm min-w-[80px]">Nama</span>
-                          <span className="text-sm">:</span>
-                          <span className="text-sm flex-1 break-words">{detailSiswa.nama}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm min-w-[80px]">NIS</span>
-                          <span className="text-sm">:</span>
-                          <span className="text-sm flex-1 break-words">{detailSiswa.nis}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm min-w-[80px]">NISN</span>
-                          <span className="text-sm">:</span>
-                          <span className="text-sm flex-1 break-words">{detailSiswa.nisn}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm min-w-[80px]">Nilai Rapor</span>
-                          <span className="text-sm">:</span>
-                          <span className="text-sm font-medium">{detailSiswa.nilai_rapor}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm min-w-[80px]">Deskripsi</span>
-                          <span className="text-sm">:</span>
-                          <span className="text-sm flex-1 break-words">{detailSiswa.deskripsi}</span>
-                        </div>
+                    <div className="p-6">
+                      <div className="space-y-2 mb-4">
+                        <p><span className="font-medium">Nama:</span> {detailSiswa.nama}</p>
+                        <p><span className="font-medium">NIS:</span> {detailSiswa.nis}</p>
+                        <p><span className="font-medium">NISN:</span> {detailSiswa.nisn}</p>
+                        <p><span className="font-medium">Nilai Rapor:</span> {detailSiswa.nilai_rapor}</p>
+                        <p><span className="font-medium">Deskripsi:</span> {detailSiswa.deskripsi}</p>
                       </div>
 
-                      {/* Nilai Komponen - Grid Responsif */}
-                      <div className="border-t pt-4">
-                        <h3 className="font-semibold text-sm mb-3">Nilai Komponen:</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {KOMPONEN.map(k => (
-                            <div key={k.id} className="bg-gray-50 rounded px-3 py-2">
-                              <div className="text-xs font-medium text-gray-600">{k.nama}</div>
-                              <div className="text-sm font-bold mt-1">
-                                {detailSiswa.nilai[k.id] !== null && detailSiswa.nilai[k.id] !== undefined
-                                  ? detailSiswa.nilai[k.id]
-                                  : '-'}
-                              </div>
+                      <h3 className="font-semibold mb-2">Nilai Komponen:</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {komponenList.map(k => (
+                          <div key={k.id} className="bg-gray-50 p-2 rounded text-center">
+                            <div className="text-xs text-gray-600">{k.nama}</div>
+                            <div className="font-medium">
+                              {detailSiswa.nilai[k.id] !== null ? detailSiswa.nilai[k.id] : '-'}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
                       </div>
 
-                      {/* Tombol Aksi */}
-                      <div className="mt-6 flex flex-col sm:flex-row sm:justify-end sm:gap-3">
+                      <div className="mt-6 flex justify-end gap-3">
                         <button
-                          onClick={() => {
-                            setDetailClosing(true);
-                            setTimeout(() => {
-                              setShowDetail(false);
-                              setDetailClosing(false);
-                            }, 200);
-                          }}
-                          className="px-4 sm:px-6 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-sm font-medium"
+                          onClick={() => setDetailClosing(true)}
+                          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
                         >
                           Tutup
                         </button>
-                        <button
-                          onClick={() => {
-                            setEditingSiswa(detailSiswa);
-                            setEditingNilai({ ...detailSiswa.nilai });
-                            setDetailClosing(true);
-                            setTimeout(() => {
-                              setShowDetail(false);
-                              setDetailClosing(false);
-                            }, 200);
-                          }}
-                          className="px-4 sm:px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded transition text-sm font-medium"
-                        >
-                          Edit
-                        </button>
+                        {currentMapel?.bisa_input && (
+                          <button
+                            onClick={() => {
+                              openEditKomponen(detailSiswa);
+                              setDetailClosing(true);
+                            }}
+                            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded"
+                          >
+                            Edit Nilai
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
+              {/* Modal Edit Komponen */}
+              {editingSiswa && (
+                <div
+                  className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+                  onClick={(e) => e.target === e.currentTarget && setEditKomponenClosing(true)}
+                  onTransitionEnd={() => {
+                    if (editKomponenClosing) {
+                      setEditingSiswa(null);
+                      setEditKomponenClosing(false);
+                    }
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gray-900/70"></div>
+                  <div
+                    className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                  >
+                    <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                      <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
+                      <button onClick={() => setEditKomponenClosing(true)} className="text-gray-500 hover:text-gray-700">
+                        <X size={24} />
+                      </button>
+                    </div>
+                    <div className="p-6">
+                      <p className="mb-4">
+                        <span className="font-medium">Siswa:</span> {editingSiswa.nama}
+                      </p>
+
+                      {/* Grid 2 kolom untuk input nilai */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        {komponenList.map(komponen => (
+                          <div key={komponen.id} className="flex flex-col">
+                            <label className="text-sm font-medium text-gray-700 mb-1">{komponen.nama}</label>
+                            <input
+                              type="text"
+                              value={editingKomponenNilai[komponen.id] ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const num = parseFloat(val);
+                                setEditingKomponenNilai(prev => ({
+                                  ...prev,
+                                  [komponen.id]: val === '' ? null : (isNaN(num) ? null : num)
+                                }));
+                              }}
+                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              placeholder="0-100"
+                              disabled={!currentMapel?.bisa_input}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => setEditKomponenClosing(true)}
+                          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                        >
+                          Batal
+                        </button>
+                        {currentMapel?.bisa_input ? (
+                          <button
+                            onClick={simpanNilaiKomponen}
+                            disabled={saving}
+                            className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                          >
+                            {saving ? 'Menyimpan...' : 'Simpan'}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
-            <div className="mt-6 sm:mt-8 text-center py-6 sm:py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-              <p className="text-gray-700 text-base sm:text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
+              <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DataInputNilaiPage;
