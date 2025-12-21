@@ -81,9 +81,12 @@ export default function AturPenilaianPage() {
                 const komponenData = await resKomponen.json();
                 const mapelData = await resMapel.json();
 
+                console.log('Komponen data:', komponenData);
+                console.log('Mapel data:', mapelData);
+
                 setKomponenList(komponenData.data || []);
                 // Semua mapel yang diajar oleh guru bidang studi (termasuk pilihan)
-                setMapelList(Array.isArray(mapelData) ? mapelData : []);
+                setMapelList(mapelData.data || []);
             } catch (err: any) {
                 console.error('Error fetch data pendukung:', err);
                 setError(err.message || 'Gagal memuat data');
@@ -348,7 +351,7 @@ export default function AturPenilaianPage() {
     return (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian (Guru Bidang Studi)</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian</h1>
 
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6 gap-2">

@@ -174,4 +174,10 @@ router.get('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next
 
 // 4. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
 router.get('/atur-penilaian/komponen', authenticate, guruKelasOnly, guruKelasController.getKomponenPenilaian);
+
+// ====== REKAPAN NILAI RAPOR (SEMUA MAPEL) ======
+router.get('/rekapan-nilai', authenticate, guruKelasOnly, guruKelasController.getRekapanNilai);
+router.get('/rekapan-nilai/export-excel', authenticate, guruKelasOnly, guruKelasController.exportRekapanNilaiExcel);
+
+
 module.exports = router;

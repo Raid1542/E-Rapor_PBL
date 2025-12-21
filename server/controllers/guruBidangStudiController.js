@@ -267,7 +267,7 @@ exports.getDaftarMapel = async (req, res) => {
             ORDER BY mp.jenis, mp.nama_mapel
         `, [userId, taId]);
 
-        res.json({ success: true,  data: rows }); 
+        res.json({ success: true, data: rows });
     } catch (err) {
         console.error('Error getDaftarMapel:', err);
         res.status(500).json({ message: 'Gagal mengambil daftar mata pelajaran' });
@@ -404,6 +404,16 @@ exports.updateBobotPenilaian = async (req, res) => {
 // GET /api/guru-bidang-studi/atur-penilaian/kategori
 exports.getKategoriAkademik = async (req, res) => {
     try {
+        const { mapel_id } = req.query;
+        if (!mapel_id) {
+            return res.status(400).json({ success: false, message: 'Parameter mapel_id wajib diisi' });
+        }
+
+        const mapelIdNum = parseInt(mapel_id, 10);
+        if (isNaN(mapelIdNum) || mapelIdNum <= 0) {
+            return res.status(400).json({ success: false, message: 'mapel_id tidak valid' });
+        }
+
         const [kategori] = await db.execute(`
             SELECT 
                 id_config AS id, 
@@ -412,8 +422,10 @@ exports.getKategoriAkademik = async (req, res) => {
                 deskripsi, 
                 urutan
             FROM konfigurasi_nilai_rapor
+            WHERE mapel_id = ?
             ORDER BY urutan ASC
-        `);
+        `, [mapelIdNum]);
+
         res.json({ success: true, data: kategori });
     } catch (err) {
         console.error('Error get kategori akademik:', err);
@@ -424,18 +436,18 @@ exports.getKategoriAkademik = async (req, res) => {
 // POST /api/guru-bidang-studi/atur-penilaian/kategori
 exports.createKategoriAkademik = async (req, res) => {
     try {
-        const { min_nilai, max_nilai, deskripsi } = req.body;
+        const { min_nilai, max_nilai, deskripsi, mapel_id } = req.body;
 
         if (min_nilai > max_nilai || min_nilai < 0 || max_nilai > 100) {
             return res.status(400).json({ success: false, message: 'Range nilai tidak valid' });
         }
 
         const [result] = await db.execute(`
-            INSERT INTO konfigurasi_nilai_rapor (min_nilai, max_nilai, deskripsi, urutan)
-            VALUES (?, ?, ?, 
+            INSERT INTO konfigurasi_nilai_rapor (mapel_id, min_nilai, max_nilai, deskripsi, urutan)
+            VALUES (?, ?, ?, ?, 
                 (SELECT IFNULL(MAX(urutan), 0) + 1 FROM (SELECT urutan FROM konfigurasi_nilai_rapor) AS tmp)
             )
-        `, [min_nilai, max_nilai, deskripsi]);
+        `, [mapel_id, min_nilai, max_nilai, deskripsi]);
 
         res.json({ success: true, message: 'Kategori berhasil ditambahkan', id: result.insertId });
     } catch (err) {
@@ -606,10 +618,11 @@ exports.getNilaiByMapelAndKelas = async (req, res) => {
         const pasKomponen = komponenRows.find(k => /PAS/i.test(k.nama_komponen));
 
         const [configRows] = await db.execute(`
-            SELECT min_nilai, max_nilai, deskripsi 
-            FROM konfigurasi_nilai_rapor 
-            ORDER BY min_nilai DESC
-        `);
+    SELECT min_nilai, max_nilai, deskripsi 
+    FROM konfigurasi_nilai_rapor 
+    WHERE mapel_id = ?
+    ORDER BY min_nilai DESC
+`, [mapelId]);
 
         const siswaList = siswaRows.map(s => {
             const nilai = nilaiMap[s.id] || {};
@@ -713,7 +726,7 @@ exports.simpanNilai = async (req, res) => {
 };
 
 exports.simpanNilaiKomponenBanyak = async (req, res) => {
-    const { mapelId, siswaId } = req.params; 
+    const { mapelId, siswaId } = req.params;
     const { nilai } = req.body;
 
     // Validasi
@@ -753,6 +766,110 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
         `, [siswaIdNum, mapelIdNum, komponenId, nilaiBulat, tahun_ajaran_id, userId]);
     }
 
+    // ====== PERHITUNGAN NILAI RAPOR & DESKRIPSI BARU ======
+    // Ambil semua data yang dibutuhkan
+    const [komponenRows] = await db.execute(`
+        SELECT id_komponen, nama_komponen 
+        FROM komponen_penilaian 
+        ORDER BY urutan
+    `);
 
-    res.json({ success: true, message: 'Nilai komponen berhasil disimpan' });
+    const [bobotRows] = await db.execute(`
+        SELECT komponen_id, bobot 
+        FROM konfigurasi_mapel_komponen 
+        WHERE mapel_id = ?
+    `, [mapelIdNum]);
+
+    const [nilaiRows] = await db.execute(`
+        SELECT komponen_id, nilai 
+        FROM nilai_detail 
+        WHERE siswa_id = ? AND mapel_id = ? AND tahun_ajaran_id = ?
+    `, [siswaIdNum, mapelIdNum, tahun_ajaran_id]);
+
+    const nilaiMap = new Map();
+    nilaiRows.forEach(row => {
+        nilaiMap.set(row.komponen_id, row.nilai);
+    });
+
+    const bobotMap = new Map();
+    bobotRows.forEach(row => {
+        bobotMap.set(row.komponen_id, parseFloat(row.bobot) || 0);
+    });
+
+    // Pisahkan UH, PTS, PAS
+    const uhKomponenIds = komponenRows
+        .filter(k => /^UH\s+\d+$/i.test(k.nama_komponen))
+        .map(k => k.id_komponen);
+    const ptsKomponen = komponenRows.find(k => /PTS/i.test(k.nama_komponen));
+    const pasKomponen = komponenRows.find(k => /PAS/i.test(k.nama_komponen));
+
+    // Hitung nilai
+    const nilaiUH = uhKomponenIds.map(id => nilaiMap.get(id)).filter(v => v != null);
+    const rataUH = nilaiUH.length > 0 ? nilaiUH.reduce((a, b) => a + b, 0) / nilaiUH.length : 0;
+    const totalBobotUH = uhKomponenIds.reduce((sum, id) => sum + (bobotMap.get(id) || 0), 0);
+    const nilaiPTS = ptsKomponen ? (nilaiMap.get(ptsKomponen.id_komponen) || 0) : 0;
+    const bobotPTS = ptsKomponen ? (bobotMap.get(ptsKomponen.id_komponen) || 0) : 0;
+    const nilaiPAS = pasKomponen ? (nilaiMap.get(pasKomponen.id_komponen) || 0) : 0;
+    const bobotPAS = pasKomponen ? (bobotMap.get(pasKomponen.id_komponen) || 0) : 0;
+
+    let nilaiRapor = 0;
+    if (totalBobotUH > 0) nilaiRapor += (rataUH * totalBobotUH);
+    if (bobotPTS > 0) nilaiRapor += (nilaiPTS * bobotPTS);
+    if (bobotPAS > 0) nilaiRapor += (nilaiPAS * bobotPAS);
+    nilaiRapor = nilaiRapor / 100;
+    const nilaiRaporBulat = Math.floor(nilaiRapor);
+
+    // Ambil deskripsi dari kategori
+    let deskripsi = 'Belum ada deskripsi';
+    const [configRows] = await db.execute(`
+        SELECT min_nilai, max_nilai, deskripsi 
+        FROM konfigurasi_nilai_rapor 
+        WHERE mapel_id = ?
+        ORDER BY min_nilai DESC
+    `, [mapelIdNum]);
+
+    for (const config of configRows) {
+        if (nilaiRaporBulat >= config.min_nilai && nilaiRaporBulat <= config.max_nilai) {
+            deskripsi = config.deskripsi;
+            break;
+        }
+    }
+
+    // Simpan ke nilai_rapor
+    const [kelasRows] = await db.execute(`
+        SELECT kelas_id FROM pembelajaran 
+        WHERE mata_pelajaran_id = ? AND user_id = ? AND tahun_ajaran_id = ?
+        LIMIT 1
+    `, [mapelIdNum, userId, tahun_ajaran_id]);
+
+    if (kelasRows.length === 0) {
+        return res.status(500).json({ success: false, message: 'Kelas tidak ditemukan untuk mata pelajaran ini' });
+    }
+    const kelas_id = kelasRows[0].kelas_id;
+
+    // Ambil semester aktif
+    const [semesterRows] = await db.execute(`
+        SELECT semester FROM tahun_ajaran WHERE id_tahun_ajaran = ?
+    `, [tahun_ajaran_id]);
+    const semester = semesterRows[0]?.semester || 'genap';
+
+    // Simpan nilai rapor ke tabel
+    await db.execute(`
+        INSERT INTO nilai_rapor (
+            siswa_id, mapel_id, kelas_id, tahun_ajaran_id, semester,
+            nilai_rapor, deskripsi, created_by_user_id, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+            nilai_rapor = VALUES(nilai_rapor),
+            deskripsi = VALUES(deskripsi),
+            updated_at = NOW()
+    `, [siswaIdNum, mapelIdNum, kelas_id, tahun_ajaran_id, semester, nilaiRaporBulat, deskripsi, userId]);
+
+    res.json({
+        success: true,
+        message: 'Nilai komponen berhasil disimpan',
+        nilai_rapor: nilaiRaporBulat,
+        deskripsi: deskripsi
+    });
 };

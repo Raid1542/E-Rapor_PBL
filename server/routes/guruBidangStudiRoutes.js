@@ -84,4 +84,6 @@ router.post('/nilai', authenticate, guruBidangStudiOnly, controller.simpanNilai)
 // Endpoint untuk edit nilai
 router.put('/nilai-komponen/:mapelId/:siswaId', authenticate, guruBidangStudiOnly, controller.simpanNilaiKomponenBanyak);
 
+
+
 module.exports = router;

@@ -2,9 +2,8 @@ const db = require('../config/db');
 
 // Fungsi untuk mendapatkan konfigurasi berdasarkan nilai numerik
 const getDeskripsiByNilai = async (nilai, mapelId) => {
-    const numNilai = Number(nilai);
-    if (isNaN(numNilai) || numNilai < 0 || numNilai > 100) {
-        return 'Nilai tidak valid';
+    if (nilai == null || mapelId == null) {
+        return 'Belum ada deskripsi';
     }
 
     const [rows] = await db.execute(`
@@ -13,11 +12,11 @@ const getDeskripsiByNilai = async (nilai, mapelId) => {
         WHERE mapel_id = ?
           AND ? BETWEEN min_nilai AND max_nilai
           AND is_active = 1
-        ORDER BY urutan ASC
+        ORDER BY min_nilai DESC
         LIMIT 1
-    `, [mapelId, numNilai]);
+    `, [mapelId, nilai]);
 
-    return rows.length > 0 ? rows[0].deskripsi : 'Tidak ada deskripsi';
+    return rows.length > 0 ? rows[0].deskripsi : 'Belum ada deskripsi';
 };
 
 
