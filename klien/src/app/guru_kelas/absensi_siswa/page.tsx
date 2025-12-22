@@ -15,6 +15,10 @@ interface SiswaAbsensi {
 }
 
 export default function DataAbsensiPage() {
+    useEffect(() => {
+    document.title = "Absensi - E-Rapor";
+  }, []);
+
     const [siswaList, setSiswaList] = useState<SiswaAbsensi[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<number | null>(null);

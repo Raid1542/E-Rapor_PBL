@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Search, Upload, X } from 'lucide-react';
+import { Search, Upload, X, Eye } from 'lucide-react';
 
 // Tipe data siswa dalam rekapan nilai
 interface SiswaRekapan {
@@ -9,14 +9,22 @@ interface SiswaRekapan {
     nis: string;
     nilaiMapel: Record<string, number | null>; // key: kode_mapel
     rataRata: number | null;
+    deskripsiRataRata: string;
     ranking: number | null;
 }
 
 export default function RekapanNilaiGuruKelasPage() {
+    useEffect(() => {
+        document.title = "Rekapan Nilai - E-Rapor";
+    }, []);
+
     const [siswaList, setSiswaList] = useState<SiswaRekapan[]>([]);
     const [mapelList, setMapelList] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showDetail, setShowDetail] = useState(false);
+    const [detailSiswa, setDetailSiswa] = useState<SiswaRekapan | null>(null);
+    const [detailClosing, setDetailClosing] = useState(false);
 
     // Fetch data rekapan nilai
     const fetchRekapanNilai = async () => {
@@ -39,6 +47,7 @@ export default function RekapanNilaiGuruKelasPage() {
                     nis: s.nis,
                     nilaiMapel: s.nilai_mapel || {},
                     rataRata: s.rata_rata != null ? parseFloat(s.rata_rata.toFixed(2)) : null,
+                    deskripsiRataRata: s.deskripsi_rata_rata || 'Belum ada deskripsi',
                     ranking: s.ranking || null,
                 }));
                 const mapel: string[] = data.mapel_list;
@@ -59,6 +68,12 @@ export default function RekapanNilaiGuruKelasPage() {
     useEffect(() => {
         fetchRekapanNilai();
     }, []);
+
+    // Fungsi untuk menampilkan detail siswa
+    const handleDetail = (siswa: SiswaRekapan) => {
+        setDetailSiswa(siswa);
+        setShowDetail(true);
+    };
 
     // Filter berdasarkan pencarian DAN urutkan berdasarkan ranking
     const filteredSiswa = siswaList
@@ -150,8 +165,8 @@ export default function RekapanNilaiGuruKelasPage() {
                                         </th>
                                     ))}
                                     <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Rata-rata</th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Detail</th>
                                     <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Ranking</th>
-                                    {/* ❌ KOLOM "AKSI" DIHAPUS */}
                                 </tr>
                             </thead>
                             <tbody>
@@ -186,6 +201,14 @@ export default function RekapanNilaiGuruKelasPage() {
                                             <td className="px-4 py-3 text-center align-middle font-medium">
                                                 {siswa.rataRata !== null ? siswa.rataRata.toFixed(2) : '-'}
                                             </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <button
+                                                    onClick={() => handleDetail(siswa)}
+                                                    className="bg-green-400 hover:bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1 mx-auto"
+                                                >
+                                                    <Eye size={12} /> Lihat
+                                                </button>
+                                            </td>
                                             <td className="px-4 py-3 text-center align-middle">
                                                 {siswa.ranking ? `${siswa.ranking}` : '-'}
                                             </td>
@@ -195,8 +218,94 @@ export default function RekapanNilaiGuruKelasPage() {
                             </tbody>
                         </table>
                     </div>
+                    {/* Modal Detail - Rekapan Nilai */}
+                    {showDetail && detailSiswa && (
+                        <div
+                            className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+                            onClick={(e) => e.target === e.currentTarget && setDetailClosing(true)}
+                            onTransitionEnd={() => {
+                                if (detailClosing) {
+                                    setShowDetail(false);
+                                    setDetailClosing(false);
+                                }
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-gray-900/70"></div>
+                            <div
+                                className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                            >
+                                <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold text-gray-800">Detail Rekapan Nilai</h2>
+                                    <button onClick={() => setDetailClosing(true)} className="text-gray-500 hover:text-gray-700">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    {/* Info Siswa */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                        <div>
+                                            <span className="font-medium text-gray-700">Nama:</span>
+                                            <span className="ml-2">{detailSiswa.nama}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-medium text-gray-700">NIS:</span>
+                                            <span className="ml-2">{detailSiswa.nis}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-medium text-gray-700">Rata-rata:</span>
+                                            <span className="ml-2 font-semibold">
+                                                {detailSiswa.rataRata !== null ? detailSiswa.rataRata.toFixed(2) : '-'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="font-medium text-gray-700">Ranking:</span>
+                                            <span className="ml-2 font-semibold">
+                                                {detailSiswa.ranking ? `${detailSiswa.ranking}` : '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Deskripsi Lengkap */}
+                                    <div className="mb-6">
+                                        <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
+                                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                                            {detailSiswa.deskripsiRataRata || 'Tidak ada deskripsi'}
+                                        </p>
+                                    </div>
+
+                                    {/* Nilai per Mata Pelajaran */}
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800 mb-3">Nilai per Mata Pelajaran:</h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {mapelList.map(kodeMapel => (
+                                                <div key={kodeMapel} className="bg-blue-50 p-3 rounded text-center">
+                                                    <div className="text-xs font-medium text-blue-700">{kodeMapel}</div>
+                                                    <div className="text-lg font-bold mt-1">
+                                                        {detailSiswa.nilaiMapel[kodeMapel] !== undefined && detailSiswa.nilaiMapel[kodeMapel] !== null
+                                                            ? Math.floor(detailSiswa.nilaiMapel[kodeMapel]!)
+                                                            : '-'}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Tombol Tutup */}
+                                    <div className="mt-8 flex justify-end">
+                                        <button
+                                            onClick={() => setDetailClosing(true)}
+                                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                        >
+                                            Tutup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
+
     );
 }

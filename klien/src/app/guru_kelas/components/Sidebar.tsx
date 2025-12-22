@@ -27,7 +27,6 @@ export default function Sidebar({ user }: SidebarProps) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [openDropdowns, setOpenDropdowns] = useState({
         kelolaData: false,
-        rapor: false,
     });
 
     // ✅ State untuk logo dan nama sekolah
@@ -93,7 +92,6 @@ export default function Sidebar({ user }: SidebarProps) {
         if (!isExpanded) setIsExpanded(true);
         setOpenDropdowns((prev) => ({
             kelolaData: menu === 'kelolaData' ? !prev.kelolaData : false,
-            rapor: menu === 'rapor' ? !prev.rapor : false,
         }));
     };
 
@@ -111,20 +109,16 @@ export default function Sidebar({ user }: SidebarProps) {
         { name: 'Catatan Wali Kelas', url: '/guru_kelas/catatan_wali_kelas' },
     ];
 
-    const raporSubmenu = [
-        { name: 'Lihat Rapor', url: '/guru_kelas/lihat-rapor' },
-        { name: 'Cetak Rapor', url: '/guru_kelas/cetak-rapor' },
-    ];
+    
 
     // Active state
     const isDashboardActive = pathname === '/guru_kelas/dashboard';
     const isKelolaDataActive = kelolaDataSubmenu.some((item) => item.url === pathname);
-    const isRaporActive = raporSubmenu.some((item) => item.url === pathname);
+    const isRaporActive = pathname === '/guru_kelas/rapor';
 
     useEffect(() => {
         if (isKelolaDataActive) setOpenDropdowns((prev) => ({ ...prev, kelolaData: true }));
-        if (isRaporActive) setOpenDropdowns((prev) => ({ ...prev, rapor: true }));
-    }, [isKelolaDataActive, isRaporActive]);
+    }, [isKelolaDataActive]);
 
     return (
         <div
@@ -216,42 +210,16 @@ export default function Sidebar({ user }: SidebarProps) {
                     )}
                 </div>
 
-                <div className="mb-2">
-                    <button
-                        onClick={() => toggleDropdown('rapor')}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${isRaporActive
-                                ? 'bg-orange-500 text-white'
-                                : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
-                            }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <BookOpen className="w-5 h-5 flex-shrink-0" />
-                            {isExpanded && <span className="font-medium">Rapor</span>}
-                        </div>
-                        {isExpanded &&
-                            (openDropdowns.rapor ? (
-                                <ChevronDown className="w-4 h-4" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4" />
-                            ))}
-                    </button>
-                    {isExpanded && openDropdowns.rapor && (
-                        <div className="ml-6 mt-1 space-y-1">
-                            {raporSubmenu.map((item, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => handleNavigation(item.url)}
-                                    className={`w-full text-left p-2 pl-4 rounded-lg text-sm transition-colors ${item.url === pathname
-                                            ? 'bg-orange-400 text-white'
-                                            : 'text-gray-600 hover:bg-orange-50 hover:text-orange-500'
-                                        }`}
-                                >
-                                    {item.name}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <button
+    onClick={() => handleNavigation('/guru_kelas/rapor')}
+    className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isRaporActive
+        ? 'bg-orange-500 text-white'
+        : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
+    }`}
+>
+    <BookOpen className="w-5 h-5 flex-shrink-0" />
+    {isExpanded && <span className="font-medium">Rapor</span>}
+</button>
             </div>
 
             <div className="p-4 border-t">

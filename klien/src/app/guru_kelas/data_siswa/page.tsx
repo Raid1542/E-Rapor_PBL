@@ -36,6 +36,10 @@ const formatJenisKelamin = (jk: string): string => {
 };
 
 export default function DataSiswaPage() {
+  useEffect(() => {
+    document.title = "Data Siswa Berdasarkan Kelas - E-Rapor";
+  }, []);
+
   const [siswaList, setSiswaList] = useState<Siswa[]>([]);
   const [filteredSiswa, setFilteredSiswa] = useState<Siswa[]>([]);
   const [loading, setLoading] = useState(true);

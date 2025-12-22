@@ -18,6 +18,10 @@ interface TahunAjaran {
 }
 
 export default function DataEkstrakurikulerPage() {
+  useEffect(() => {
+    document.title = "Ekstrakurikuler - E-Rapor";
+  }, []);
+
   const [ekskulList, setEkskulList] = useState<Ekstrakurikuler[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTambah, setShowTambah] = useState(false);

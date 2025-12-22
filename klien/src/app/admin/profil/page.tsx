@@ -20,7 +20,10 @@ interface UserProfile {
 }
 
 const ProfilePage = () => {
-  // State profil
+  useEffect(() => {
+    document.title = "Profil Admin - E-Rapor";
+  }, []);
+
   const [formData, setFormData] = useState({
     nama: '',
     nuptk: '',

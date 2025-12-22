@@ -44,6 +44,10 @@ interface FormDataType {
 }
 
 export default function DataSiswaPage() {
+  useEffect(() => {
+    document.title = "Data Siswa - E-Rapor";
+  }, []);
+
   const [siswaList, setSiswaList] = useState<Siswa[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);

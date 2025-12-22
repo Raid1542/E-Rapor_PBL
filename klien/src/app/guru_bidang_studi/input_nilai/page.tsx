@@ -31,7 +31,10 @@ interface KelasItem {
 }
 
 const DataInputNilaiPage = () => {
-    // ====== STATE ======
+    useEffect(() => {
+    document.title = "Input Nilai - E-Rapor";
+  }, []);
+
     const [mapelList, setMapelList] = useState<Mapel[]>([]);
     const [kelasList, setKelasList] = useState<KelasItem[]>([]);
     const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
@@ -494,7 +497,6 @@ const DataInputNilaiPage = () => {
                                                 </th>
                                             ))}
                                             <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[90px]">Nilai Rapor</th>
-                                            <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[140px]">Deskripsi</th>
                                             <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[100px]">Aksi</th>
                                         </tr>
                                     </thead>
@@ -524,9 +526,6 @@ const DataInputNilaiPage = () => {
                                                         </td>
                                                     ))}
                                                     <td className="px-3 py-3 text-center font-medium">{siswa.nilai_rapor}</td>
-                                                    <td className="px-3 py-3 text-center max-w-[150px] truncate" title={siswa.deskripsi}>
-                                                        {siswa.deskripsi}
-                                                    </td>
                                                     <td className="px-3 py-3 text-center">
                                                         <div className="flex justify-center gap-1">
                                                             <button
@@ -581,18 +580,39 @@ const DataInputNilaiPage = () => {
                                         </div>
                                         <div className="p-6">
                                             <div className="space-y-2 mb-4">
-                                                <p><span className="font-medium">Nama:</span> {detailSiswa.nama}</p>
-                                                <p><span className="font-medium">NIS:</span> {detailSiswa.nis}</p>
-                                                <p><span className="font-medium">NISN:</span> {detailSiswa.nisn}</p>
-                                                <p><span className="font-medium">Nilai Rapor:</span> {detailSiswa.nilai_rapor}</p>
-                                                <p><span className="font-medium">Deskripsi:</span> {detailSiswa.deskripsi}</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6`">
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Nama:</span>
+                                                        <span className="ml-2">{detailSiswa.nama}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">NIS:</span>
+                                                        <span className="ml-2">{detailSiswa.nis}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">NISN:</span>
+                                                        <span className="ml-2">{detailSiswa.nisn}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium text-gray-700">Nilai Rapor:</span>
+                                                        <span className="ml-2 font-semibold">{detailSiswa.nilai_rapor}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Deskripsi - Full Width */}
+                                                <div className="mb-6">
+                                                    <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
+                                                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                                                        {detailSiswa.deskripsi || 'Tidak ada deskripsi'}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <h3 className="font-semibold mb-2">Nilai Komponen:</h3>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                 {komponenList.map(k => (
-                                                    <div key={k.id} className="bg-gray-50 p-2 rounded text-center">
-                                                        <div className="text-xs text-gray-600">{k.nama}</div>
-                                                        <div className="font-medium">
+                                                    <div key={k.id} className="bg-orange-50 p-2 rounded text-center">
+                                                        <div className="text-xs font-medium text-orange-700">{k.nama}</div>
+                                                        <div className="text-lg font-bold mt-1">
                                                             {detailSiswa.nilai[k.id] !== null ? detailSiswa.nilai[k.id] : '-'}
                                                         </div>
                                                     </div>

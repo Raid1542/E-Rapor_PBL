@@ -26,6 +26,10 @@ interface EkskulOption {
 }
 
 export default function DataEkstrakurikulerPage() {
+  useEffect(() => {
+    document.title = "Data Ekskul - E-Rapor";
+  }, []);
+
   const [siswaList, setSiswaList] = useState<SiswaEkskul[]>([]);
   const [filteredSiswa, setFilteredSiswa] = useState<SiswaEkskul[]>([]);
   const [loading, setLoading] = useState(true);

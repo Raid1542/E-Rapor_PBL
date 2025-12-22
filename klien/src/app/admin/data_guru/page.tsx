@@ -14,7 +14,7 @@ interface Guru {
   alamat?: string;
   no_telepon?: string;
   statusGuru?: string;
-  profileImage?: string; // ✅ Pastikan ini ada
+  profileImage?: string; 
   roles?: string[];
 }
 
@@ -47,6 +47,10 @@ const formatTanggalIndonesia = (dateStr?: string | null): string => {
 };
 
 export default function DataGuruPage() {
+  useEffect(() => {
+    document.title = "Data Guru - E-Rapor";
+  }, []);
+
   const formatGender = (g?: string | null) => {
     if (!g) return '-';
     const s = String(g).trim().toLowerCase();

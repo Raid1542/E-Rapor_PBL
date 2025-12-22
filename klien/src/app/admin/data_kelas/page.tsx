@@ -31,6 +31,10 @@ interface FormDataType {
 }
 
 export default function DataKelasPage() {
+  useEffect(() => {
+    document.title = "Data Kelas - E-Rapor";
+  }, []);
+
   const [kelasList, setKelasList] = useState<Kelas[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTambah, setShowTambah] = useState(false);

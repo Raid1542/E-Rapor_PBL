@@ -5,7 +5,7 @@ import { ChevronRight, Users, UserCircle, Award, School, Book } from 'lucide-rea
 import { UserData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
-// ✅ Definisikan tipe stats
+// Definisikan tipe stats
 interface DashboardStats {
   guru: number;
   siswa: number;
@@ -16,6 +16,10 @@ interface DashboardStats {
 }
 
 export default function AdminDashboardPage() {
+  useEffect(() => {
+    document.title = "Dashboard Admin - E-Rapor";
+  }, []);
+
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [stats, setStats] = useState<DashboardStats>({ 

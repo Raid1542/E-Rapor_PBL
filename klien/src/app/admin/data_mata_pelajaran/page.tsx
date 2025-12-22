@@ -29,6 +29,10 @@ interface FormDataType {
 }
 
 export default function DataMataPelajaranPage() {
+  useEffect(() => {
+    document.title = "Data Mata Pelajaran - E-Rapor";
+  }, []);
+
   const [mapelList, setMapelList] = useState<MataPelajaran[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTambah, setShowTambah] = useState(false);

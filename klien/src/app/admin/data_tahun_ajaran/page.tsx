@@ -33,6 +33,10 @@ const formatTanggalIndonesia = (dateStr: string | null | undefined): string => {
 };
 
 export default function DataTahunAjaranPage() {
+  useEffect(() => {
+    document.title = "Data Tahun Ajaran - E-Rapor";
+  }, []);
+
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTambah, setShowTambah] = useState(false);

@@ -24,6 +24,10 @@ interface DashboardData {
 }
 
 export default function GuruBidangStudiDashboard() {
+  useEffect(() => {
+    document.title = "Dashboard Guru Bidang Studi - E-Rapor";
+  }, []);
+
   const [user, setUser] = useState<UserData | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

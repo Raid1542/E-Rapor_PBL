@@ -34,6 +34,10 @@ interface FormDataType {
 }
 
 export default function DataAdminPage() {
+  useEffect(() => {
+    document.title = "Data Admin - E-Rapor";
+  }, []);
+
   const formatGender = (g?: string | null) => {
     if (!g) return '-';
     const s = String(g).trim().toLowerCase();

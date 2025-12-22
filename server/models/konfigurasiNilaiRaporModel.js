@@ -21,7 +21,7 @@ const getDeskripsiByNilai = async (nilai, mapelId) => {
 
 
 // Fungsi untuk mendapatkan semua kategori/rentang nilai
-const getAllKategori = async (mapelId = null) => {
+const getAllKategori = async (mapelId = null, isRataRata = false) => {
     let query = `
         SELECT 
             id_config AS id,
@@ -38,7 +38,9 @@ const getAllKategori = async (mapelId = null) => {
     `;
     const params = [];
 
-    if (mapelId !== null) {
+    if (isRataRata) {
+        query += ' AND mapel_id IS NULL';
+    } else if (mapelId !== null) {
         query += ' AND mapel_id = ?';
         params.push(mapelId);
     }
@@ -49,11 +51,9 @@ const getAllKategori = async (mapelId = null) => {
     return rows;
 };
 
+
 // Fungsi untuk membuat kategori baru (tanpa grade)
 const createKategori = async ({ mapel_id, min_nilai, max_nilai, deskripsi, urutan }) => {
-    if (mapel_id == null) {
-        throw new Error('mapel_id wajib diisi');
-    }
 
     const [result] = await db.execute(`
         INSERT INTO konfigurasi_nilai_rapor (
@@ -81,10 +81,6 @@ const createKategori = async ({ mapel_id, min_nilai, max_nilai, deskripsi, uruta
 
 // Fungsi untuk memperbarui kategori (tanpa grade)
 const updateKategori = async (id, { mapel_id, min_nilai, max_nilai, deskripsi, urutan }) => {
-    // Validasi: pastikan mapel_id tidak null
-    if (mapel_id == null) {
-        throw new Error('mapel_id wajib diisi');
-    }
 
     const [result] = await db.execute(`
         UPDATE konfigurasi_nilai_rapor

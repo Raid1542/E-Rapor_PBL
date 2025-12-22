@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Layout from "@/app/admin/components/Layout"; // ⬅️ penting!
 
 export const metadata: Metadata = {
-  title: "E-Rapor Admin",
-  description: "Dashboard Admin E-Rapor",
+  title: "E-Rapor",
+  description: "Sistem Informasi Akademik SDIT Ulil Albab",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body>
         {children}
       </body>

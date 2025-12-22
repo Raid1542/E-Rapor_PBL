@@ -1,9 +1,12 @@
-// app/admin/data_sekolah/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 
 export default function DataSekolahPage() {
+  useEffect(() => {
+    document.title = "Data Sekolah - E-Rapor";
+  }, []);
+
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     namaSekolah: '',

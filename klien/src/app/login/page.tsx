@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  useEffect(() => {
+    document.title = "Login - E-Rapor";
+  }, []);
+
   const router = useRouter();
   const [formData, setFormData] = useState({
     email_sekolah: "",
@@ -14,7 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ✅ State untuk data sekolah
+  //  State untuk data sekolah
   const [namaSekolah, setNamaSekolah] = useState("Sekolah");
   const [logoSekolah, setLogoSekolah] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -149,7 +153,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* ✅ Judul Dinamis — tanpa teks "Login pada akun terdaftar" */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-black mb-2 tracking-tight">
                   E-Rapor {namaSekolah}

@@ -28,6 +28,10 @@ interface Komponen {
 }
 
 const DataInputNilaiPage = () => {
+  useEffect(() => {
+    document.title = "Input Nilai - E-Rapor";
+  }, []);
+
   // ====== STATE ======
   const [mapelList, setMapelList] = useState<Mapel[]>([]);
   const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
@@ -415,7 +419,7 @@ const DataInputNilaiPage = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Cari siswa..."
+                  placeholder="Pencarian"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full border border-gray-300 rounded pl-10 pr-10 py-2 text-sm"
@@ -445,7 +449,6 @@ const DataInputNilaiPage = () => {
                         </th>
                       ))}
                       <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[90px]">Nilai Rapor</th>
-                      <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[140px]">Deskripsi</th>
                       <th className="px-3 py-3 text-center bg-gray-800 text-white font-semibold min-w-[100px]">Aksi</th>
                     </tr>
                   </thead>
@@ -475,9 +478,6 @@ const DataInputNilaiPage = () => {
                             </td>
                           ))}
                           <td className="px-3 py-3 text-center font-medium">{siswa.nilai_rapor}</td>
-                          <td className="px-3 py-3 text-center max-w-[150px] truncate" title={siswa.deskripsi}>
-                            {siswa.deskripsi}
-                          </td>
                           <td className="px-3 py-3 text-center">
                             <div className="flex justify-center gap-1">
                               <button
@@ -535,27 +535,51 @@ const DataInputNilaiPage = () => {
                       </button>
                     </div>
                     <div className="p-6">
-                      <div className="space-y-2 mb-4">
-                        <p><span className="font-medium">Nama:</span> {detailSiswa.nama}</p>
-                        <p><span className="font-medium">NIS:</span> {detailSiswa.nis}</p>
-                        <p><span className="font-medium">NISN:</span> {detailSiswa.nisn}</p>
-                        <p><span className="font-medium">Nilai Rapor:</span> {detailSiswa.nilai_rapor}</p>
-                        <p><span className="font-medium">Deskripsi:</span> {detailSiswa.deskripsi}</p>
+                      {/* Info Siswa - Gunakan Grid 2 Kolom */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                        <div>
+                          <span className="font-medium text-gray-700">Nama:</span>
+                          <span className="ml-2">{detailSiswa.nama}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">NIS:</span>
+                          <span className="ml-2">{detailSiswa.nis}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">NISN:</span>
+                          <span className="ml-2">{detailSiswa.nisn}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Nilai Rapor:</span>
+                          <span className="ml-2 font-semibold">{detailSiswa.nilai_rapor}</span>
+                        </div>
                       </div>
 
-                      <h3 className="font-semibold mb-2">Nilai Komponen:</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {komponenList.map(k => (
-                          <div key={k.id} className="bg-gray-50 p-2 rounded text-center">
-                            <div className="text-xs text-gray-600">{k.nama}</div>
-                            <div className="font-medium">
-                              {detailSiswa.nilai[k.id] !== null ? detailSiswa.nilai[k.id] : '-'}
+                      {/* Deskripsi - Full Width */}
+                      <div className="mb-6">
+                        <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
+                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                          {detailSiswa.deskripsi || 'Tidak ada deskripsi'}
+                        </p>
+                      </div>
+
+                      {/* Nilai Komponen */}
+                      <div>
+                        <h3 className="font-semibold text-gray-800 mb-3">Nilai Komponen:</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {komponenList.map(k => (
+                            <div key={k.id} className="bg-orange-50 p-3 rounded text-center">
+                              <div className="text-xs font-medium text-orange-700">{k.nama}</div>
+                              <div className="text-lg font-bold mt-1">
+                                {detailSiswa.nilai[k.id] !== null ? detailSiswa.nilai[k.id] : '-'}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="mt-6 flex justify-end gap-3">
+                      {/* Tombol */}
+                      <div className="mt-8 flex justify-end gap-3">
                         <button
                           onClick={() => setDetailClosing(true)}
                           className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
@@ -568,7 +592,7 @@ const DataInputNilaiPage = () => {
                               openEditKomponen(detailSiswa);
                               setDetailClosing(true);
                             }}
-                            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-800 rounded"
+                            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
                           >
                             Edit Nilai
                           </button>
@@ -612,7 +636,10 @@ const DataInputNilaiPage = () => {
                           <div key={komponen.id} className="flex flex-col">
                             <label className="text-sm font-medium text-gray-700 mb-1">{komponen.nama}</label>
                             <input
-                              type="text"
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
                               value={editingKomponenNilai[komponen.id] ?? ''}
                               onChange={(e) => {
                                 const val = e.target.value;

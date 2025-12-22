@@ -39,6 +39,10 @@ const ASPEK_ID = {
 };
 
 export default function DataKokurikulerPage() {
+  useEffect(() => {
+    document.title = "Data Kokurikuler - E-Rapor";
+  }, []);
+
   const [siswaList, setSiswaList] = useState<SiswaKokurikuler[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
@@ -346,7 +350,7 @@ export default function DataKokurikulerPage() {
             <div>
               <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
               <p className="text-sm text-gray-600">
-                Semester {semester || '–'} • Silakan isi dan perbarui nilai kokurikuler siswa.
+                Silakan isi dan perbarui nilai kokurikuler siswa.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">

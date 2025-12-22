@@ -31,7 +31,11 @@ export default function Header({ user }: HeaderProps) {
                     const userData = JSON.parse(storedUser);
                     if (userData.profileImage) {
                         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-                        setProfileImage(baseUrl + userData.profileImage);
+                        // ✅ Pastikan ada '/' antara baseUrl dan path
+                        const imgUrl = userData.profileImage.startsWith('/')
+                            ? `${baseUrl}${userData.profileImage}`
+                            : `${baseUrl}/${userData.profileImage}`;
+                        setProfileImage(imgUrl);
                     } else {
                         setProfileImage(null);
                     }

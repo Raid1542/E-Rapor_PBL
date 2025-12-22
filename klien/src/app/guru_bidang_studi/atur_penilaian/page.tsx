@@ -28,6 +28,10 @@ interface BobotItem {
 
 // ====== MAIN COMPONENT ======
 export default function AturPenilaianPage() {
+    useEffect(() => {
+    document.title = "Atur Penilaian - E-Rapor";
+  }, []);
+
     const [activeTab, setActiveTab] = useState<'akademik' | 'bobot'>('akademik');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

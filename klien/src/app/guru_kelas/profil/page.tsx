@@ -17,6 +17,10 @@ interface UserProfile {
 }
 
 const ProfilePage = () => {
+    useEffect(() => {
+    document.title = "Profil Guru Kelas - E-Rapor";
+  }, []);
+
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [formData, setFormData] = useState({

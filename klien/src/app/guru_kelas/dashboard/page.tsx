@@ -20,6 +20,10 @@ interface KelasInfo {
 }
 
 export default function GuruKelasDashboard() {
+  useEffect(() => {
+    document.title = "Dashboard Guru Kelas - E-Rapor";
+  }, []);
+
   const [user, setUser] = useState<UserData | null>(null);
   const [kelasInfo, setKelasInfo] = useState<KelasInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

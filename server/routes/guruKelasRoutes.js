@@ -180,4 +180,26 @@ router.get('/rekapan-nilai', authenticate, guruKelasOnly, guruKelasController.ge
 router.get('/rekapan-nilai/export-excel', authenticate, guruKelasOnly, guruKelasController.exportRekapanNilaiExcel);
 
 
+// Rapor
+router.get('/rapor/generate', authenticate, guruKelasOnly, guruKelasController.generateRaporPDF);
+router.get('/tahun-ajaran/aktif', authenticate, guruKelasOnly, guruKelasController.getTahunAjaranAktif);
+
+// Atur Kategori Nilai Rata-Rata Akademik (UNTUK RATA-RATA SEMUA MAPEL)
+router.get('/atur-penilaian/kategori-rata-rata', authenticate, guruKelasOnly, guruKelasController.getKategoriRataRata);
+router.post('/atur-penilaian/kategori-rata-rata', authenticate, guruKelasOnly, guruKelasController.createKategoriRataRata);
+router.put('/atur-penilaian/kategori-rata-rata/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.updateKategoriRataRata);
+router.delete('/atur-penilaian/kategori-rata-rata/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.deleteKategoriRataRata);
+
 module.exports = router;

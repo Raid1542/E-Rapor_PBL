@@ -14,6 +14,10 @@ interface SiswaCatatan {
 }
 
 export default function DataCatatanWaliKelasPage() {
+  useEffect(() => {
+    document.title = "Catatan Wali Kelas - E-Rapor";
+  }, []);
+
   const [siswaList, setSiswaList] = useState<SiswaCatatan[]>([]);
   const [filteredSiswa, setFilteredSiswa] = useState<SiswaCatatan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -337,7 +341,7 @@ const handleSave = async () => {
                           <span className="text-gray-400">—</span>
                         )
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-400">—</span>
                       )}
                     </td>
                     <td className="px-3 py-3 text-center align-middle">

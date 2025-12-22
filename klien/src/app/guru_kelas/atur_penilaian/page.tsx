@@ -42,6 +42,10 @@ interface MapelItem {
 
 // ====== MAIN COMPONENT ======
 export default function AturPenilaianPage() {
+    useEffect(() => {
+    document.title = "Atur Penilaian - E-Rapor";
+  }, []);
+
     const [activeTab, setActiveTab] = useState<'kokurikuler' | 'akademik' | 'bobot'>('kokurikuler');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -73,6 +77,7 @@ export default function AturPenilaianPage() {
     // Mapel selection (untuk akademik & bobot)
     const [selectedMapelAkademik, setSelectedMapelAkademik] = useState<number | null>(null);
     const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
+    const [selectedMapelForRataRata, setSelectedMapelForRataRata] = useState(false);
 
     // Aspek & bobot
     const [aspekList, setAspekList] = useState<AspekKokurikuler[]>([]);
@@ -123,37 +128,40 @@ export default function AturPenilaianPage() {
 
     // ====== FETCH KATEGORI AKADEMIK/KOKURIKULER ======
     useEffect(() => {
-        if (activeTab === 'bobot') return;
-        const fetchKategori = async () => {
-            setLoading(true);
-            try {
-                const token = localStorage.getItem('token');
-                let endpoint = '';
-                if (activeTab === 'akademik') {
-                    if (selectedMapelAkademik === null) {
-                        setKategoriList([]);
-                        setLoading(false);
-                        return;
-                    }
-                    endpoint = `atur-penilaian/kategori-akademik?mapel_id=${selectedMapelAkademik}`;
-                } else {
-                    endpoint = 'atur-penilaian/kategori-kokurikuler';
-                }
-                const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error(`Gagal mengambil kategori ${activeTab}`);
-                const data = await res.json();
-                setKategoriList(data.data || []);
-            } catch (err: any) {
-                console.error('Error fetch kategori:', err);
-                setError(err.message || 'Gagal memuat kategori');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchKategori();
-    }, [activeTab, selectedMapelAkademik]);
+  if (activeTab === 'bobot') return;
+  const fetchKategori = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      let endpoint = '';
+      if (activeTab === 'akademik') {
+        if (selectedMapelForRataRata) {
+          endpoint = 'atur-penilaian/kategori-rata-rata'; 
+        } else if (selectedMapelAkademik !== null) {
+          endpoint = `atur-penilaian/kategori-akademik?mapel_id=${selectedMapelAkademik}`;
+        } else {
+          setKategoriList([]);
+          setLoading(false);
+          return;
+        }
+      } else {
+        endpoint = 'atur-penilaian/kategori-kokurikuler';
+      }
+      const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Gagal mengambil kategori ${activeTab}`);
+      const data = await res.json();
+      setKategoriList(data.data || []);
+    } catch (err: any) {
+      console.error('Error fetch kategori:', err);
+      setError(err.message || 'Gagal memuat kategori');
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchKategori();
+}, [activeTab, selectedMapelAkademik, selectedMapelForRataRata]);
 
     // ====== FETCH BOBOT SAAT MAPSEL BERUBAH ======
     useEffect(() => {
@@ -171,24 +179,18 @@ export default function AturPenilaianPage() {
                 let bobotData = [];
                 if (res.ok) {
                     const data = await res.json();
-                    // Ambil data bobot dari API
                     bobotData = data.data || [];
                 }
-
-                // Buat mapping bobot berdasarkan komponen_id
                 const bobotMap = new Map<number, number>();
                 bobotData.forEach((b: any) => {
                     const numBobot = typeof b.bobot === 'number' ? b.bobot : parseFloat(b.bobot);
                     bobotMap.set(b.komponen_id, isNaN(numBobot) ? 0 : numBobot);
                 });
-
-                // Gabungkan dengan semua komponen yang ada di `komponenList`
                 const fullBobot = komponenList.map(k => ({
                     komponen_id: k.id_komponen,
-                    bobot: bobotMap.get(k.id_komponen) || 0, // Jika tidak ada, default 0
+                    bobot: bobotMap.get(k.id_komponen) || 0,
                     is_active: true
                 }));
-
                 setBobotList(fullBobot);
                 setInitialBobotList(JSON.parse(JSON.stringify(fullBobot)));
             } catch (err) {
@@ -226,6 +228,7 @@ export default function AturPenilaianPage() {
         setInitialEditKategoriData(JSON.parse(JSON.stringify(newData)));
         setShowEditKategori(true);
     };
+
     const closeEditKategori = () => {
         setEditKategoriClosing(true);
         setTimeout(() => {
@@ -238,90 +241,106 @@ export default function AturPenilaianPage() {
 
     // ====== SIMPAN KATEGORI ======
     const handleSaveKategori = async () => {
-        if (initialEditKategoriData && JSON.stringify(editKategoriData) === JSON.stringify(initialEditKategoriData)) {
-            alert('Tidak ada perubahan data.');
-            return;
+  if (initialEditKategoriData && JSON.stringify(editKategoriData) === JSON.stringify(initialEditKategoriData)) {
+    alert('Tidak ada perubahan data.');
+    return;
+  }
+  try {
+    const token = localStorage.getItem('token');
+    const isAkademik = activeTab === 'akademik';
+    let endpoint = '';
+    let payload: any;
+
+    if (isAkademik) {
+      if (selectedMapelForRataRata) {
+        // Simpan ke kategori rata-rata
+        endpoint = 'atur-penilaian/kategori-rata-rata';
+        payload = {
+          min_nilai: editKategoriData.min_nilai,
+          max_nilai: editKategoriData.max_nilai,
+          deskripsi: editKategoriData.deskripsi,
+          urutan: 0
+        };
+      } else {
+        if (selectedMapelAkademik === null) {
+          alert('Pilih mata pelajaran terlebih dahulu');
+          return;
         }
-        try {
-            const token = localStorage.getItem('token');
-            const isAkademik = activeTab === 'akademik';
-            const endpoint = isAkademik
-                ? 'atur-penilaian/kategori-akademik'
-                : 'atur-penilaian/kategori-kokurikuler';
-            let payload: any;
+        endpoint = 'atur-penilaian/kategori-akademik';
+        payload = {
+          min_nilai: editKategoriData.min_nilai,
+          max_nilai: editKategoriData.max_nilai,
+          deskripsi: editKategoriData.deskripsi,
+          urutan: 0,
+          mapel_id: selectedMapelAkademik
+        };
+      }
+    } else {
+      // Kokurikuler
+      if (editKategoriData.id_aspek_kokurikuler == null) {
+        alert('Pilih aspek kokurikuler terlebih dahulu');
+        return;
+      }
+      endpoint = 'atur-penilaian/kategori-kokurikuler';
+      payload = {
+        min_nilai: editKategoriData.min_nilai,
+        max_nilai: editKategoriData.max_nilai,
+        grade: editKategoriData.grade,
+        deskripsi: editKategoriData.deskripsi,
+        urutan: 0,
+        id_aspek_kokurikuler: editKategoriData.id_aspek_kokurikuler
+      };
+    }
 
-            if (isAkademik) {
-                if (selectedMapelAkademik === null) {
-                    alert('Pilih mata pelajaran terlebih dahulu');
-                    return;
-                }
-                payload = {
-                    min_nilai: editKategoriData.min_nilai,
-                    max_nilai: editKategoriData.max_nilai,
-                    deskripsi: editKategoriData.deskripsi,
-                    urutan: 0,
-                    mapel_id: selectedMapelAkademik
-                };
-            } else {
-                if (editKategoriData.id_aspek_kokurikuler == null) {
-                    alert('Pilih aspek kokurikuler terlebih dahulu');
-                    return;
-                }
-                payload = {
-                    min_nilai: editKategoriData.min_nilai,
-                    max_nilai: editKategoriData.max_nilai,
-                    grade: editKategoriData.grade,
-                    deskripsi: editKategoriData.deskripsi,
-                    urutan: 0,
-                    id_aspek_kokurikuler: editKategoriData.id_aspek_kokurikuler
-                };
-            }
+    const url = editKategoriId
+      ? `http://localhost:5000/api/guru-kelas/${endpoint}/${editKategoriId}`
+      : `http://localhost:5000/api/guru-kelas/${endpoint}`;
 
-            const url = editKategoriId
-                ? `http://localhost:5000/api/guru-kelas/${endpoint}/${editKategoriId}`
-                : `http://localhost:5000/api/guru-kelas/${endpoint}`;
+    const res = await fetch(url, {
+      method: editKategoriId ? 'PUT' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
 
-            const res = await fetch(url, {
-                method: editKategoriId ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
+    if (res.ok) {
+      alert(editKategoriId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan');
+      closeEditKategori();
 
-            if (res.ok) {
-                alert(editKategoriId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan');
-                closeEditKategori();
-
-                // ✅ RELOAD DENGAN PARAMETER YANG SESUAI
-                let reloadUrl = `http://localhost:5000/api/guru-kelas/${endpoint}`;
-                if (isAkademik && selectedMapelAkademik) {
-                    reloadUrl += `?mapel_id=${selectedMapelAkademik}`;
-                }
-
-                const resReload = await fetch(reloadUrl, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const data = await resReload.json();
-                setKategoriList(data.data || []);
-            } else {
-                const err = await res.json();
-                alert(err.message || 'Gagal menyimpan kategori');
-            }
-        } catch (err: any) {
-            alert('Gagal menyimpan: ' + err.message);
-        }
-    };
+      // Reload data
+      let reloadUrl = `http://localhost:5000/api/guru-kelas/${endpoint}`;
+      if (isAkademik && !selectedMapelForRataRata && selectedMapelAkademik) {
+        reloadUrl += `?mapel_id=${selectedMapelAkademik}`;
+      }
+      const resReload = await fetch(reloadUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resReload.json();
+      setKategoriList(data.data || []);
+    } else {
+      const err = await res.json();
+      alert(err.message || 'Gagal menyimpan kategori');
+    }
+  } catch (err: any) {
+    alert('Gagal menyimpan: ' + err.message);
+  }
+};
 
     // ====== HAPUS KATEGORI ======
     const handleDeleteKategori = async (id: number) => {
         if (!confirm('Hapus kategori ini?')) return;
         try {
             const token = localStorage.getItem('token');
-            const endpoint = activeTab === 'akademik'
-                ? 'atur-penilaian/kategori-akademik'
-                : 'atur-penilaian/kategori-kokurikuler';
+            let endpoint = '';
+            if (activeTab === 'akademik') {
+                endpoint = selectedMapelForRataRata
+                    ? 'atur-penilaian/kategori-rata-rata'
+                    : 'atur-penilaian/kategori-akademik';
+            } else {
+                endpoint = 'atur-penilaian/kategori-kokurikuler';
+            }
             const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
@@ -344,6 +363,7 @@ export default function AturPenilaianPage() {
             prev.map(b => (b.komponen_id === komponenId ? { ...b, bobot: newValue } : b))
         );
     };
+
     const handleSaveBobot = async () => {
         if (!selectedMapelId) return;
         const isUnchanged = bobotList.every((b, i) =>
@@ -401,7 +421,6 @@ export default function AturPenilaianPage() {
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian</h1>
-
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
@@ -433,8 +452,7 @@ export default function AturPenilaianPage() {
                                 onClick={() => openEditKategori()}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 text-sm"
                             >
-                                <Plus size={16} />
-                                Tambah Kategori
+                                <Plus size={16} /> Tambah Kategori
                             </button>
                         </div>
                         <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -474,15 +492,13 @@ export default function AturPenilaianPage() {
                                                             onClick={() => openEditKategori(kategori)}
                                                             className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                         >
-                                                            <Pencil size={12} />
-                                                            Edit
+                                                            <Pencil size={12} /> Edit
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteKategori(kategori.id)}
                                                             className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                         >
-                                                            <Trash2 size={12} />
-                                                            Hapus
+                                                            <Trash2 size={12} /> Hapus
                                                         </button>
                                                     </div>
                                                 </td>
@@ -499,11 +515,21 @@ export default function AturPenilaianPage() {
                             <h2 className="text-xl font-semibold text-gray-800 mb-4">Kategori Nilai Akademik</h2>
                             <div className="max-w-xs">
                                 <select
-                                    value={selectedMapelAkademik || ''}
-                                    onChange={(e) => setSelectedMapelAkademik(e.target.value ? Number(e.target.value) : null)}
+                                    value={selectedMapelAkademik || (selectedMapelForRataRata ? 'rata-rata' : '')}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === 'rata-rata') {
+                                            setSelectedMapelAkademik(null);
+                                            setSelectedMapelForRataRata(true);
+                                        } else {
+                                            setSelectedMapelAkademik(val ? Number(val) : null);
+                                            setSelectedMapelForRataRata(false);
+                                        }
+                                    }}
                                     className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
+                                    <option value="rata-rata">📈 Rata-rata Seluruh Mapel</option>
                                     {mapelList
                                         .filter(m => m.jenis === 'wajib')
                                         .map(mapel => (
@@ -515,15 +541,14 @@ export default function AturPenilaianPage() {
                             </div>
                         </div>
 
-                        {selectedMapelAkademik ? (
+                        {selectedMapelAkademik || selectedMapelForRataRata ? (
                             <>
                                 <div className="flex justify-end mb-4">
                                     <button
                                         onClick={() => openEditKategori()}
                                         className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 text-xs sm:text-sm"
                                     >
-                                        <Plus size={14} />
-                                        Tambah Kategori
+                                        <Plus size={14} /> Tambah Kategori
                                     </button>
                                 </div>
                                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -539,7 +564,9 @@ export default function AturPenilaianPage() {
                                             {kategoriList.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={3} className="px-3 py-4 sm:px-4 sm:py-6 text-center text-gray-500">
-                                                        Belum ada kategori untuk mata pelajaran ini.
+                                                        {selectedMapelForRataRata
+                                                            ? 'Belum ada kategori untuk rata-rata nilai.'
+                                                            : 'Belum ada kategori untuk mata pelajaran ini.'}
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -555,15 +582,13 @@ export default function AturPenilaianPage() {
                                                                     onClick={() => openEditKategori(kategori)}
                                                                     className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                                 >
-                                                                    <Pencil size={12} />
-                                                                    Edit
+                                                                    <Pencil size={12} /> Edit
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDeleteKategori(kategori.id)}
                                                                     className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 text-xs"
                                                                 >
-                                                                    <Trash2 size={12} />
-                                                                    Hapus
+                                                                    <Trash2 size={12} /> Hapus
                                                                 </button>
                                                             </div>
                                                         </td>
@@ -601,7 +626,6 @@ export default function AturPenilaianPage() {
                                 </select>
                             </div>
                         </div>
-
                         {selectedMapelId ? (
                             bobotLoading ? (
                                 <div className="text-gray-500 text-xs sm:text-sm">Memuat bobot...</div>
