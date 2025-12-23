@@ -5,6 +5,6 @@ export const metadata: Metadata = {
     title: 'Profil',
 };
 
-export default function DataInputNilaiPage() {
+export default function ProfilePage() {
     return <ProfilClient />;
 }
