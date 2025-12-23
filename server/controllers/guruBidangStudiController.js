@@ -203,6 +203,7 @@ exports.getDashboardData = async (req, res) => {
                 AND sk.tahun_ajaran_id = ?
             WHERE p.user_id = ? 
                 AND p.tahun_ajaran_id = ?
+                AND mp.jenis = 'pilihan'
             GROUP BY mp.id_mata_pelajaran, mp.nama_mapel
             ORDER BY mp.nama_mapel
         `, [id_tahun_ajaran, userId, id_tahun_ajaran]);

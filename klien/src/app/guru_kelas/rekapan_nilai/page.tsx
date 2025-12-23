@@ -278,8 +278,8 @@ export default function RekapanNilaiGuruKelasPage() {
                                         <h3 className="font-semibold text-gray-800 mb-3">Nilai per Mata Pelajaran:</h3>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                             {mapelList.map(kodeMapel => (
-                                                <div key={kodeMapel} className="bg-blue-50 p-3 rounded text-center">
-                                                    <div className="text-xs font-medium text-blue-700">{kodeMapel}</div>
+                                                <div key={kodeMapel} className="bg-orange-50 p-3 rounded text-center">
+                                                    <div className="text-xs font-medium text-orange-700">{kodeMapel}</div>
                                                     <div className="text-lg font-bold mt-1">
                                                         {detailSiswa.nilaiMapel[kodeMapel] !== undefined && detailSiswa.nilaiMapel[kodeMapel] !== null
                                                             ? Math.floor(detailSiswa.nilaiMapel[kodeMapel]!)

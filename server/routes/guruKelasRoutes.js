@@ -6,11 +6,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Setup upload directory
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Foto profil storage config
 const fotoProfilStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadDir);
@@ -39,49 +41,48 @@ const uploadFoto = multer({
 
 const guruKelasController = require('../controllers/guruKelasController');
 
-// Middleware: hanya user dengan role 'guru_kelas' yang diizinkan
+// Middleware role
 const guruKelasOnly = authorize(['guru kelas']);
 
-
-// Ambil data siswa berdasarkan kelas
+// --- Rute Umum ---
 router.get('/kelas', authenticate, guruKelasOnly, guruKelasController.getKelasSaya);
 router.get('/siswa', authenticate, guruKelasOnly, guruKelasController.getSiswaByKelas);
 
-// Profil Guru Kelas
+// --- Profil ---
 router.put('/profil', authenticate, guruKelasOnly, guruKelasController.editProfil);
 router.put('/ganti-password', authenticate, guruKelasOnly, guruKelasController.gantiPassword);
+router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasController.uploadFotoProfil);
 
-// Absensi
+// --- Absensi ---
 router.get('/absensi', authenticate, guruKelasOnly, guruKelasController.getAbsensiTotal);
 router.put('/absensi/:siswa_id', authenticate, guruKelasOnly, guruKelasController.updateAbsensiTotal);
 
-// Catatan Wali Kelas
+// --- Catatan Wali Kelas ---
 router.get('/catatan-wali-kelas', authenticate, guruKelasOnly, guruKelasController.getCatatanWaliKelas);
 router.put('/catatan-wali-kelas/:siswa_id', authenticate, guruKelasOnly, guruKelasController.updateCatatanWaliKelas);
 
-// Ekstrakurikuler
+// --- Ekstrakurikuler & Kokurikuler ---
 router.get('/ekskul', authenticate, guruKelasOnly, guruKelasController.getEkskulSiswa);
 router.put('/ekskul/:siswaId', authenticate, guruKelasOnly, guruKelasController.updateEkskulSiswa);
 
-// Kokurikuler
 router.get('/kokurikuler', authenticate, guruKelasOnly, guruKelasController.getNilaiKokurikuler);
+router.get('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
+    const siswaId = parseInt(req.params.siswaId);
+    if (isNaN(siswaId) || siswaId <= 0) {
+        return res.status(400).json({ success: false, message: 'ID siswa tidak valid' });
+    }
+    next();
+}, guruKelasController.getNilaiKokurikulerBySiswa);
 
-// Validasi parameter siswaId
 router.put('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
     const siswaId = parseInt(req.params.siswaId);
     if (isNaN(siswaId) || siswaId <= 0) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'ID siswa tidak valid' 
-        });
+        return res.status(400).json({ success: false, message: 'ID siswa tidak valid' });
     }
     next();
 }, guruKelasController.updateNilaiKokurikuler);
 
-// Foto Profil
-router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasController.uploadFotoProfil);
-
-// Nilai
+// --- Nilai Akademik ---
 router.get('/mapel', authenticate, guruKelasOnly, guruKelasController.getMapelForGuruKelas);
 router.get('/nilai/:mapelId', authenticate, guruKelasOnly, guruKelasController.getNilaiByMapel);
 router.put('/nilai-komponen/:mapelId/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
@@ -95,16 +96,15 @@ router.put('/nilai-komponen/:mapelId/:siswaId', authenticate, guruKelasOnly, (re
     next();
 }, guruKelasController.updateNilaiKomponen);
 
-// ====== ATUR PENILAIAN ======
-
-// 1. Atur Kategori Nilai Akademik (HANYA untuk mata pelajaran, TIDAK PAKAI GRADE)
+// --- Atur Penilaian ---
+// Kategori Akademik
 router.get('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, (req, res, next) => {
-  const { mapel_id } = req.query;
-  if (!mapel_id || isNaN(Number(mapel_id))) {
-    return res.status(400).json({ success: false, message: 'mapel_id wajib diisi' });
-  }
-  req.validatedMapelId = Number(mapel_id);
-  next();
+    const { mapel_id } = req.query;
+    if (!mapel_id || isNaN(Number(mapel_id))) {
+        return res.status(400).json({ success: false, message: 'mapel_id wajib diisi' });
+    }
+    req.validatedMapelId = Number(mapel_id);
+    next();
 }, guruKelasController.getKategoriNilaiAkademik);
 router.post('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiAkademik);
 router.put('/atur-penilaian/kategori-akademik/:id', authenticate, guruKelasOnly, (req, res, next) => {
@@ -122,7 +122,7 @@ router.delete('/atur-penilaian/kategori-akademik/:id', authenticate, guruKelasOn
     next();
 }, guruKelasController.deleteKategoriNilaiAkademik);
 
-// 2. Atur Bobot Penilaian Akademik per Mata Pelajaran
+// Bobot Akademik
 router.get('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
     const mapelId = parseInt(req.params.mapelId);
     if (isNaN(mapelId) || mapelId <= 0) {
@@ -130,7 +130,6 @@ router.get('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnl
     }
     next();
 }, guruKelasController.getBobotAkademikByMapel);
-
 router.put('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
     const mapelId = parseInt(req.params.mapelId);
     if (isNaN(mapelId) || mapelId <= 0) {
@@ -139,10 +138,8 @@ router.put('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnl
     next();
 }, guruKelasController.updateBobotAkademikByMapel);
 
-// Setiap aspek kokurikuler
+// Aspek & Kategori Kokurikuler
 router.get('/atur-penilaian/aspek-kokurikuler', authenticate, guruKelasOnly, guruKelasController.getAspekKokurikuler);
-
-// 3. Atur Kategori Nilai Non-Akademik (Kokurikuler - MENGGUNAKAN GRADE)
 router.get('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKategoriNilaiKokurikuler);
 router.post('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiKokurikuler);
 router.put('/atur-penilaian/kategori-kokurikuler/:id', authenticate, guruKelasOnly, (req, res, next) => {
@@ -160,31 +157,14 @@ router.delete('/atur-penilaian/kategori-kokurikuler/:id', authenticate, guruKela
     next();
 }, guruKelasController.deleteKategoriNilaiKokurikuler);
 
-// Ambil nilai kokurikuler spesifik untuk satu siswa
-router.get('/kokurikuler/:siswaId', authenticate, guruKelasOnly, (req, res, next) => {
-    const siswaId = parseInt(req.params.siswaId);
-    if (isNaN(siswaId) || siswaId <= 0) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'ID siswa tidak valid' 
-        });
-    }
-    next();
-}, guruKelasController.getNilaiKokurikulerBySiswa);
-
-// 4. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
+// Komponen Penilaian (UH1, PTS, PAS, dll)
 router.get('/atur-penilaian/komponen', authenticate, guruKelasOnly, guruKelasController.getKomponenPenilaian);
 
-// ====== REKAPAN NILAI RAPOR (SEMUA MAPEL) ======
+// Rekapan Nilai
 router.get('/rekapan-nilai', authenticate, guruKelasOnly, guruKelasController.getRekapanNilai);
 router.get('/rekapan-nilai/export-excel', authenticate, guruKelasOnly, guruKelasController.exportRekapanNilaiExcel);
 
-
-// Rapor
-router.get('/rapor/generate', authenticate, guruKelasOnly, guruKelasController.generateRaporPDF);
-router.get('/tahun-ajaran/aktif', authenticate, guruKelasOnly, guruKelasController.getTahunAjaranAktif);
-
-// Atur Kategori Nilai Rata-Rata Akademik (UNTUK RATA-RATA SEMUA MAPEL)
+// Kategori Rata-Rata Akademik
 router.get('/atur-penilaian/kategori-rata-rata', authenticate, guruKelasOnly, guruKelasController.getKategoriRataRata);
 router.post('/atur-penilaian/kategori-rata-rata', authenticate, guruKelasOnly, guruKelasController.createKategoriRataRata);
 router.put('/atur-penilaian/kategori-rata-rata/:id', authenticate, guruKelasOnly, (req, res, next) => {
@@ -201,5 +181,38 @@ router.delete('/atur-penilaian/kategori-rata-rata/:id', authenticate, guruKelasO
     }
     next();
 }, guruKelasController.deleteKategoriRataRata);
+
+// --- ✅ RAPOR (DIPERBAIKI) ---
+router.get('/tahun-ajaran/aktif', authenticate, guruKelasOnly, guruKelasController.getTahunAjaranAktif);
+
+// Validasi khusus untuk generate rapor
+router.get('/generate-rapor/:siswaId/:jenis/:semester', 
+    authenticate, 
+    guruKelasOnly, 
+    (req, res, next) => {
+        // Validasi siswaId
+        const siswaId = parseInt(req.params.siswaId, 10);
+        if (isNaN(siswaId) || siswaId <= 0) {
+            return res.status(400).json({ success: false, message: 'ID siswa tidak valid' });
+        }
+
+        // Validasi jenis (PTS/PAS)
+        const jenis = req.params.jenis.toLowerCase();
+        if (!['pts', 'pas'].includes(jenis)) {
+            return res.status(400).json({ success: false, message: 'Jenis rapor harus PTS atau PAS' });
+        }
+
+        // Validasi semester (ganjil/genap)
+        const semester = req.params.semester.toLowerCase();
+        if (!['ganjil', 'genap'].includes(semester)) {
+            return res.status(400).json({ success: false, message: 'Semester harus ganjil atau genap' });
+        }
+
+        // Simpan ke req agar controller bisa akses
+        req.raporParams = { siswaId, jenis, semester };
+        next();
+    },
+    guruKelasController.generateRaporPDF
+);
 
 module.exports = router;

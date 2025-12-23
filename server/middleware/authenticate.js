@@ -1,9 +1,19 @@
 const jwt = require('jsonwebtoken');
 
 const authenticate = (req, res, next) => {
+  // 1. Coba ambil dari header Authorization (Bearer token)
+  let token = null;
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
 
+  // 2. Jika tidak ada di header, coba dari query string ?token=...
+  if (!token && req.query && req.query.token) {
+    token = req.query.token;
+  }
+
+  // 3. Jika tetap tidak ada token
   if (!token) {
     return res.status(401).json({ message: 'Token tidak ditemukan' });
   }

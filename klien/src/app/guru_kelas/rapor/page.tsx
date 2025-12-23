@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Eye } from 'lucide-react';
 
 interface Siswa {
     id: number;
@@ -12,10 +12,11 @@ interface Siswa {
 
 export default function RaporGuruKelasPage() {
     useEffect(() => {
-    document.title = "Data Rapor - E-Rapor";
-  }, []);
+        document.title = "Data Rapor - E-Rapor";
+    }, []);
 
-    const [jenisPenilaian, setJenisPenilaian] = useState<'PTS' | 'PAS' | ''>('');
+    const [jenisPenilaian, setJenisPenilaian] = useState<string>('');
+    const [activeReportType, setActiveReportType] = useState<string | null>(null); // ← TAMBAHAN
     const [siswaList, setSiswaList] = useState<Siswa[]>([]);
     const [loading, setLoading] = useState(true);
     const [tahunAjaranInfo, setTahunAjaranInfo] = useState<{
@@ -23,7 +24,16 @@ export default function RaporGuruKelasPage() {
         semester: 'Ganjil' | 'Genap';
     } | null>(null);
 
-    // === Ambil info tahun ajaran aktif (sekali saat load) ===
+    const getOptionsBySemester = () => {
+        if (!tahunAjaranInfo) return [];
+        const { semester } = tahunAjaranInfo;
+        return [
+            { value: `PTS-${semester.toLowerCase()}`, label: `Penilaian Tengah Semester (${semester})` },
+            { value: `PAS-${semester.toLowerCase()}`, label: `Penilaian Akhir Semester (${semester})` }
+        ];
+    };
+
+    // Ambil tahun ajaran aktif
     useEffect(() => {
         const fetchTahunAjaranAktif = async () => {
             try {
@@ -40,7 +50,7 @@ export default function RaporGuruKelasPage() {
                     const ta = data.data;
                     setTahunAjaranInfo({
                         tahun_ajaran: ta.tahun_ajaran,
-                        semester: ta.semester === 'genap' ? 'Genap' : 'Ganjil'
+                        semester: ta.semester === 'Genap' ? 'Genap' : 'Ganjil'
                     });
                 } else {
                     alert('Gagal mengambil tahun ajaran aktif');
@@ -50,14 +60,17 @@ export default function RaporGuruKelasPage() {
                 alert('Gagal terhubung ke server');
             }
         };
-
         fetchTahunAjaranAktif();
     }, []);
 
-    // === Ambil daftar siswa saat jenis penilaian dipilih ===
+    // Reset activeReportType saat ganti jenisPenilaian
+    useEffect(() => {
+        setActiveReportType(null);
+    }, [jenisPenilaian]);
+
+    // Ambil daftar siswa
     useEffect(() => {
         if (!jenisPenilaian || !tahunAjaranInfo) return;
-
         const fetchSiswa = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -81,46 +94,44 @@ export default function RaporGuruKelasPage() {
                 setLoading(false);
             }
         };
-
         setLoading(true);
         fetchSiswa();
     }, [jenisPenilaian, tahunAjaranInfo]);
 
-    const handleGeneratePDF = async (siswaId: number) => {
+
+    // ← TAMBAHAN: FUNGSI AKTIFKAN LAPORAN
+    const handleActivateReport = () => {
+        if (!jenisPenilaian) {
+            alert('Pilih jenis penilaian terlebih dahulu!');
+            return;
+        }
+
+        const userConfirmed = window.confirm(
+            `Anda yakin ingin mengaktifkan:\n"${getOptionsBySemester().find(opt => opt.value === jenisPenilaian)?.label}"?\n\nData yang Anda kelola akan mengacu pada laporan ini.`
+        );
+
+        if (userConfirmed) {
+            setActiveReportType(jenisPenilaian);
+        }
+    };
+
+    // TOMBOL "DOWNLOAD" → UNDUH FILE
+    const handleDownloadRapor = (siswaId: number) => {
+        // ← OPSIONAL: Anda bisa izinkan unduh meski belum aktif, atau blokir
+        // Di sini saya IZINKAN unduh, karena unduh tidak mengubah data
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Silakan login terlebih dahulu');
             return;
         }
-
-        try {
-            const url = `http://localhost:5000/api/guru-kelas/rapor/generate?siswa_id=${siswaId}&jenis=${jenisPenilaian}`;
-
-            const res = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.message || 'Gagal generate rapor');
-            }
-
-            const pdfBlob = await res.blob();
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-
-            const link = document.createElement('a');
-            link.href = pdfUrl;
-            link.download = `rapor_${siswaId}_${jenisPenilaian}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(pdfUrl);
-        } catch (err: any) {
-            alert(`Error: ${err.message}`);
-            console.error('Error generate PDF:', err);
-        }
+        const [jenis, semester] = jenisPenilaian.split('-');
+        const url = `http://localhost:5000/api/guru-kelas/generate-rapor/${siswaId}/${jenis}/${semester}?view=false&token=${encodeURIComponent(token)}`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `rapor_${jenis}_${semester}_${siswaId}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -144,19 +155,46 @@ export default function RaporGuruKelasPage() {
                     </label>
                     <select
                         value={jenisPenilaian}
-                        onChange={(e) => setJenisPenilaian(e.target.value as 'PTS' | 'PAS')}
+                        onChange={(e) => setJenisPenilaian(e.target.value)}
                         className="w-full md:w-72 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="">-- Pilih Jenis --</option>
-                        <option value="PTS">PTS (Penilaian Tengah Semester)</option>
-                        <option value="PAS">PAS (Penilaian Akhir Semester)</option>
+                        {tahunAjaranInfo &&
+                            getOptionsBySemester().map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
                     </select>
                 </div>
+
+                {/* ← TAMBAHAN: Tombol Aktifkan & Status */}
+                {jenisPenilaian && (
+                    <div className="mb-6 flex flex-wrap items-center gap-3">
+                        <button
+                            onClick={handleActivateReport}
+                            className={`px-4 py-2 rounded-lg font-medium text-sm ${
+                                activeReportType === jenisPenilaian
+                                    ? 'bg-green-100 text-green-800 border border-green-300'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
+                        >
+                            {activeReportType === jenisPenilaian
+                                ? 'Laporan Aktif ✅'
+                                : 'Aktifkan Edit Laporan Ini'}
+                        </button>
+                        {activeReportType === jenisPenilaian && (
+                            <span className="text-xs text-green-700 font-medium">
+                                🔒 Sistem sedang menggunakan: {getOptionsBySemester().find(opt => opt.value === jenisPenilaian)?.label}
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {jenisPenilaian === '' ? (
                     <div className="mt-8 text-center py-10 bg-yellow-50 border border-dashed border-yellow-300 rounded-xl">
                         <p className="text-gray-700 text-lg font-medium max-w-md mx-auto">
-                            Silakan pilih jenis penilaian (PTS/PAS) terlebih dahulu.
+                            Silakan pilih jenis penilaian terlebih dahulu.
                         </p>
                     </div>
                 ) : loading ? (
@@ -180,10 +218,10 @@ export default function RaporGuruKelasPage() {
                             <table className="w-full min-w-[500px] sm:min-w-[600px] table-auto text-sm">
                                 <thead className="bg-gray-800 text-white">
                                     <tr>
-                                        <th className="px-4 py-3.5 text-center w-12">No.</th>
+                                        <th className="px-4 py-3.5 text-center">No.</th>
                                         <th className="px-4 py-3.5 text-center">Nama</th>
-                                        <th className="px-4 py-3.5 text-center w-32">NIS</th>
-                                        <th className="px-4 py-3.5 text-center w-40">Aksi</th>
+                                        <th className="px-4 py-3.5 text-center">NIS</th>
+                                        <th className="px-4 py-3.5 text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -196,13 +234,15 @@ export default function RaporGuruKelasPage() {
                                             <td className="px-4 py-3.5 font-medium text-gray-800">{siswa.nama}</td>
                                             <td className="px-4 py-3.5 text-center text-gray-700">{siswa.nis}</td>
                                             <td className="px-4 py-3.5 text-center">
-                                                <button
-                                                    onClick={() => handleGeneratePDF(siswa.id)}
-                                                    className="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition text-xs sm:text-sm gap-1.5 min-w-[100px]"
-                                                >
-                                                    <Download size={14} />
-                                                    <span>Cetak Rapor</span>
-                                                </button>
+                                                <div className="flex gap-2 justify-center">
+                                                    <button
+                                                        onClick={() => handleDownloadRapor(siswa.id)}
+                                                        className="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-2 py-1.5 rounded-lg transition text-xs sm:text-sm gap-1 min-w-[100px]"
+                                                    >
+                                                        <Download size={14} />
+                                                        <span>Unduh (.docx)</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -210,19 +250,12 @@ export default function RaporGuruKelasPage() {
                             </table>
                         </div>
 
-                        {/* Catatan Template */}
                         <div className="mt-6 p-4 bg-gray-100 rounded-xl text-sm text-gray-700">
-                            <p className="font-medium mb-2">Catatan Template PDF:</p>
+                            <p className="font-medium mb-2">Catatan:</p>
                             <ul className="list-disc pl-5 space-y-1">
-                                <li>
-                                    <strong>PTS</strong>: Format <em>Laporan Penilaian Tengah Semester</em>
-                                </li>
-                                <li>
-                                    <strong>PAS Ganjil</strong>: Tanpa keterangan kenaikan kelas
-                                </li>
-                                <li>
-                                    <strong>PAS Genap</strong>: Dengan keterangan <em>“Naik / Tidak Naik kelas”</em>
-                                </li>
+                                <li>Rapor diunduh dalam format <strong>.docx</strong> (Microsoft Word)</li>
+                                <li>Buka dengan Microsoft Word untuk tampilan terbaik</li>
+                                <li>PAS Semester Genap mencantumkan status kenaikan kelas</li>
                             </ul>
                         </div>
                     </>
