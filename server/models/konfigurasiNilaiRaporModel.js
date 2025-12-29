@@ -21,45 +21,34 @@ const getDeskripsiByNilai = async (nilai, mapelId) => {
 
 
 // Fungsi untuk mendapatkan semua kategori/rentang nilai
-const getAllKategori = async (mapelId = null, isRataRata = false) => {
-    let query = `
-        SELECT 
-            id_config AS id,
-            mapel_id,
-            min_nilai,
-            max_nilai,
-            deskripsi,
-            urutan,
-            is_active,
-            created_at,
-            updated_at
-        FROM konfigurasi_nilai_rapor
-        WHERE is_active = 1
-    `;
-    const params = [];
+const getAllKategori = async (mapelId = null, isRataRata = false, tahunAjaranId) => {
+  let query = `
+    SELECT id_config AS id, mapel_id, tahun_ajaran_id, min_nilai, max_nilai, deskripsi, urutan
+    FROM konfigurasi_nilai_rapor
+    WHERE is_active = 1 AND tahun_ajaran_id = ?
+  `;
+  const params = [tahunAjaranId];
 
-    if (isRataRata) {
-        query += ' AND mapel_id IS NULL';
-    } else if (mapelId !== null) {
-        query += ' AND mapel_id = ?';
-        params.push(mapelId);
-    }
+  if (isRataRata) {
+    query += ' AND mapel_id IS NULL';
+  } else if (mapelId !== null) {
+    query += ' AND mapel_id = ?';
+    params.push(mapelId);
+  }
 
-    query += ' ORDER BY urutan ASC';
-
-    const [rows] = await db.execute(query, params);
-    return rows;
+  query += ' ORDER BY urutan ASC';
+  const [rows] = await db.execute(query, params);
+  return rows;
 };
 
 
 // Fungsi untuk membuat kategori baru (tanpa grade)
-const createKategori = async ({ mapel_id, min_nilai, max_nilai, deskripsi, urutan }) => {
-
-    const [result] = await db.execute(`
-        INSERT INTO konfigurasi_nilai_rapor (
-            mapel_id, min_nilai, max_nilai, deskripsi, urutan, is_active
-        ) VALUES (?, ?, ?, ?, ?, 1)
-    `, [mapel_id, min_nilai, max_nilai, deskripsi, urutan || 0]);
+const createKategori = async ({ mapel_id, tahun_ajaran_id, min_nilai, max_nilai, deskripsi, urutan }) => {
+  const [result] = await db.execute(`
+    INSERT INTO konfigurasi_nilai_rapor (
+      mapel_id, tahun_ajaran_id, min_nilai, max_nilai, deskripsi, urutan, is_active
+    ) VALUES (?, ?, ?, ?, ?, ?, 1)
+  `, [mapel_id, tahun_ajaran_id, min_nilai, max_nilai, deskripsi, urutan || 0]);
 
     const [newRow] = await db.execute(`
         SELECT 

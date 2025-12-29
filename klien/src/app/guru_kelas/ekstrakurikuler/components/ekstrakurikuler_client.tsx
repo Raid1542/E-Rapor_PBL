@@ -385,47 +385,76 @@ export default function DataEkstrakurikulerPage() {
             </div>
 
             {/* Modal View (Lihat Deskripsi) */}
-            {showView && viewSiswa && (
-                <div
-                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${viewClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) closeView();
-                    }}
-                >
-                    <div className="absolute inset-0 bg-gray-900/70"></div>
-                    <div
-                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${viewClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-                    >
-                        <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Ekstrakurikuler</h2>
-                            <button
-                                onClick={closeView}
-                                className="text-gray-500 hover:text-gray-700"
-                                aria-label="Tutup"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-4 sm:p-6 mb-6">
-                            <div className="text-center mb-4">
-                                <h3 className="text-lg font-semibold">{viewSiswa.nama}</h3>
-                            </div>
-                            {viewSiswa.ekskul.length === 0 ? (
-                                <p className="text-center text-gray-500">Belum mengikuti ekstrakurikuler</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {viewSiswa.ekskul.map((e, i) => (
-                                        <div key={i} className="border-l-4 border-green-500 pl-3 py-1">
-                                            <p className="font-medium text-green-800">{e.nama}</p>
-                                            <p className="text-sm text-gray-700">{e.deskripsi || 'Tidak ada deskripsi'}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+{showView && viewSiswa && (
+  <div
+    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${viewClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+    onClick={(e) => e.target === e.currentTarget && setViewClosing(true)}
+    onTransitionEnd={() => {
+      if (viewClosing) {
+        setShowView(false);
+        setViewClosing(false);
+      }
+    }}
+  >
+    <div className="absolute inset-0 bg-gray-900/70"></div>
+    <div
+      className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${viewClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+    >
+      <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">Detail Ekstrakurikuler</h2>
+        <button onClick={() => setViewClosing(true)} className="text-gray-500 hover:text-gray-700">
+          <X size={24} />
+        </button>
+      </div>
+      <div className="p-6">
+        {/* Info Siswa */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div>
+            <span className="font-medium text-gray-700">Nama:</span>
+            <span className="ml-2">{viewSiswa.nama}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">NIS:</span>
+            <span className="ml-2">{viewSiswa.nis}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">NISN:</span>
+            <span className="ml-2">{viewSiswa.nisn}</span>
+          </div>
+        </div>
+
+        {/* Daftar Ekstrakurikuler */}
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-3">Eksrakurikuler yang Diikuti:</h3>
+          {viewSiswa.ekskul.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Belum mengikuti ekstrakurikuler</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {viewSiswa.ekskul.map((e, i) => (
+                <div key={i} className="bg-green-50 p-4 rounded border">
+                  <div className="font-medium text-green-800">{e.nama}</div>
+                  <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap break-words">
+                    {e.deskripsi || 'Tidak ada deskripsi'}
+                  </p>
                 </div>
-            )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Tombol Tutup */}
+        <div className="mt-8 flex justify-end">
+          <button
+            onClick={() => setViewClosing(true)}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
             {/* Modal Edit */}
             {showEdit && editId !== null && (

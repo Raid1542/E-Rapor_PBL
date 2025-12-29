@@ -265,7 +265,7 @@ export default function RekapanNilaiGuruKelasPage() {
                                     {/* Deskripsi Lengkap */}
                                     <div className="mb-6">
                                         <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
-                                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words">
                                             {detailSiswa.deskripsiRataRata || 'Tidak ada deskripsi'}
                                         </p>
                                     </div>

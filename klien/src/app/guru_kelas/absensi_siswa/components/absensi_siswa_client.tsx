@@ -34,6 +34,7 @@ export default function DataAbsensiPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
     const [showModal, setShowModal] = useState(false);
+    const [isModalClosing, setIsModalClosing] = useState(false);
 
     // Fetch data
     useEffect(() => {
@@ -84,21 +85,25 @@ export default function DataAbsensiPage() {
         setEditData(initialData);
         setOriginalEditData(initialData);
         setShowModal(true);
+        setIsModalClosing(false);
+    };
+
+    // Helper: close modal with animation
+    const handleCloseModal = () => {
+        setIsModalClosing(true);
     };
 
     // Handle save
     const handleSave = async () => {
         if (!editingId) return;
 
-        // ✅ Cek apakah ada perubahan
         if (
             editData.jumlah_sakit === originalEditData.jumlah_sakit &&
             editData.jumlah_izin === originalEditData.jumlah_izin &&
             editData.jumlah_alpha === originalEditData.jumlah_alpha
         ) {
             alert('Tidak ada perubahan data.');
-            setShowModal(false);
-            setEditingId(null);
+            handleCloseModal();
             return;
         }
 
@@ -140,8 +145,7 @@ export default function DataAbsensiPage() {
         } catch (err) {
             alert('Gagal terhubung ke server');
         } finally {
-            setShowModal(false);
-            setEditingId(null);
+            handleCloseModal();
         }
     };
 
@@ -337,19 +341,33 @@ export default function DataAbsensiPage() {
                 </div>
             </div>
 
-            {/* Modal Edit */}
+            {/* Modal Edit dengan Animasi */}
             {showModal && editingId !== null && (
                 <div
-                    className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 p-3 sm:p-4"
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
+                        isModalClosing ? 'opacity-0' : 'opacity-100'
+                    } p-3 sm:p-4`}
                     onClick={(e) => {
-                        if (e.target === e.currentTarget) setShowModal(false);
+                        if (e.target === e.currentTarget) handleCloseModal();
+                    }}
+                    onTransitionEnd={() => {
+                        if (isModalClosing) {
+                            setShowModal(false);
+                            setIsModalClosing(false);
+                            setEditingId(null);
+                        }
                     }}
                 >
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-[400px] sm:max-w-md max-h-[85vh] overflow-y-auto">
+                    <div className="absolute inset-0 bg-black/50"></div>
+                    <div
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-[400px] sm:max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${
+                            isModalClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                        }`}
+                    >
                         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
                             <h2 className="text-base sm:text-lg font-bold text-gray-800">Edit Absensi</h2>
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={handleCloseModal}
                                 className="text-gray-500 hover:text-gray-700"
                                 aria-label="Tutup"
                             >
@@ -390,7 +408,7 @@ export default function DataAbsensiPage() {
 
                                         <div className="mt-4 flex justify-end gap-2">
                                             <button
-                                                onClick={() => setShowModal(false)}
+                                                onClick={handleCloseModal}
                                                 className="px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm border border-gray-300 rounded hover:bg-gray-100 font-medium"
                                             >
                                                 Batal

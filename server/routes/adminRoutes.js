@@ -146,9 +146,49 @@ router.delete('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.
 
 // Ambil data tambahan (ekskul)
 router.get('/ekstrakurikuler/:id/anggota', adminOnly, adminController.getPesertaByEkskul);
-router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulBySiswa); 
+router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulBySiswa);
 
-// --- Dashboard Stats ---
+// Dashboard 
 router.get('/dashboard/stats', adminOnlyWithTahunAjaran, adminController.getDashboardStats);
+
+// Rapor
+router.get('/arsip-rapor/tahun-ajaran', adminOnly, adminController.getTahunAjaranAll);
+router.get('/arsip-rapor/kelas', adminOnly, (req, res, next) => {
+    const { tahun_ajaran_id } = req.query;
+    if (!tahun_ajaran_id) {
+        return res.status(400).json({ success: false, message: 'tahun_ajaran_id wajib diisi' });
+    }
+    next();
+}, adminController.getKelasByTahunAjaran);
+router.get('/arsip-rapor/daftar-siswa/:tahunAjaranId/:kelasId',
+    adminOnly,
+    (req, res, next) => {
+        const { tahunAjaranId, kelasId } = req.params;
+
+        // Validasi
+        if (!tahunAjaranId || !kelasId) {
+            return res.status(400).json({
+                success: false,
+                message: 'tahun_ajaran_id dan kelas_id wajib diisi'
+            });
+        }
+
+        // Parse ke integer
+        req.tahunAjaranId = parseInt(tahunAjaranId, 10);
+        req.kelasId = parseInt(kelasId, 10);
+
+        if (isNaN(req.tahunAjaranId) || isNaN(req.kelasId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID tidak valid'
+            });
+        }
+
+        next();
+    },
+    adminController.getDaftarSiswaUntukRapor
+);
+router.post('/atur-status-penilaian', adminOnly, adminController.aturStatusPenilaian);
+router.post('/arsipkan-rapor', adminOnly, adminController.arsipkanRapor);
 
 module.exports = router;

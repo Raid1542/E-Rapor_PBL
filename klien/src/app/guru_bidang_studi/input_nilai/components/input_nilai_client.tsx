@@ -650,7 +650,7 @@ const DataInputNilaiPage = () => {
                                 >
                                     <div className="absolute inset-0 bg-gray-900/70"></div>
                                     <div
-                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                                     >
                                         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
                                             <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
@@ -662,16 +662,19 @@ const DataInputNilaiPage = () => {
                                             <p className="mb-4">
                                                 <span className="font-medium">Siswa:</span> {editingSiswa.nama}
                                             </p>
-                                            {/* Grid 2 kolom untuk input nilai */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+
+                                            {/* Input Vertikal — satu per baris */}
+                                            <div className="space-y-3 mb-6">
                                                 {komponenList.map(komponen => (
                                                     <div key={komponen.id} className="flex flex-col">
-                                                        <label className="text-sm font-medium text-gray-700 mb-1">{komponen.nama}</label>
+                                                        <label className="text-sm font-medium text-gray-700 mb-1">
+                                                            {komponen.nama} {/* ← Nama asli dari backend */}
+                                                        </label>
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             max="100"
-                                                            step="1" // <-- Ini penting: hanya izinkan angka bulat
+                                                            step="1"
                                                             value={editingKomponenNilai[komponen.id] ?? ''}
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
@@ -681,21 +684,22 @@ const DataInputNilaiPage = () => {
                                                                         [komponen.id]: null
                                                                     }));
                                                                 } else {
-                                                                    const numValue = parseInt(val, 10); // Gunakan parseInt, bukan parseFloat
+                                                                    const numValue = parseInt(val, 10);
                                                                     if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
                                                                         setEditingKomponenNilai(prev => ({
                                                                             ...prev,
-                                                                            [komponen.id]: numValue // <-- Pastikan ini integer
+                                                                            [komponen.id]: numValue
                                                                         }));
                                                                     }
                                                                 }
                                                             }}
-                                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                                            placeholder="0-100"
+                                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                                            placeholder="0–100"
                                                         />
                                                     </div>
                                                 ))}
                                             </div>
+
                                             <div className="flex justify-end gap-3">
                                                 <button
                                                     onClick={() => setEditKomponenClosing(true)}

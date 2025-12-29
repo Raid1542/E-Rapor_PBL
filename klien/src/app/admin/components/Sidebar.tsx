@@ -123,7 +123,7 @@ export default function Sidebar({ user }: SidebarProps) {
   const isDashboardActive = pathname === '/admin/dashboard';
   const isTahunAjaranActive = pathname === '/admin/data_tahun_ajaran';
   const isEkskulActive = pathname === '/admin/ekstrakurikuler';
-  const isRaporActive = pathname === '/admin/rapor';
+  const isRaporActive = pathname === '/admin/arsip_rapor';
   const isPenggunaActive = penggunaSubmenu.some((item) => item.url === pathname);
   const isAdministrasiActive = administrasiSubmenu.some((item) => item.url === pathname);
 
@@ -283,14 +283,14 @@ export default function Sidebar({ user }: SidebarProps) {
         </button>
 
         <button
-          onClick={() => handleNavigation('/admin/rapor')}
+          onClick={() => handleNavigation('/admin/arsip_rapor')}
           className={`w-full flex items-center gap-3 p-3 rounded-lg mb-2 transition-colors ${isRaporActive
               ? 'bg-orange-500 text-white'
               : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500'
             }`}
         >
           <BookOpen className="w-5 h-5 flex-shrink-0" />
-          {isExpanded && <span className="font-medium">Rapor</span>}
+          {isExpanded && <span className="font-medium">Arsip Rapor</span>}
         </button>
       </div>
 

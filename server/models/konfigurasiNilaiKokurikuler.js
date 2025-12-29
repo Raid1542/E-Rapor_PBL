@@ -28,35 +28,46 @@ const getGradeDeskripsiByNilai = async (nilai, aspek) => {
 };
 
 // Fungsi untuk mendapatkan semua kategori/rentang nilai
-const getAllKategori = async () => {
+const getAllKategori = async (tahunAjaranId) => {
     const [rows] = await db.execute(`
-        SELECT 
-            id_kategori_grade_kokurikuler AS id,
-            id_aspek_kokurikuler,
-            rentang_min AS min_nilai,
-            rentang_max AS max_nilai,
-            grade,
-            deskripsi,
-            urutan
+        SELECT id_kategori_grade_kokurikuler AS id, id_aspek_kokurikuler, tahun_ajaran_id,
+        rentang_min AS min_nilai, rentang_max AS max_nilai, grade, deskripsi, urutan
         FROM kategori_grade_kokurikuler
+        WHERE tahun_ajaran_id = ?
         ORDER BY urutan ASC
-    `);
+    `, [tahunAjaranId]);
     return rows;
 };
 
 // Fungsi untuk membuat kategori baru (dengan grade) → ke tabel KATEGORI_GRADE_KOKURIKULER
-const createKategori = async ({ id_aspek_kokurikuler, min_nilai, max_nilai, grade, deskripsi, urutan }) => {
+const createKategori = async ({ id_aspek_kokurikuler, tahun_ajaran_id, min_nilai, max_nilai, grade, deskripsi, urutan }) => {
+    // Ambil semester dari tahun_ajaran_id
+    const [taRows] = await db.execute(
+        `SELECT semester FROM tahun_ajaran WHERE id_tahun_ajaran = ?`,
+        [tahun_ajaran_id]
+    );
+
+    if (taRows.length === 0) {
+        throw new Error('Tahun ajaran tidak ditemukan');
+    }
+    const semester = taRows[0].semester;
+
+    // Sertakan semester di query INSERT
     const [result] = await db.execute(`
         INSERT INTO kategori_grade_kokurikuler (
             id_aspek_kokurikuler,
+            tahun_ajaran_id,
+            semester,          
             rentang_min,
             rentang_max,
             grade,
             deskripsi,
             urutan
-        ) VALUES (?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-        id_aspek_kokurikuler,   
+        id_aspek_kokurikuler,
+        tahun_ajaran_id,
+        semester,          
         min_nilai,
         max_nilai,
         grade,
@@ -71,7 +82,8 @@ const createKategori = async ({ id_aspek_kokurikuler, min_nilai, max_nilai, grad
         max_nilai,
         grade,
         deskripsi,
-        urutan: urutan || 0
+        urutan: urutan || 0,
+        semester            
     };
 };
 

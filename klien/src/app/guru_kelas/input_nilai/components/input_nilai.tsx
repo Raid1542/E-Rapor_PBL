@@ -234,7 +234,7 @@ const DataInputNilaiPage = () => {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({ nilai: editingKomponenNilai }),
+                    body: JSON.stringify({ nilai: editingKomponenNilai, }),
                 }
             );
 
@@ -400,6 +400,7 @@ const DataInputNilaiPage = () => {
                         )}
                     </div>
 
+
                     {selectedMapelId && currentMapel ? (
                         <>
                             <div className="text-sm text-gray-600 mb-4">
@@ -555,7 +556,7 @@ const DataInputNilaiPage = () => {
                                             {/* Deskripsi - Full Width */}
                                             <div className="mb-6">
                                                 <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
-                                                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                                                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words">
                                                     {detailSiswa.deskripsi || 'Tidak ada deskripsi'}
                                                 </p>
                                             </div>
@@ -601,80 +602,84 @@ const DataInputNilaiPage = () => {
                             )}
 
                             {/* Modal Edit Komponen */}
-                            {editingSiswa && (
-                                <div
-                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
-                                    onClick={(e) => e.target === e.currentTarget && setEditKomponenClosing(true)}
-                                    onTransitionEnd={() => {
-                                        if (editKomponenClosing) {
-                                            setEditingSiswa(null);
-                                            setEditKomponenClosing(false);
-                                        }
-                                    }}
-                                >
-                                    <div className="absolute inset-0 bg-gray-900/70"></div>
-                                    <div
-                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-                                    >
-                                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-                                            <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
-                                            <button onClick={() => setEditKomponenClosing(true)} className="text-gray-500 hover:text-gray-700">
-                                                <X size={24} />
-                                            </button>
-                                        </div>
-                                        <div className="p-6">
-                                            <p className="mb-4">
-                                                <span className="font-medium">Siswa:</span> {editingSiswa.nama}
-                                            </p>
+{editingSiswa && (
+    <div
+        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+        onClick={(e) => e.target === e.currentTarget && setEditKomponenClosing(true)}
+        onTransitionEnd={() => {
+            if (editKomponenClosing) {
+                setEditingSiswa(null);
+                setEditKomponenClosing(false);
+            }
+        }}
+    >
+        <div className="absolute inset-0 bg-gray-900/70"></div>
+        <div
+            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+        >
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
+                <button onClick={() => setEditKomponenClosing(true)} className="text-gray-500 hover:text-gray-700">
+                    <X size={24} />
+                </button>
+            </div>
+            <div className="p-6">
+                <p className="mb-4">
+                    <span className="font-medium">Siswa:</span> {editingSiswa.nama}
+                </p>
 
-                                            {/* Grid 2 kolom untuk input nilai */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                                                {komponenList.map(komponen => (
-                                                    <div key={komponen.id} className="flex flex-col">
-                                                        <label className="text-sm font-medium text-gray-700 mb-1">{komponen.nama}</label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            step="1"
-                                                            value={editingKomponenNilai[komponen.id] ?? ''}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                const num = parseFloat(val);
-                                                                setEditingKomponenNilai(prev => ({
-                                                                    ...prev,
-                                                                    [komponen.id]: val === '' ? null : (isNaN(num) ? null : num)
-                                                                }));
-                                                            }}
-                                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                                            placeholder="0-100"
-                                                            disabled={!currentMapel?.bisa_input}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
+                {/* Input Vertikal — satu per baris */}
+                <div className="space-y-3 mb-6">
+                    {komponenList.map(komponen => (
+                        <div key={komponen.id} className="flex flex-col">
+                            <label className="text-sm font-medium text-gray-700 mb-1">
+                                {komponen.nama} {/* ← Gunakan nama asli dari backend */}
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={editingKomponenNilai[komponen.id] ?? ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    const num = parseFloat(val);
+                                    setEditingKomponenNilai(prev => ({
+                                        ...prev,
+                                        [komponen.id]: val === '' ? null : (isNaN(num) ? null : Math.floor(num))
+                                    }));
+                                }}
+                                className={`w-full border border-gray-300 rounded px-3 py-2 text-sm  ${
+                                    !currentMapel?.bisa_input ? 'bg-gray-100 cursor-not-allowed' : ''
+                                }`}
+                                placeholder="Masukkan nilai (0-100)"
+                                disabled={!currentMapel?.bisa_input}
+                            />
+                        </div>
+                    ))}
+                </div>
 
-                                            <div className="flex justify-end gap-3">
-                                                <button
-                                                    onClick={() => setEditKomponenClosing(true)}
-                                                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
-                                                >
-                                                    Batal
-                                                </button>
-                                                {currentMapel?.bisa_input ? (
-                                                    <button
-                                                        onClick={simpanNilaiKomponen}
-                                                        disabled={saving}
-                                                        className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                                                    >
-                                                        {saving ? 'Menyimpan...' : 'Simpan'}
-                                                    </button>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                <div className="flex justify-end gap-3">
+                    <button
+                        onClick={() => setEditKomponenClosing(true)}
+                        className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                    >
+                        Batal
+                    </button>
+                    {currentMapel?.bisa_input ? (
+                        <button
+                            onClick={simpanNilaiKomponen}
+                            disabled={saving}
+                            className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                        >
+                            {saving ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    </div>
+)}
                         </>
                     ) : (
                         <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">

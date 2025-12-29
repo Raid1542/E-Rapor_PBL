@@ -7,6 +7,6 @@ module.exports = async (req, res, next) => {
     if (rows.length === 0) {
         return res.status(400).json({ message: 'Tidak ada tahun ajaran aktif' });
     }
-    req.tahunAjaranAktifId = rows[0].id_tahun_ajaran; // ✅ Ini yang dibaca di controller
+    req.tahunAjaranAktifId = rows[0].id_tahun_ajaran; 
     next();
 };

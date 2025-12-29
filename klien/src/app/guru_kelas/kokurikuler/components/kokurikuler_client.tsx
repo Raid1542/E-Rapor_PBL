@@ -43,6 +43,7 @@ export default function DataKokurikulerPage() {
     const [siswaList, setSiswaList] = useState<SiswaKokurikuler[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDetail, setShowDetail] = useState(false);
+    const [isDetailClosing, setIsDetailClosing] = useState(false); // ← tambahan untuk animasi
     const [detailId, setDetailId] = useState<number | null>(null);
     const [detailData, setDetailData] = useState<KokurikulerData | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -120,8 +121,7 @@ export default function DataKokurikulerPage() {
                 return { grade: c.grade, deskripsi: c.deskripsi };
             }
         }
-        // Jika tidak cocok (seharusnya tidak terjadi), kembalikan null
-        console.warn(`⚠️ Tidak ditemukan konfigurasi untuk aspek ${aspekId}, nilai: ${nilai}`);
+        // Jika tidak cocok (seharusnya tidak terjadi)
         return { grade: null, deskripsi: null };
     };
 
@@ -134,6 +134,11 @@ export default function DataKokurikulerPage() {
         setDetailId(siswa.id);
         setDetailData({ ...siswa.kokurikuler });
         setShowDetail(true);
+        setIsDetailClosing(false); // reset animasi
+    };
+
+    const closeDetail = () => {
+        setIsDetailClosing(true);
     };
 
     const handleSave = async (siswaId: number) => {
@@ -142,6 +147,7 @@ export default function DataKokurikulerPage() {
         const originalSiswa = siswaList.find((s) => s.id === siswaId);
         if (!originalSiswa) {
             alert('Data siswa tidak ditemukan');
+            closeDetail();
             return;
         }
 
@@ -203,10 +209,8 @@ export default function DataKokurikulerPage() {
         if (field.endsWith('_nilai')) {
             const numValue = value === '' ? null : Number(value);
             if (value === '' || (numValue !== null && !isNaN(numValue) && numValue >= 0 && numValue <= 100)) {
-                // Update nilai
                 setDetailData((prev) => ({ ...prev!, [field]: numValue }));
 
-                // Tentukan aspekId berdasarkan field
                 let aspekId: number | null = null;
                 if (field === 'mutabaah_nilai') aspekId = ASPEK_ID.mutabaah;
                 else if (field === 'bpi_nilai') aspekId = ASPEK_ID.bpi;
@@ -322,12 +326,6 @@ export default function DataKokurikulerPage() {
                 </button>
             );
         return pages;
-    };
-
-    const closeDetail = () => {
-        setShowDetail(false);
-        setDetailId(null);
-        setDetailData(null);
     };
 
     return (
@@ -493,15 +491,30 @@ export default function DataKokurikulerPage() {
                 </div>
             </div>
 
-            {/* Modal Detail */}
+            {/* Modal Detail dengan Animasi */}
             {showDetail && detailData && (
                 <div
-                    className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4 bg-black/50"
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
+                        isDetailClosing ? 'opacity-0' : 'opacity-100'
+                    } p-3 sm:p-4`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) closeDetail();
                     }}
+                    onTransitionEnd={() => {
+                        if (isDetailClosing) {
+                            setShowDetail(false);
+                            setIsDetailClosing(false);
+                            setDetailId(null);
+                            setDetailData(null);
+                        }
+                    }}
                 >
-                    <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <div className="absolute inset-0 bg-black/50"></div>
+                    <div
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${
+                            isDetailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                        }`}
+                    >
                         <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 flex justify-between items-center">
                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Nilai Kokurikuler</h2>
                             <button
@@ -545,7 +558,7 @@ export default function DataKokurikulerPage() {
                                 </div>
                                 <div className="mt-3">
                                     <label className="block text-xs text-gray-600 mb-1">Deskripsi</label>
-                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm min-h-[60px]">
+                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm whitespace-pre-wrap break-words min-h-[60px]">
                                         {detailData.mutabaah_deskripsi || <span className="text-gray-400">–</span>}
                                     </div>
                                 </div>
@@ -580,7 +593,8 @@ export default function DataKokurikulerPage() {
                                     </div>
                                 </div>
                                 <div className="mt-3">
-                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm min-h-[60px]">
+                                    <label className="block text-xs text-gray-600 mb-1">Deskripsi</label>
+                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm whitespace-pre-wrap break-words min-h-[60px]">
                                         {detailData.bpi_deskripsi || <span className="text-gray-400">–</span>}
                                     </div>
                                 </div>
@@ -615,7 +629,8 @@ export default function DataKokurikulerPage() {
                                     </div>
                                 </div>
                                 <div className="mt-3">
-                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm min-h-[60px]">
+                                    <label className="block text-xs text-gray-600 mb-1">Deskripsi</label>
+                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm whitespace-pre-wrap break-words min-h-[60px]">
                                         {detailData.literasi_deskripsi || <span className="text-gray-400">–</span>}
                                     </div>
                                 </div>
@@ -628,7 +643,7 @@ export default function DataKokurikulerPage() {
                                     <label className="block text-xs text-gray-600 mb-1">Nama Kegiatan Proyek</label>
                                     <input
                                         type="text"
-                                        value={detailData.nama_judul_proyek ?? ''} //  <-- ini akan dipisah seharusnya
+                                        value={detailData.nama_judul_proyek ?? ''}
                                         onChange={(e) =>
                                             setDetailData((prev) => ({ ...prev!, nama_judul_proyek: e.target.value }))
                                         }
@@ -665,7 +680,7 @@ export default function DataKokurikulerPage() {
                                 </div>
                                 <div className="mt-3">
                                     <label className="block text-xs text-gray-600 mb-1">Deskripsi</label>
-                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm min-h-[60px]">
+                                    <div className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-sm whitespace-pre-wrap break-words min-h-[60px]">
                                         {detailData.judul_proyek_deskripsi || <span className="text-gray-400">–</span>}
                                     </div>
                                 </div>

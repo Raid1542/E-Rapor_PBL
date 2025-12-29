@@ -9,7 +9,9 @@ const getAllTahunAjaran = async () => {
             semester,
             status,
             tanggal_pembagian_pts,
-            tanggal_pembagian_pas
+            tanggal_pembagian_pas,
+            status_pts,
+            status_pas
         FROM tahun_ajaran
         ORDER BY 
             CASE 

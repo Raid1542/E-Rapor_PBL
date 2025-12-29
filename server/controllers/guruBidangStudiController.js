@@ -443,14 +443,46 @@ exports.createKategoriAkademik = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Range nilai tidak valid' });
         }
 
-        const [result] = await db.execute(`
-            INSERT INTO konfigurasi_nilai_rapor (mapel_id, min_nilai, max_nilai, deskripsi, urutan)
-            VALUES (?, ?, ?, ?, 
-                (SELECT IFNULL(MAX(urutan), 0) + 1 FROM (SELECT urutan FROM konfigurasi_nilai_rapor) AS tmp)
-            )
-        `, [mapel_id, min_nilai, max_nilai, deskripsi]);
+        //  Ambil tahun ajaran aktif
+        const [taRows] = await db.execute(`
+            SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1
+        `);
+        if (taRows.length === 0) {
+            return res.status(400).json({ success: false, message: 'Tahun ajaran aktif belum diatur' });
+        }
+        const tahun_ajaran_id = taRows[0].id_tahun_ajaran;
 
-        res.json({ success: true, message: 'Kategori berhasil ditambahkan', id: result.insertId });
+        // INSERT dengan tahun_ajaran_id + urutan per mapel & tahun ajaran
+        const [result] = await db.execute(`
+            INSERT INTO konfigurasi_nilai_rapor (
+                mapel_id, 
+                tahun_ajaran_id, 
+                min_nilai, 
+                max_nilai, 
+                deskripsi, 
+                urutan
+            )
+            VALUES (?, ?, ?, ?, ?, 
+                (SELECT IFNULL(MAX(urutan), 0) + 1 
+                 FROM (SELECT urutan 
+                       FROM konfigurasi_nilai_rapor 
+                       WHERE mapel_id = ? AND tahun_ajaran_id = ?) AS tmp)
+            )
+        `, [
+            mapel_id,
+            tahun_ajaran_id,       
+            min_nilai,
+            max_nilai,
+            deskripsi,
+            mapel_id,           
+            tahun_ajaran_id      
+        ]);
+
+        res.json({ 
+            success: true, 
+            message: 'Kategori berhasil ditambahkan', 
+            id: result.insertId 
+        });
     } catch (err) {
         console.error('Error create kategori:', err);
         res.status(500).json({ success: false, message: 'Gagal menambah kategori' });

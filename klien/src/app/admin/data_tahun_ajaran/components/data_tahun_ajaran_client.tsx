@@ -43,8 +43,8 @@ export default function DataTahunAjaranPage() {
     const [itemsPerPage] = useState(10);
 
     const [formData, setFormData] = useState({
-        tahun1: '2024',
-        tahun2: '2025',
+        tahun1: '',
+        tahun2: '',
         semester: 'Ganjil' as 'Ganjil' | 'Genap',
         tanggal_pembagian_pts: '',
         tanggal_pembagian_pas: ''
