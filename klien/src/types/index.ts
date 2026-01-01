@@ -1,5 +1,10 @@
-// File untuk centralized types
-// Lokasi: lib/types.ts
+/**
+ * Nama File: index.ts
+ * Fungsi: Mendefinisikan tipe data terpusat untuk aplikasi E-Rapor,
+ *         mencakup tipe pengguna, item menu, dan props komponen layout.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
 
 import { LucideIcon } from 'lucide-react';
 

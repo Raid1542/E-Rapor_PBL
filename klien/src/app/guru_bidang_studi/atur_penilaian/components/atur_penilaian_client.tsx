@@ -28,7 +28,7 @@ interface BobotItem {
 
 // ====== MAIN COMPONENT ======
 export default function AturPenilaianPage() {
-
+    const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [activeTab, setActiveTab] = useState<'akademik' | 'bobot'>('akademik');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -64,6 +64,15 @@ export default function AturPenilaianPage() {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
+
+                const taRes = await fetch('http://localhost:5000/api/guru-bidang-studi/tahun-ajaran/aktif', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
+                const taData = await taRes.json();
+                const { status_pts, status_pas } = taData.data;
+                const jenisAktif = status_pts === 'aktif' ? 'PTS' : status_pas === 'aktif' ? 'PAS' : null;
+                setJenisPenilaianAktif(jenisAktif);
 
                 // ✅ Ganti ke endpoint guru bidang studi
                 const [resKomponen, resMapel] = await Promise.all([
@@ -280,6 +289,26 @@ export default function AturPenilaianPage() {
         }
     };
 
+    const hasInvalidBobot = () => {
+        if (!jenisPenilaianAktif || jenisPenilaianAktif !== 'PTS') return false;
+        const ptsKomponenIds = komponenList
+            .filter(k => k.nama_komponen.toLowerCase().includes('pts'))
+            .map(k => k.id_komponen);
+        return bobotList.some(b => {
+            return !ptsKomponenIds.includes(b.komponen_id) && b.bobot > 0;
+        });
+    };
+
+    const getPTSPesan = () => {
+        if (!jenisPenilaianAktif || jenisPenilaianAktif !== 'PTS') return null;
+        return (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800">
+                ⚠️ <strong>Periode PTS aktif.</strong> Hanya komponen <strong>PTS</strong> yang boleh memiliki bobot.
+                Semua bobot lain harus 0.
+            </div>
+        );
+    };
+
     // ====== BOBOT HANDLERS ======
     const handleBobotChange = (komponenId: number, value: string) => {
         const newValue = parseFloat(value) || 0;
@@ -320,6 +349,11 @@ export default function AturPenilaianPage() {
                 }
             );
 
+            if (hasInvalidBobot()) {
+                alert('Di periode PTS, hanya bobot PTS yang boleh > 0. Harap atur bobot UH dan PAS menjadi 0.');
+                return;
+            }
+
             if (res.ok) {
                 alert('Bobot penilaian berhasil disimpan');
                 setInitialBobotList(JSON.parse(JSON.stringify(bobotList)));
@@ -357,21 +391,19 @@ export default function AturPenilaianPage() {
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
-                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${
-                            activeTab === 'akademik'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
-                        }`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik'
+                            ? 'text-blue-600 border-b-2 border-blue-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
                         onClick={() => setActiveTab('akademik')}
                     >
                         Kategori Akademik
                     </button>
                     <button
-                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${
-                            activeTab === 'bobot'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
-                        }`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot'
+                            ? 'text-blue-600 border-b-2 border-blue-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
                         onClick={() => setActiveTab('bobot')}
                     >
                         Atur Bobot Penilaian
@@ -506,6 +538,7 @@ export default function AturPenilaianPage() {
                                 <div className="text-gray-500 text-xs sm:text-sm">Memuat bobot...</div>
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
+                                    {getPTSPesan()}
                                     {bobotList.map((bobot) => {
                                         const komponen = komponenList.find((k) => k.id_komponen === bobot.komponen_id);
                                         return (
@@ -534,11 +567,10 @@ export default function AturPenilaianPage() {
                                         <div className="flex justify-between items-center">
                                             <span className="font-semibold text-xs sm:text-sm">Total Bobot:</span>
                                             <span
-                                                className={`text-sm sm:text-lg font-bold ${
-                                                    Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1
-                                                        ? 'text-green-600'
-                                                        : 'text-red-600'
-                                                }`}
+                                                className={`text-sm sm:text-lg font-bold ${Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1
+                                                    ? 'text-green-600'
+                                                    : 'text-red-600'
+                                                    }`}
                                             >
                                                 {bobotList.reduce((sum, b) => sum + b.bobot, 0).toFixed(2)}%
                                             </span>
@@ -568,18 +600,16 @@ export default function AturPenilaianPage() {
             {/* Modal Edit Kategori */}
             {showEditKategori && (
                 <div
-                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
-                        editKategoriClosing ? 'opacity-0' : 'opacity-100'
-                    } p-2`}
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKategoriClosing ? 'opacity-0' : 'opacity-100'
+                        } p-2`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) closeEditKategori();
                     }}
                 >
                     <div className="absolute inset-0 bg-gray-900/70 pointer-events-none"></div>
                     <div
-                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${
-                            editKategoriClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                        }`}
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKategoriClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                            }`}
                         style={{ pointerEvents: 'auto' }}
                     >
                         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">

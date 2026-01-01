@@ -1,12 +1,27 @@
+/**
+ * Nama File: userModel.js
+ * Fungsi: Model untuk mengelola data pengguna (user), termasuk autentikasi,
+ *         manajemen role, dan operasi CRUD untuk admin serta guru.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022
+ * Tanggal: 1 Oktober 2025
+ */
+
 const db = require('../config/db');
 
-const findByEmail = async (email) => {
-    const [rows] = await db.execute('SELECT * FROM user WHERE email_sekolah = ?', [email]);
+const userModel = {
+  // Mencari pengguna berdasarkan email sekolah
+  async findByEmail(email) {
+    const [rows] = await db.execute(
+      'SELECT * FROM user WHERE email_sekolah = ?',
+      [email]
+    );
     return rows[0];
-};
+  },
 
-const findById = async (id) => {
-    const [rows] = await db.execute(`
+  // Mengambil data pengguna lengkap berdasarkan ID (termasuk data guru)
+  async findById(id) {
+    const [rows] = await db.execute(
+      `
         SELECT 
             u.*,
             g.niy,
@@ -20,41 +35,52 @@ const findById = async (id) => {
         FROM user u
         LEFT JOIN guru g ON u.id_user = g.user_id
         WHERE u.id_user = ?
-    `, [id]);
+      `,
+      [id]
+    );
     return rows[0] || null;
-};
+  },
 
-const createUser = async (data) => {
+  // Membuat pengguna baru (tanpa role khusus)
+  async createUser(data) {
     const { email_sekolah, password, nama_lengkap, role } = data;
     const hashedPassword = await require('../utils/hash').hashPassword(password);
     const [result] = await db.execute(
-        'INSERT INTO user (email_sekolah, password, nama_lengkap, status, created_at, updated_at) VALUES (?, ?, ?, "aktif", NOW(), NOW())',
-        [email_sekolah, hashedPassword, nama_lengkap]
+      'INSERT INTO user (email_sekolah, password, nama_lengkap, status, created_at, updated_at) VALUES (?, ?, ?, "aktif", NOW(), NOW())',
+      [email_sekolah, hashedPassword, nama_lengkap]
     );
     const id_user = result.insertId;
 
-    // Jika role diberikan, simpan ke user_role
     if (role) {
-        await db.execute('INSERT INTO user_role (id_user, role) VALUES (?, ?)', [id_user, role]);
+      await db.execute('INSERT INTO user_role (id_user, role) VALUES (?, ?)', [
+        id_user,
+        role,
+      ]);
     }
 
     return id_user;
-};
+  },
 
-const updateUser = async (id, data, connection) => {
+  // Memperbarui data pengguna (tanpa transaksi eksternal)
+  async updateUser(id, data, connection = db) {
     const { email_sekolah, nama_lengkap, status } = data;
-    await db.execute(
-        'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, status = ?, updated_at = NOW() WHERE id_user = ?',
-        [email_sekolah, nama_lengkap, status, id]
+    await connection.execute(
+      'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, status = ?, updated_at = NOW() WHERE id_user = ?',
+      [email_sekolah, nama_lengkap, status, id]
     );
-};
+  },
 
-const getRolesByUserId = async (id_user) => {
-    const [rows] = await db.execute('SELECT role FROM user_role WHERE id_user = ?', [id_user]);
+  // Mengambil daftar role berdasarkan ID pengguna
+  async getRolesByUserId(id_user) {
+    const [rows] = await db.execute(
+      'SELECT role FROM user_role WHERE id_user = ?',
+      [id_user]
+    );
     return rows.map(row => row.role);
-};
+  },
 
-const getAdminList = async () => {
+  // Mengambil daftar semua admin
+  async getAdminList() {
     const [rows] = await db.execute(`
         SELECT 
             u.id_user AS id, 
@@ -77,118 +103,134 @@ const getAdminList = async () => {
         ORDER BY u.id_user
     `);
     return rows;
-};
+  },
 
-const createAdmin = async (userData, connection = db) => {
+  // Membuat admin baru (dengan transaksi opsional)
+  async createAdmin(userData, connection = db) {
     const {
-        email_sekolah,
-        password, // bisa undefined
-        nama_lengkap,
-        niy = '',
-        nuptk = '',
-        tempat_lahir = '',
-        tanggal_lahir = null,
-        jenis_kelamin = 'Laki-laki',
-        alamat = '',
-        no_telepon = ''
+      email_sekolah,
+      password,
+      nama_lengkap,
+      niy = '',
+      nuptk = '',
+      tempat_lahir = '',
+      tanggal_lahir = null,
+      jenis_kelamin = 'Laki-laki',
+      alamat = '',
+      no_telepon = '',
     } = userData;
 
-    // ✅ Jika tidak ada password, gunakan default
-    const finalPassword = password && password.trim() !== ''
-        ? password
-        : 'sekolah123'; // atau "admin123", dll
-
+    const finalPassword = password?.trim() || 'sekolah123';
     const hashedPassword = await require('../utils/hash').hashPassword(finalPassword);
 
-    // 1. Insert ke user
     const [result] = await connection.execute(
-        'INSERT INTO user (email_sekolah, password, nama_lengkap, status, created_at, updated_at) VALUES (?, ?, ?, "aktif", NOW(), NOW())',
-        [email_sekolah, hashedPassword, nama_lengkap]
+      'INSERT INTO user (email_sekolah, password, nama_lengkap, status, created_at, updated_at) VALUES (?, ?, ?, "aktif", NOW(), NOW())',
+      [email_sekolah, hashedPassword, nama_lengkap]
     );
     const id_user = result.insertId;
 
-    // 2. Insert role
     await connection.execute(
-        'INSERT INTO user_role (id_user, role) VALUES (?, "admin")',
-        [id_user]
+      'INSERT INTO user_role (id_user, role) VALUES (?, "admin")',
+      [id_user]
     );
 
-    // 3. Insert ke guru
     await connection.execute(
-        `INSERT INTO guru (
+      `INSERT INTO guru (
             user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id_user, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon]
+      [
+        id_user,
+        niy,
+        nuptk,
+        tempat_lahir,
+        tanggal_lahir,
+        jenis_kelamin,
+        alamat,
+        no_telepon,
+      ]
     );
 
     return id_user;
-};
+  },
 
-const updateAdmin = async (id, data, connection = db) => {
-    // ✅ Beri nilai default untuk semua field
+  // Memperbarui data admin (dengan transaksi opsional)
+  async updateAdmin(id, data, connection = db) {
     const {
-        email_sekolah = '',
-        nama_lengkap = '',
-        password = undefined, // biarkan undefined untuk dicek
-        status = '',
-        niy = '',
-        nuptk = '',
-        tempat_lahir = '',
-        tanggal_lahir = null,       // DATE boleh null
-        jenis_kelamin = 'Laki-laki',
-        alamat = '',
-        no_telepon = ''
+      email_sekolah = '',
+      nama_lengkap = '',
+      password,
+      status = '',
+      niy = '',
+      nuptk = '',
+      tempat_lahir = '',
+      tanggal_lahir = null,
+      jenis_kelamin = 'Laki-laki',
+      alamat = '',
+      no_telepon = '',
     } = data;
 
-    // 1. Update user
-    let updateUserQuery = 'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, status = ?';
+    let updateUserQuery =
+      'UPDATE user SET email_sekolah = ?, nama_lengkap = ?, status = ?';
     let updateUserParams = [email_sekolah, nama_lengkap, status];
 
-    if (password && password.trim() !== '') {
-        const hashedPassword = await require('../utils/hash').hashPassword(password);
-        updateUserQuery += ', password = ?';
-        updateUserParams.push(hashedPassword);
+    if (password?.trim()) {
+      const hashedPassword = await require('../utils/hash').hashPassword(password);
+      updateUserQuery += ', password = ?';
+      updateUserParams.push(hashedPassword);
     }
 
     updateUserQuery += ', updated_at = NOW() WHERE id_user = ?';
     updateUserParams.push(id);
     await connection.execute(updateUserQuery, updateUserParams);
 
-    // 2. Update guru — pastikan TIDAK ADA undefined
-    const [guruRows] = await connection.execute('SELECT 1 FROM guru WHERE user_id = ?', [id]);
-    if (guruRows.length > 0) {
-        await connection.execute(
-            `UPDATE guru SET 
-        niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
-        jenis_kelamin = ?, alamat = ?, no_telepon = ?
-        WHERE user_id = ?`,
-            [niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, id]
-        );
-    } else {
-        await connection.execute(
-            `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon]
-        );
-    }
-};
+    const [guruRows] = await connection.execute(
+      'SELECT 1 FROM guru WHERE user_id = ?',
+      [id]
+    );
 
-const updatePassword = async (id_user, hashedPassword) => {
+    if (guruRows.length > 0) {
+      await connection.execute(
+        `UPDATE guru SET 
+          niy = ?, nuptk = ?, tempat_lahir = ?, tanggal_lahir = ?,
+          jenis_kelamin = ?, alamat = ?, no_telepon = ?
+          WHERE user_id = ?`,
+        [
+          niy,
+          nuptk,
+          tempat_lahir,
+          tanggal_lahir,
+          jenis_kelamin,
+          alamat,
+          no_telepon,
+          id,
+        ]
+      );
+    } else {
+      await connection.execute(
+        `INSERT INTO guru (user_id, niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          niy,
+          nuptk,
+          tempat_lahir,
+          tanggal_lahir,
+          jenis_kelamin,
+          alamat,
+          no_telepon,
+        ]
+      );
+    }
+  },
+
+  // Memperbarui password pengguna
+  async updatePassword(id_user, hashedPassword) {
     const [result] = await db.execute(
-        'UPDATE user SET password = ?, updated_at = NOW() WHERE id_user = ?',
-        [hashedPassword, id_user]
+      'UPDATE user SET password = ?, updated_at = NOW() WHERE id_user = ?',
+      [hashedPassword, id_user]
     );
     return result.affectedRows > 0;
+  },
 };
 
-module.exports = {
-    findByEmail,
-    findById,
-    createUser,
-    updateUser,
-    getRolesByUserId,
-    getAdminList,
-    createAdmin,
-    updateAdmin,
-    updatePassword
-};
+module.exports = userModel;

@@ -1,10 +1,18 @@
+/**
+ * Nama File: login_client.tsx
+ * Fungsi: Komponen klien untuk halaman login E-Rapor.
+ *         Menangani formulir login, validasi input, komunikasi API,
+ *         dan navigasi berdasarkan role pengguna.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 2 Januari 2026
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
-
+export default function LoginClient() {
     const router = useRouter();
     const [formData, setFormData] = useState({
         email_sekolah: "",
@@ -15,33 +23,33 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    //  State untuk data sekolah
+    // State untuk data sekolah (nama dan logo)
     const [namaSekolah, setNamaSekolah] = useState("Sekolah");
     const [logoSekolah, setLogoSekolah] = useState<string | null>(null);
     const [logoError, setLogoError] = useState(false);
 
-    // ✅ Ambil data sekolah saat halaman dimuat
+    // Ambil data publik sekolah saat komponen dimuat
     useEffect(() => {
         const fetchSekolah = async () => {
             try {
                 const res = await fetch("http://localhost:5000/api/sekolah/publik");
-
                 if (res.ok) {
                     const data = await res.json();
-                    setNamaSekolah(data.nama_sekolah || 'Sekolah');
+                    setNamaSekolah(data.nama_sekolah || "Sekolah");
                     if (data.logo_path) {
                         setLogoSekolah(`http://localhost:5000${data.logo_path}`);
                     }
                 }
             } catch (err) {
-                console.warn('Gagal memuat data sekolah publik');
+                console.warn("Gagal memuat data sekolah publik");
             }
         };
 
         fetchSekolah();
     }, []);
 
-    const handleSubmit = async (e) => {
+    // Tangani submit formulir login
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
 
@@ -60,8 +68,8 @@ export default function LoginPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email_sekolah: email_sekolah.trim(),
-                    password: password,
-                    role: role,
+                    password,
+                    role,
                 }),
             });
 
@@ -73,11 +81,11 @@ export default function LoginPage() {
                 return;
             }
 
+            // Simpan data pengguna dan token ke localStorage
             if (data.user) {
-                const selectedRole = formData.role;
                 const normalizedUser = {
                     ...data.user,
-                    role: selectedRole,
+                    role: formData.role,
                     profileImage: data.user.profileImage || data.user.foto_path || null,
                 };
 
@@ -86,6 +94,7 @@ export default function LoginPage() {
                 window.dispatchEvent(new Event("userDataUpdated"));
             }
 
+            // Arahkan ke dashboard berdasarkan role
             if (role === "admin") {
                 router.push("/admin/dashboard");
             } else if (role === "guru kelas") {
@@ -93,7 +102,6 @@ export default function LoginPage() {
             } else if (role === "guru bidang studi") {
                 router.push("/guru_bidang_studi/dashboard");
             }
-
         } catch (err) {
             console.error("💥 Error koneksi:", err);
             setError("Gagal terhubung ke server. Silakan coba lagi");
@@ -101,10 +109,11 @@ export default function LoginPage() {
         }
     };
 
-    const handleChange = (e) => {
+    // Tangani perubahan input form
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
-        setFormData(prev => ({ ...prev, [name]: trimmedValue }));
+        const trimmedValue = name === "email_sekolah" ? value.trim() : value;
+        setFormData((prev) => ({ ...prev, [name]: trimmedValue }));
     };
 
     return (
@@ -130,7 +139,7 @@ export default function LoginPage() {
                 <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
                     <div className="w-full max-w-md">
                         <div className="bg-white rounded-xl shadow-xl p-8">
-                            {/* ✅ Logo Sekolah Dinamis */}
+                            {/* Logo Sekolah Dinamis */}
                             <div className="flex justify-center mb-6">
                                 {logoSekolah && !logoError ? (
                                     <div className="transform hover:scale-105 transition-all duration-300">
@@ -156,14 +165,14 @@ export default function LoginPage() {
                                 </h1>
                             </div>
 
-                            {/* Error */}
+                            {/* Pesan Error */}
                             {error && (
                                 <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
                                     {error}
                                 </div>
                             )}
 
-                            {/* Form */}
+                            {/* Form Login */}
                             <form onSubmit={handleSubmit} className="space-y-5">
                                 <div>
                                     <label className="flex items-center text-black text-sm font-medium mb-2.5">

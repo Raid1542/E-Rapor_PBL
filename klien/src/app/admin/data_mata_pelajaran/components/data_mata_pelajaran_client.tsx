@@ -11,6 +11,7 @@ interface MataPelajaran {
     tahun_ajaran_id: number;
     tahun_ajaran: string;
     semester: string;
+    urutan_rapor: number | null;
 }
 
 interface TahunAjaran {
@@ -25,11 +26,11 @@ interface FormDataType {
     nama_mapel: string;
     jenis: string;
     kurikulum: string;
+    urutan_rapor: string;
     confirmData: boolean;
 }
 
 export default function DataMataPelajaranPage() {
-
     const [mapelList, setMapelList] = useState<MataPelajaran[]>([]);
     const [loading, setLoading] = useState(true);
     const [showTambah, setShowTambah] = useState(false);
@@ -47,6 +48,7 @@ export default function DataMataPelajaranPage() {
         nama_mapel: '',
         jenis: '',
         kurikulum: '',
+        urutan_rapor: '',
         confirmData: false
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,7 +101,8 @@ export default function DataMataPelajaranPage() {
                     kurikulum: mp.kurikulum,
                     tahun_ajaran_id: mp.tahun_ajaran_id,
                     tahun_ajaran: mp.tahun_ajaran,
-                    semester: mp.semester
+                    semester: mp.semester,
+                    urutan_rapor: mp.urutan_rapor
                 }));
                 setMapelList(camelCasedData);
             } else {
@@ -119,21 +122,55 @@ export default function DataMataPelajaranPage() {
 
     // === Handle Form ===
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+
+        // ✅ Auto-lowercase untuk field jenis
+        if (name === 'jenis') {
+            setFormData(prev => ({ ...prev, [name]: value.toLowerCase().trim() }));
+        } 
+        // Handle checkbox
+        else if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData(prev => ({ ...prev, [name]: checked }));
+        } 
+        // Handle input lain
+        else {
+            setFormData(prev => ({ ...prev, [name]: value.trim() }));
+        }
     };
 
     const validate = (): boolean => {
-        console.log('FormData:', formData);
         const newErrors: Record<string, string> = {};
-        if (!formData.kode_mapel?.trim()) newErrors.kode_mapel = 'Kode mapel wajib diisi';
-        if (!formData.nama_mapel?.trim()) newErrors.nama_mapel = 'Nama mapel wajib diisi';
-        if (!formData.jenis || !['wajib', 'pilihan'].includes(formData.jenis)) {
-            newErrors.jenis = 'Pilih jenis yang valid';
+
+        // Trim semua string
+        const kodeMapel = formData.kode_mapel?.trim() || '';
+        const namaMapel = formData.nama_mapel?.trim() || '';
+        const kurikulum = formData.kurikulum?.trim() || '';
+        const jenis = formData.jenis?.toLowerCase()?.trim() || '';
+
+        if (!kodeMapel) newErrors.kode_mapel = 'Kode mapel wajib diisi';
+        if (!namaMapel) newErrors.nama_mapel = 'Nama mapel wajib diisi';
+        if (!kurikulum) newErrors.kurikulum = 'Kurikulum wajib diisi';
+
+        // ✅ Validasi jenis dengan pesan jelas
+        if (!jenis) {
+            newErrors.jenis = 'Jenis mapel wajib dipilih';
+        } else if (!['wajib', 'pilihan'].includes(jenis)) {
+            newErrors.jenis = `Jenis tidak valid: "${jenis}". Harus "wajib" atau "pilihan"`;
         }
-        if (!formData.kurikulum?.trim()) newErrors.kurikulum = 'Kurikulum wajib diisi';
-        if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data';
+
+        // Validasi checkbox
+        if (!formData.confirmData) {
+            newErrors.confirmData = 'Harap konfirmasi data terlebih dahulu';
+        }
+
         setErrors(newErrors);
+
+        // ✅ Tampilkan error di console untuk debug
+        if (Object.keys(newErrors).length > 0) {
+            console.log('❌ Validasi gagal:', newErrors);
+        }
+
         return Object.keys(newErrors).length === 0;
     };
 
@@ -182,49 +219,63 @@ export default function DataMataPelajaranPage() {
         setFormData({
             kode_mapel: mapel.kode_mapel,
             nama_mapel: mapel.nama_mapel,
-            jenis: mapel.jenis.toLowerCase(),
+            jenis: mapel.jenis.toLowerCase().trim(), // ✅ Pastikan lowercase & trim
             kurikulum: mapel.kurikulum,
+            urutan_rapor: mapel.urutan_rapor !== null ? String(mapel.urutan_rapor) : '',
             confirmData: false
         });
         setShowEdit(true);
     };
 
     const handleSubmitEdit = async () => {
-        if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
-            return;
+    console.log('=== DEBUG: Mulai edit ===');
+    if (!validate()) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('Sesi login telah habis. Silakan login ulang.');
+        return;
+    }
+    if (!editId) return;
+
+    try {
+        // ✅ Pastikan nama variabel konsisten
+        const urutanRaporInput = formData.urutan_rapor?.trim() || '';
+        const urutan_rapor = urutanRaporInput ? Number(urutanRaporInput) : null;
+
+        // ✅ Logging untuk memastikan nilai
+        console.log('Urutan rapor final:', urutan_rapor);
+
+        const res = await fetch(`http://localhost:5000/api/admin/mata-pelajaran/${editId}`, {
+            method: "PUT",
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                kode_mapel: formData.kode_mapel.trim().toUpperCase(),
+                nama_mapel: formData.nama_mapel.trim(),
+                jenis: formData.jenis,
+                kurikulum: formData.kurikulum.trim(),
+                urutan_rapor // ✅ Pakai nama yang sama dengan yang didefinisikan
+            })
+        });
+
+        if (res.ok) {
+            alert("Data mata pelajaran berhasil diperbarui");
+            setShowEdit(false);
+            setEditId(null);
+            if (selectedTahunAjaranId) fetchMataPelajaran(selectedTahunAjaranId);
+            handleReset();
+        } else {
+            const error = await res.json();
+            console.error('Error dari backend:', error);
+            alert('Error: ' + (error.message || 'Gagal memperbarui'));
         }
-        if (!editId) return;
-        try {
-            const res = await fetch(`http://localhost:5000/api/admin/mata-pelajaran/${editId}`, {
-                method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    kode_mapel: formData.kode_mapel.trim().toUpperCase(),
-                    nama_mapel: formData.nama_mapel.trim(),
-                    jenis: formData.jenis,
-                    kurikulum: formData.kurikulum.trim()
-                })
-            });
-            if (res.ok) {
-                alert("Data mata pelajaran berhasil diperbarui");
-                setShowEdit(false);
-                setEditId(null);
-                if (selectedTahunAjaranId) fetchMataPelajaran(selectedTahunAjaranId);
-                handleReset();
-            } else {
-                const error = await res.json();
-                alert(error.message || "Gagal memperbarui mata pelajaran");
-            }
-        } catch (err) {
-            alert("Gagal terhubung ke server");
-        }
-    };
+    } catch (err) {
+        console.error('Error saat edit:', err);
+        alert("Gagal terhubung ke server");
+    }
+};
 
     const handleDelete = async (id: number) => {
         if (!confirm('Yakin ingin menghapus mata pelajaran ini?')) return;
@@ -256,6 +307,7 @@ export default function DataMataPelajaranPage() {
             nama_mapel: '',
             jenis: '',
             kurikulum: '',
+            urutan_rapor: '',
             confirmData: false
         });
         setErrors({});
@@ -382,7 +434,24 @@ export default function DataMataPelajaranPage() {
                             />
                             {errors.kurikulum && <p className="text-red-500 text-xs mt-1">{errors.kurikulum}</p>}
                         </div>
-                        {/* Input tahun ajaran dihapus sesuai permintaan */}
+
+                        {/* 🔹 Input Urutan Rapor (HANYA di form EDIT) */}
+                        {isEdit && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Urutan di Rapor (kosongkan = tampil di akhir)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="urutan_rapor"
+                                    value={formData.urutan_rapor}
+                                    onChange={handleInputChange}
+                                    placeholder="Contoh: 1, 2, 3..."
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5"
+                                    min="1"
+                                />
+                            </div>
+                        )}
                     </div>
                     <div className="mt-6">
                         <label className="flex items-start gap-2 cursor-pointer">
@@ -527,17 +596,18 @@ export default function DataMataPelajaranPage() {
                                             <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Mata Pelajaran</th>
                                             <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Jenis</th>
                                             <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Kurikulum</th>
+                                            <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Urutan Rapor</th>
                                             <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                                                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
                                             </tr>
                                         ) : currentMapel.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data mata pelajaran</td>
+                                                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Tidak ada data mata pelajaran</td>
                                             </tr>
                                         ) : (
                                             currentMapel.map((mp, index) => (
@@ -549,6 +619,9 @@ export default function DataMataPelajaranPage() {
                                                         {mp.jenis.charAt(0).toUpperCase() + mp.jenis.slice(1)}
                                                     </td>
                                                     <td className="px-4 py-3 text-center align-middle">{mp.kurikulum}</td>
+                                                    <td className="px-4 py-3 text-center align-middle">
+                                                        {mp.urutan_rapor !== null ? mp.urutan_rapor : '-'}
+                                                    </td>
                                                     <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
                                                         {selectedTahunAjaranAktif ? (
                                                             <div className="flex gap-1 justify-center">

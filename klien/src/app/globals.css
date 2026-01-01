@@ -1,3 +1,11 @@
+/**
+ * Nama File: global.css
+ * Fungsi: File stylesheet global untuk aplikasi E-Rapor.
+ *         Mengatur font utama (Poppins), tema warna, dan dukungan dark mode.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
@@ -16,12 +24,12 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: rgb(19, 19, 19);
+    --foreground: #f3f3f3;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-sans);
 }

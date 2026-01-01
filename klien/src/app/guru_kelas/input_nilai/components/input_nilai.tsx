@@ -30,6 +30,7 @@ interface Komponen {
 const DataInputNilaiPage = () => {
 
     // ====== STATE ======
+    const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [mapelList, setMapelList] = useState<Mapel[]>([]);
     const [selectedMapelId, setSelectedMapelId] = useState<number | null>(null);
     const [siswaList, setSiswaList] = useState<NilaiSiswa[]>([]);
@@ -46,7 +47,7 @@ const DataInputNilaiPage = () => {
     const [detailSiswa, setDetailSiswa] = useState<NilaiSiswa | null>(null);
     const [detailClosing, setDetailClosing] = useState(false);
 
-    // Modal Edit Komponen (BUKAN Nilai Rapor)
+    // Modal Edit Komponen
     const [editingSiswa, setEditingSiswa] = useState<NilaiSiswa | null>(null);
     const [editingKomponenNilai, setEditingKomponenNilai] = useState<Record<number, number | null>>({});
     const [editKomponenClosing, setEditKomponenClosing] = useState(false);
@@ -120,6 +121,16 @@ const DataInputNilaiPage = () => {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
 
+                // Ambil tahun ajaran aktif untuk cek periode
+                const taRes = await fetch('http://localhost:5000/api/guru-kelas/tahun-ajaran/aktif', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
+                const taData = await taRes.json();
+                const { status_pts, status_pas } = taData.data;
+                const jenisAktif = status_pts === 'aktif' ? 'PTS' : status_pas === 'aktif' ? 'PAS' : null;
+                setJenisPenilaianAktif(jenisAktif);
+
                 const res = await fetch(`http://localhost:5000/api/guru-kelas/nilai/${selectedMapelId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -130,7 +141,6 @@ const DataInputNilaiPage = () => {
                 }
 
                 const data = await res.json();
-
                 if (!data.success) {
                     throw new Error(data.message || 'Operasi gagal');
                 }
@@ -201,7 +211,22 @@ const DataInputNilaiPage = () => {
         }
     }, [searchQuery, siswaList]);
 
-    // ====== SIMPAN NILAI KOMPONEN (BUKAN NILAI RAPOR) ======
+    // 🔒 Validasi: cek apakah sedang di periode PTS
+    const isPeriodePTS = jenisPenilaianAktif === 'PTS';
+
+    // 🔒 Validasi: cek apakah ada bobot selain PTS > 0
+    const hasInvalidBobot = () => {
+        if (!isPeriodePTS) return false;
+        const ptsKomponenIds = komponenList
+            .filter(k => k.nama.toLowerCase().includes('pts'))
+            .map(k => k.id);
+        return Object.entries(editingKomponenNilai).some(([idStr, nilai]) => {
+            const id = Number(idStr);
+            return !ptsKomponenIds.includes(id) && nilai != null && nilai > 0;
+        });
+    };
+
+    // ====== SIMPAN NILAI KOMPONEN ======
     const simpanNilaiKomponen = async () => {
         if (!editingSiswa || !selectedMapelId) return;
 
@@ -213,7 +238,6 @@ const DataInputNilaiPage = () => {
                     alert(`Nilai untuk komponen "${komponenNama}" tidak valid. Harus berupa angka antara 0 dan 100.`);
                     return;
                 }
-                // Jika nilai valid, pastikan itu bilangan bulat (bulatkan ke bawah)
                 if (!Number.isInteger(nilai)) {
                     alert(`Nilai untuk komponen "${komponenNama}" harus bilangan bulat.`);
                     return;
@@ -234,7 +258,7 @@ const DataInputNilaiPage = () => {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({ nilai: editingKomponenNilai, }),
+                    body: JSON.stringify({ nilai: editingKomponenNilai }),
                 }
             );
 
@@ -305,8 +329,7 @@ const DataInputNilaiPage = () => {
                     <button
                         key={i}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -317,8 +340,7 @@ const DataInputNilaiPage = () => {
                 <button
                     key={1}
                     onClick={() => setCurrentPage(1)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     1
                 </button>
@@ -331,8 +353,7 @@ const DataInputNilaiPage = () => {
                     <button
                         key={i}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -344,8 +365,7 @@ const DataInputNilaiPage = () => {
                 <button
                     key={totalPages}
                     onClick={() => setCurrentPage(totalPages)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     {totalPages}
                 </button>
@@ -399,7 +419,6 @@ const DataInputNilaiPage = () => {
                             </select>
                         )}
                     </div>
-
 
                     {selectedMapelId && currentMapel ? (
                         <>
@@ -533,7 +552,6 @@ const DataInputNilaiPage = () => {
                                             </button>
                                         </div>
                                         <div className="p-6">
-                                            {/* Info Siswa - Gunakan Grid 2 Kolom */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                                                 <div>
                                                     <span className="font-medium text-gray-700">Nama:</span>
@@ -553,7 +571,6 @@ const DataInputNilaiPage = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Deskripsi - Full Width */}
                                             <div className="mb-6">
                                                 <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
                                                 <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words">
@@ -561,7 +578,6 @@ const DataInputNilaiPage = () => {
                                                 </p>
                                             </div>
 
-                                            {/* Nilai Komponen */}
                                             <div>
                                                 <h3 className="font-semibold text-gray-800 mb-3">Nilai Komponen:</h3>
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -576,7 +592,6 @@ const DataInputNilaiPage = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Tombol */}
                                             <div className="mt-8 flex justify-end gap-3">
                                                 <button
                                                     onClick={() => setDetailClosing(true)}
@@ -602,84 +617,89 @@ const DataInputNilaiPage = () => {
                             )}
 
                             {/* Modal Edit Komponen */}
-{editingSiswa && (
-    <div
-        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
-        onClick={(e) => e.target === e.currentTarget && setEditKomponenClosing(true)}
-        onTransitionEnd={() => {
-            if (editKomponenClosing) {
-                setEditingSiswa(null);
-                setEditKomponenClosing(false);
-            }
-        }}
-    >
-        <div className="absolute inset-0 bg-gray-900/70"></div>
-        <div
-            className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-        >
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
-                <button onClick={() => setEditKomponenClosing(true)} className="text-gray-500 hover:text-gray-700">
-                    <X size={24} />
-                </button>
-            </div>
-            <div className="p-6">
-                <p className="mb-4">
-                    <span className="font-medium">Siswa:</span> {editingSiswa.nama}
-                </p>
+                            {editingSiswa && (
+                                <div
+                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+                                    onClick={(e) => e.target === e.currentTarget && setEditKomponenClosing(true)}
+                                    onTransitionEnd={() => {
+                                        if (editKomponenClosing) {
+                                            setEditingSiswa(null);
+                                            setEditKomponenClosing(false);
+                                        }
+                                    }}
+                                >
+                                    <div className="absolute inset-0 bg-gray-900/70"></div>
+                                    <div
+                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                                    >
+                                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                                            <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
+                                            <button onClick={() => setEditKomponenClosing(true)} className="text-gray-500 hover:text-gray-700">
+                                                <X size={24} />
+                                            </button>
+                                        </div>
+                                        <div className="p-6">
+                                            <p className="mb-4">
+                                                <span className="font-medium">Siswa:</span> {editingSiswa.nama}
+                                            </p>
 
-                {/* Input Vertikal — satu per baris */}
-                <div className="space-y-3 mb-6">
-                    {komponenList.map(komponen => (
-                        <div key={komponen.id} className="flex flex-col">
-                            <label className="text-sm font-medium text-gray-700 mb-1">
-                                {komponen.nama} {/* ← Gunakan nama asli dari backend */}
-                            </label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="1"
-                                value={editingKomponenNilai[komponen.id] ?? ''}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    const num = parseFloat(val);
-                                    setEditingKomponenNilai(prev => ({
-                                        ...prev,
-                                        [komponen.id]: val === '' ? null : (isNaN(num) ? null : Math.floor(num))
-                                    }));
-                                }}
-                                className={`w-full border border-gray-300 rounded px-3 py-2 text-sm  ${
-                                    !currentMapel?.bisa_input ? 'bg-gray-100 cursor-not-allowed' : ''
-                                }`}
-                                placeholder="Masukkan nilai (0-100)"
-                                disabled={!currentMapel?.bisa_input}
-                            />
-                        </div>
-                    ))}
-                </div>
+                                            {/* Input Vertikal — Satu Per Baris */}
+                                            <div className="space-y-3 mb-6">
+                                                {komponenList.map(komponen => {
+                                                    const isPtsKomponen = /PTS/i.test(komponen.nama);
+                                                    const isDisabled = jenisPenilaianAktif === 'PTS' && !isPtsKomponen;
 
-                <div className="flex justify-end gap-3">
-                    <button
-                        onClick={() => setEditKomponenClosing(true)}
-                        className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
-                    >
-                        Batal
-                    </button>
-                    {currentMapel?.bisa_input ? (
-                        <button
-                            onClick={simpanNilaiKomponen}
-                            disabled={saving}
-                            className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                        >
-                            {saving ? 'Menyimpan...' : 'Simpan'}
-                        </button>
-                    ) : null}
-                </div>
-            </div>
-        </div>
-    </div>
-)}
+                                                    return (
+                                                        <div key={komponen.id} className="flex flex-col">
+                                                            <label className="text-sm font-medium text-gray-700 mb-1">
+                                                                {komponen.nama}
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="1"
+                                                                value={editingKomponenNilai[komponen.id] ?? ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    const num = parseFloat(val);
+                                                                    setEditingKomponenNilai(prev => ({
+                                                                        ...prev,
+                                                                        [komponen.id]: val === '' ? null : (isNaN(num) ? null : Math.floor(num))
+                                                                    }));
+                                                                }}
+                                                                disabled={isDisabled}
+                                                                className={`w-full border rounded px-3 py-2 text-sm ${isDisabled
+                                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                        : 'border-gray-300'
+                                                                    }`}
+                                                                placeholder="0–100"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Tombol Batal & Simpan */}
+                                            <div className="flex justify-end gap-3">
+                                                <button
+                                                    onClick={() => setEditKomponenClosing(true)}
+                                                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                                                >
+                                                    Batal
+                                                </button>
+                                                <button
+                                                    onClick={simpanNilaiKomponen}
+                                                    disabled={saving || hasInvalidBobot()}
+                                                    className={`px-4 py-2 rounded ${hasInvalidBobot() ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                                                >
+                                                    {saving ? 'Menyimpan...' : 'Simpan'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">

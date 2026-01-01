@@ -42,7 +42,7 @@ interface MapelItem {
 
 // ====== MAIN COMPONENT ======
 export default function AturPenilaianPage() {
-
+    const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [activeTab, setActiveTab] = useState<'kokurikuler' | 'akademik' | 'bobot'>('kokurikuler');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -92,6 +92,17 @@ export default function AturPenilaianPage() {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
+
+                // Ambil status periode aktif
+                const taRes = await fetch('http://localhost:5000/api/guru-kelas/tahun-ajaran/aktif', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
+                const taData = await taRes.json();
+                const { status_pts, status_pas } = taData.data;
+                const jenisAktif = status_pts === 'aktif' ? 'PTS' : status_pas === 'aktif' ? 'PAS' : null;
+                setJenisPenilaianAktif(jenisAktif);
+
                 const endpoints = [
                     fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/komponen', {
                         headers: { Authorization: `Bearer ${token}` }
@@ -126,11 +137,13 @@ export default function AturPenilaianPage() {
     // ====== FETCH KATEGORI AKADEMIK/KOKURIKULER ======
     useEffect(() => {
         if (activeTab === 'bobot') return;
+
         const fetchKategori = async () => {
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
                 let endpoint = '';
+
                 if (activeTab === 'akademik') {
                     if (selectedMapelForRataRata) {
                         endpoint = 'atur-penilaian/kategori-rata-rata';
@@ -144,12 +157,16 @@ export default function AturPenilaianPage() {
                 } else {
                     endpoint = 'atur-penilaian/kategori-kokurikuler';
                 }
+
                 const res = await fetch(`http://localhost:5000/api/guru-kelas/${endpoint}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+
                 if (!res.ok) throw new Error(`Gagal mengambil kategori ${activeTab}`);
+
                 const data = await res.json();
                 setKategoriList(data.data || []);
+
             } catch (err: any) {
                 console.error('Error fetch kategori:', err);
                 setError(err.message || 'Gagal memuat kategori');
@@ -157,6 +174,7 @@ export default function AturPenilaianPage() {
                 setLoading(false);
             }
         };
+
         fetchKategori();
     }, [activeTab, selectedMapelAkademik, selectedMapelForRataRata]);
 
@@ -166,6 +184,7 @@ export default function AturPenilaianPage() {
             setBobotList([]);
             return;
         }
+
         const fetchBobot = async () => {
             setBobotLoading(true);
             try {
@@ -173,29 +192,35 @@ export default function AturPenilaianPage() {
                 const res = await fetch(`http://localhost:5000/api/guru-kelas/atur-penilaian/bobot-akademik/${selectedMapelId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+
                 let bobotData = [];
                 if (res.ok) {
                     const data = await res.json();
                     bobotData = data.data || [];
                 }
+
                 const bobotMap = new Map<number, number>();
                 bobotData.forEach((b: any) => {
                     const numBobot = typeof b.bobot === 'number' ? b.bobot : parseFloat(b.bobot);
                     bobotMap.set(b.komponen_id, isNaN(numBobot) ? 0 : numBobot);
                 });
+
                 const fullBobot = komponenList.map(k => ({
                     komponen_id: k.id_komponen,
                     bobot: bobotMap.get(k.id_komponen) || 0,
                     is_active: true
                 }));
+
                 setBobotList(fullBobot);
                 setInitialBobotList(JSON.parse(JSON.stringify(fullBobot)));
+
             } catch (err) {
                 alert('Gagal mengambil bobot penilaian');
             } finally {
                 setBobotLoading(false);
             }
         };
+
         fetchBobot();
     }, [selectedMapelId, komponenList, activeTab]);
 
@@ -242,6 +267,7 @@ export default function AturPenilaianPage() {
             alert('Tidak ada perubahan data.');
             return;
         }
+
         try {
             const token = localStorage.getItem('token');
             const isAkademik = activeTab === 'akademik';
@@ -305,7 +331,6 @@ export default function AturPenilaianPage() {
             if (res.ok) {
                 alert(editKategoriId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan');
                 closeEditKategori();
-
                 // Reload data
                 let reloadUrl = `http://localhost:5000/api/guru-kelas/${endpoint}`;
                 if (isAkademik && !selectedMapelForRataRata && selectedMapelAkademik) {
@@ -354,6 +379,32 @@ export default function AturPenilaianPage() {
     };
 
     // ====== BOBOT HANDLERS ======
+
+    // 🔒 Validasi: cek apakah sedang di periode PTS
+    const isPeriodePTS = jenisPenilaianAktif === 'PTS';
+
+    // 🔒 Validasi: cek apakah ada bobot selain PTS > 0
+    const hasInvalidBobot = () => {
+        if (!isPeriodePTS) return false;
+        const ptsKomponenIds = komponenList
+            .filter(k => k.nama_komponen.toLowerCase().includes('pts'))
+            .map(k => k.id_komponen);
+        return bobotList.some(b => {
+            return !ptsKomponenIds.includes(b.komponen_id) && b.bobot > 0;
+        });
+    };
+
+    // ⚠️ Notifikasi: tampilkan pesan jika di periode PTS
+    const getPTSPesan = () => {
+        if (!jenisPenilaianAktif || jenisPenilaianAktif !== 'PTS') return null;
+        return (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800">
+                ⚠️ <strong>Periode PTS aktif.</strong> Hanya komponen <strong>PTS</strong> yang boleh memiliki bobot.
+                Semua bobot lain harus 0.
+            </div>
+        );
+    };
+
     const handleBobotChange = (komponenId: number, value: string) => {
         const newValue = parseFloat(value) || 0;
         setBobotList(prev =>
@@ -363,6 +414,13 @@ export default function AturPenilaianPage() {
 
     const handleSaveBobot = async () => {
         if (!selectedMapelId) return;
+
+        // 🔒 Blokir jika ada bobot selain PTS > 0
+        if (hasInvalidBobot()) {
+            alert('Di periode PTS, hanya bobot PTS yang boleh > 0. Harap atur bobot UH dan PAS menjadi 0.');
+            return;
+        }
+
         const isUnchanged = bobotList.every((b, i) =>
             b.komponen_id === initialBobotList[i]?.komponen_id &&
             b.bobot === initialBobotList[i]?.bobot
@@ -371,11 +429,28 @@ export default function AturPenilaianPage() {
             alert('Tidak ada perubahan data.');
             return;
         }
+
+        // Validasi total bobot
         const total = bobotList.reduce((sum, b) => sum + b.bobot, 0);
         if (Math.abs(total - 100) > 0.1) {
             alert('Total bobot harus 100%');
             return;
         }
+
+        // 🔒 Validasi khusus PTS: pastikan PTS = 100%
+        if (isPeriodePTS) {
+            const ptsKomponenIds = komponenList
+                .filter(k => k.nama_komponen.toLowerCase().includes('pts'))
+                .map(k => k.id_komponen);
+            const ptsBobot = bobotList
+                .filter(b => ptsKomponenIds.includes(b.komponen_id))
+                .reduce((sum, b) => sum + b.bobot, 0);
+            if (Math.abs(ptsBobot - 100) > 0.1) {
+                alert('Di periode PTS, bobot PTS harus diatur 100%.');
+                return;
+            }
+        }
+
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`http://localhost:5000/api/guru-kelas/atur-penilaian/bobot-akademik/${selectedMapelId}`, {
@@ -406,6 +481,7 @@ export default function AturPenilaianPage() {
             </div>
         );
     }
+
     if (error) {
         return (
             <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -418,6 +494,7 @@ export default function AturPenilaianPage() {
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Atur Penilaian</h1>
+
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
@@ -526,7 +603,7 @@ export default function AturPenilaianPage() {
                                     className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
-                                    <option value="rata-rata">📈 Rata-rata Seluruh Mapel</option>
+                                    <option value="rata-rata">📚 Rata-rata Seluruh Mapel</option>
                                     {mapelList
                                         .filter(m => m.jenis === 'wajib')
                                         .map(mapel => (
@@ -537,7 +614,6 @@ export default function AturPenilaianPage() {
                                 </select>
                             </div>
                         </div>
-
                         {selectedMapelAkademik || selectedMapelForRataRata ? (
                             <>
                                 <div className="flex justify-end mb-4">
@@ -623,11 +699,14 @@ export default function AturPenilaianPage() {
                                 </select>
                             </div>
                         </div>
+
                         {selectedMapelId ? (
                             bobotLoading ? (
                                 <div className="text-gray-500 text-xs sm:text-sm">Memuat bobot...</div>
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
+                                    {getPTSPesan()} 
+
                                     {bobotList.map((bobot) => {
                                         const komponen = komponenList.find(k => k.id_komponen === bobot.komponen_id);
                                         return (
@@ -647,6 +726,7 @@ export default function AturPenilaianPage() {
                                             </div>
                                         );
                                     })}
+
                                     <div className="pt-3 sm:pt-4 border-t">
                                         <div className="flex justify-between items-center">
                                             <span className="font-semibold text-xs sm:text-sm">Total Bobot:</span>
@@ -655,10 +735,12 @@ export default function AturPenilaianPage() {
                                             </span>
                                         </div>
                                     </div>
+
                                     <div className="flex justify-end mt-3 sm:mt-6">
                                         <button
                                             onClick={handleSaveBobot}
-                                            className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded font-medium text-xs sm:text-sm"
+                                            disabled={hasInvalidBobot()} // Nonaktifkan tombol jika ada bobot invalid
+                                            className={`px-3 py-2 sm:px-4 sm:py-2 ${hasInvalidBobot() ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded font-medium text-xs sm:text-sm`}
                                         >
                                             Simpan Bobot
                                         </button>

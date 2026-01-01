@@ -1,3 +1,12 @@
+/**
+ * Nama File: adminRoutes.js
+ * Fungsi: Mendefinisikan rute API yang hanya dapat diakses oleh pengguna dengan role 'admin',
+ *         mencakup manajemen data guru, siswa, admin, sekolah, kelas, ekstrakurikuler,
+ *         mata pelajaran, pembelajaran, tahun ajaran, dan arsip rapor.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022
+ * Tanggal: 1 Oktober 2025
+ */
+
 const fs = require('fs');
 const express = require('express');
 const authenticate = require('../middleware/authenticate');
@@ -7,68 +16,72 @@ const path = require('path');
 
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// ✅ Storage untuk logo sekolah
+// Storage untuk logo sekolah
 const logoStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (!['.png', '.jpg', '.jpeg'].includes(ext)) {
-            return cb(new Error('Hanya file .png, .jpg, .jpeg yang diizinkan'));
-        }
-        cb(null, `logo_sekolah${ext}`);
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg'].includes(ext)) {
+      return cb(new Error('Hanya file .png, .jpg, .jpeg yang diizinkan'));
     }
+    cb(null, `logo_sekolah${ext}`);
+  },
 });
 
-// ✅ Storage untuk import Excel
+// Storage untuk import Excel
 const excelStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `import_guru_${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `import_guru_${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
 });
 
-const uploadLogo = multer({ storage: logoStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadLogo = multer({
+  storage: logoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 const uploadExcel = multer({
-    storage: excelStorage,
-    fileFilter: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (ext !== '.xlsx' && ext !== '.xls') {
-            return cb(new Error('Hanya file .xlsx atau .xls yang diizinkan'), false);
-        }
-        cb(null, true);
-    },
-    limits: { fileSize: 10 * 1024 * 1024 }
+  storage: excelStorage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.xlsx' && ext !== '.xls') {
+      return cb(new Error('Hanya file .xlsx atau .xls yang diizinkan'), false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// ✅ Storage untuk foto profil
+// Storage untuk foto profil
 const fotoProfilStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
-            return cb(new Error('Hanya file .png, .jpg, .jpeg, .webp yang diizinkan'));
-        }
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, `profil_${uniqueSuffix}${ext}`);
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+      return cb(new Error('Hanya file .png, .jpg, .jpeg, .webp yang diizinkan'));
     }
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `profil_${uniqueSuffix}${ext}`);
+  },
 });
 
 const uploadFoto = multer({
-    storage: fotoProfilStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // max 5MB
-    fileFilter: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
-            return cb(new Error('Format file tidak didukung'), false);
-        }
-        cb(null, true);
+  storage: fotoProfilStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+      return cb(new Error('Format file tidak didukung'), false);
     }
+    cb(null, true);
+  },
 });
 
 const adminController = require('../controllers/adminController');
@@ -76,7 +89,10 @@ const router = express.Router();
 
 // Middleware: hanya admin
 const adminOnly = [authenticate, authorize('admin')];
-const adminOnlyWithTahunAjaran = [...adminOnly, require('../middleware/cekTahunAjaranAktif')];
+const adminOnlyWithTahunAjaran = [
+  ...adminOnly,
+  require('../middleware/cekTahunAjaranAktif'),
+];
 
 // --- Data Guru ---
 router.post('/guru/import', adminOnly, uploadExcel.single('file'), adminController.importGuru);
@@ -138,7 +154,6 @@ router.put('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.editPe
 router.delete('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.hapusPembelajaran);
 
 // --- EKSTRAKURIKULER ---
-// CRUD Ekstrakurikuler
 router.get('/ekstrakurikuler', adminOnly, adminController.getEkskul);
 router.post('/ekstrakurikuler', adminOnlyWithTahunAjaran, adminController.tambahEkskul);
 router.put('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.editEkskul);
@@ -148,46 +163,30 @@ router.delete('/ekstrakurikuler/:id', adminOnlyWithTahunAjaran, adminController.
 router.get('/ekstrakurikuler/:id/anggota', adminOnly, adminController.getPesertaByEkskul);
 router.get('/siswa/:id/ekstrakurikuler', adminOnly, adminController.getEkskulBySiswa);
 
-// Dashboard 
+// Dashboard
 router.get('/dashboard/stats', adminOnlyWithTahunAjaran, adminController.getDashboardStats);
 
 // Rapor
 router.get('/arsip-rapor/tahun-ajaran', adminOnly, adminController.getTahunAjaranAll);
 router.get('/arsip-rapor/kelas', adminOnly, (req, res, next) => {
-    const { tahun_ajaran_id } = req.query;
-    if (!tahun_ajaran_id) {
-        return res.status(400).json({ success: false, message: 'tahun_ajaran_id wajib diisi' });
-    }
-    next();
+  const { tahun_ajaran_id } = req.query;
+  if (!tahun_ajaran_id) {
+    return res.status(400).json({ success: false, message: 'tahun_ajaran_id wajib diisi' });
+  }
+  next();
 }, adminController.getKelasByTahunAjaran);
-router.get('/arsip-rapor/daftar-siswa/:tahunAjaranId/:kelasId',
-    adminOnly,
-    (req, res, next) => {
-        const { tahunAjaranId, kelasId } = req.params;
-
-        // Validasi
-        if (!tahunAjaranId || !kelasId) {
-            return res.status(400).json({
-                success: false,
-                message: 'tahun_ajaran_id dan kelas_id wajib diisi'
-            });
-        }
-
-        // Parse ke integer
-        req.tahunAjaranId = parseInt(tahunAjaranId, 10);
-        req.kelasId = parseInt(kelasId, 10);
-
-        if (isNaN(req.tahunAjaranId) || isNaN(req.kelasId)) {
-            return res.status(400).json({
-                success: false,
-                message: 'ID tidak valid'
-            });
-        }
-
-        next();
-    },
-    adminController.getDaftarSiswaUntukRapor
-);
+router.get('/arsip-rapor/daftar-siswa/:tahunAjaranId/:kelasId', adminOnly, (req, res, next) => {
+  const { tahunAjaranId, kelasId } = req.params;
+  if (!tahunAjaranId || !kelasId) {
+    return res.status(400).json({ success: false, message: 'tahun_ajaran_id dan kelas_id wajib diisi' });
+  }
+  req.tahunAjaranId = parseInt(tahunAjaranId, 10);
+  req.kelasId = parseInt(kelasId, 10);
+  if (isNaN(req.tahunAjaranId) || isNaN(req.kelasId)) {
+    return res.status(400).json({ success: false, message: 'ID tidak valid' });
+  }
+  next();
+}, adminController.getDaftarSiswaUntukRapor);
 router.post('/atur-status-penilaian', adminOnly, adminController.aturStatusPenilaian);
 router.post('/arsipkan-rapor', adminOnly, adminController.arsipkanRapor);
 

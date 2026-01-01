@@ -1,87 +1,91 @@
+/**
+ * Nama File: tahunAjaranModel.js
+ * Fungsi: Model untuk mengelola data tahun ajaran dan semester,
+ *         termasuk operasi CRUD dan logika status aktif/nonaktif.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022
+ * Tanggal: 1 Oktober 2025
+ */
+
 const db = require('../config/db');
 
-// Ambil SEMUA data (untuk ditampilkan di tabel)
-const getAllTahunAjaran = async () => {
+const tahunAjaranModel = {
+  // Mengambil semua data tahun ajaran, diurutkan dengan status 'aktif' di atas
+  async getAllTahunAjaran() {
     const [rows] = await db.execute(`
-        SELECT 
-            id_tahun_ajaran,
-            tahun_ajaran,
-            semester,
-            status,
-            tanggal_pembagian_pts,
-            tanggal_pembagian_pas,
-            status_pts,
-            status_pas
-        FROM tahun_ajaran
-        ORDER BY 
-            CASE 
-                WHEN status = 'aktif' THEN 0 
-                ELSE 1 
-            END,
-            id_tahun_ajaran DESC
+      SELECT 
+          id_tahun_ajaran,
+          tahun_ajaran,
+          semester,
+          status,
+          tanggal_pembagian_pts,
+          tanggal_pembagian_pas,
+          status_pts,
+          status_pas
+      FROM tahun_ajaran
+      ORDER BY 
+          CASE 
+              WHEN status = 'aktif' THEN 0 
+              ELSE 1 
+          END,
+          id_tahun_ajaran DESC
     `);
     return rows;
-};
+  },
 
-// Tambah data BARU (dan nonaktifkan yang lama)
-const createTahunAjaran = async (data) => {
+  // Menambahkan tahun ajaran baru dan menonaktifkan yang lama
+  async createTahunAjaran(data) {
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
+      await connection.beginTransaction();
 
-        // Nonaktifkan yang lama
-        await connection.execute("UPDATE tahun_ajaran SET status = 'nonaktif'");
+      await connection.execute("UPDATE tahun_ajaran SET status = 'nonaktif'");
 
-        // Tambah yang baru sebagai aktif
-        const [result] = await connection.execute(
-            `INSERT INTO tahun_ajaran (
-                tahun_ajaran, 
-                semester, 
-                tanggal_pembagian_pts, 
-                tanggal_pembagian_pas, 
-                status
-            ) VALUES (?, ?, ?, ?, 'aktif')`,
-            [
-                data.tahun_ajaran, 
-                data.semester, 
-                data.tanggal_pembagian_pts, 
-                data.tanggal_pembagian_pas
-            ]
-        );
+      const [result] = await connection.execute(
+        `INSERT INTO tahun_ajaran (
+            tahun_ajaran, 
+            semester, 
+            tanggal_pembagian_pts, 
+            tanggal_pembagian_pas, 
+            status
+        ) VALUES (?, ?, ?, ?, 'aktif')`,
+        [
+          data.tahun_ajaran,
+          data.semester,
+          data.tanggal_pembagian_pts,
+          data.tanggal_pembagian_pas,
+        ]
+      );
 
-        await connection.commit();
-        return result.insertId > 0;
+      await connection.commit();
+      return result.insertId > 0;
     } catch (err) {
-        await connection.rollback();
-        throw err;
+      await connection.rollback();
+      throw err;
     } finally {
-        connection.release();
+      connection.release();
     }
-};
+  },
 
-// Update berdasarkan ID (untuk edit)
-const updateTahunAjaranById = async (id, data) => {
+  // Memperbarui data tahun ajaran berdasarkan ID
+  async updateTahunAjaranById(id, data) {
     const [result] = await db.execute(
-        `UPDATE tahun_ajaran 
+      `UPDATE tahun_ajaran 
         SET 
             tahun_ajaran = ?, 
             semester = ?, 
             tanggal_pembagian_pts = ?, 
             tanggal_pembagian_pas = ?
         WHERE id_tahun_ajaran = ?`,
-        [
-            data.tahun_ajaran, 
-            data.semester, 
-            data.tanggal_pembagian_pts, 
-            data.tanggal_pembagian_pas, 
-            id
-        ]
+      [
+        data.tahun_ajaran,
+        data.semester,
+        data.tanggal_pembagian_pts,
+        data.tanggal_pembagian_pas,
+        id,
+      ]
     );
     return result.affectedRows > 0;
+  },
 };
 
-module.exports = {
-    getAllTahunAjaran,
-    createTahunAjaran,
-    updateTahunAjaranById
-};
+module.exports = tahunAjaranModel;

@@ -1,5 +1,12 @@
 {
   "dependencies": {
     "lucide-react": "^0.556.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "typescript-eslint": "^8.51.0"
   }
 }
