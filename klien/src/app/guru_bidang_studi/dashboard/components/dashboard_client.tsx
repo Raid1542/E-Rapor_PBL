@@ -1,3 +1,11 @@
+/**
+ * Nama File: dashboard_client.tsx
+ * Fungsi: Komponen klien untuk menampilkan dashboard guru bidang studi,
+ *         mencakup data profil, tahun ajaran aktif, dan ringkasan mata pelajaran yang diampu.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 dan Syahrul Ramadhan - NIM: 3312301093
+ * Tanggal: 15 September 2025
+ */
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -22,8 +30,7 @@ interface DashboardData {
     mata_pelajaran_list: MapelItem[];
 }
 
-export default function GuruBidangStudiDashboard() {
-
+export default function DashboardClient() {
     const [user, setUser] = useState<UserData | null>(null);
     const [dashboard, setDashboard] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -32,17 +39,15 @@ export default function GuruBidangStudiDashboard() {
         const token = localStorage.getItem('token');
         const userData = localStorage.getItem('currentUser');
 
-        // Apakah user sudah login?
         if (!token || !userData) {
             alert("Silakan login terlebih dahulu.");
-            window.location.href = "/login"; // Redirect langsung (bukan router.push)
+            window.location.href = "/login";
             return;
         }
 
         try {
             const parsedUser: UserData = JSON.parse(userData);
 
-            // Apakah role sesuai?
             if (parsedUser.role !== 'guru bidang studi') {
                 alert('Anda tidak memiliki akses ke halaman ini.');
                 window.location.href = "/login";
@@ -51,14 +56,12 @@ export default function GuruBidangStudiDashboard() {
 
             setUser(parsedUser);
 
-            // Ambil data dari API
             const fetchDashboard = async () => {
                 try {
                     const res = await fetch('http://localhost:5000/api/guru-bidang-studi/dashboard', {
                         headers: { 'Authorization': `Bearer ${token}` },
                     });
 
-                    // Apakah token kadaluarsa? (401)
                     if (res.status === 401) {
                         localStorage.removeItem('token');
                         localStorage.removeItem('currentUser');
@@ -130,7 +133,7 @@ export default function GuruBidangStudiDashboard() {
 
             {/* Flexbox for better control */}
             <div className="flex flex-wrap gap-6">
-                {/* Card 1: Tahun Ajaran */}
+                {/* Card: Tahun Ajaran */}
                 <div className="bg-white rounded-xl shadow p-6 flex items-start space-x-4 w-full md:w-[30%] min-w-[280px]">
                     <div className="bg-orange-100 p-3 rounded-lg">
                         <Calendar className="w-6 h-6 text-orange-600" />
@@ -148,7 +151,10 @@ export default function GuruBidangStudiDashboard() {
 
                 {/* Cards Per Mata Pelajaran */}
                 {dashboard.mata_pelajaran_list.map((mapel, index) => (
-                    <div key={index} className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-200 p-6 w-full md:w-[30%] min-w-[280px]">
+                    <div
+                        key={index}
+                        className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-200 p-6 w-full md:w-[30%] min-w-[280px]"
+                    >
                         <div className="flex items-start space-x-4">
                             <div className="bg-orange-100 p-3 rounded-lg">
                                 <Book className="w-6 h-6 text-orange-600" />

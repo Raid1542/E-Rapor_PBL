@@ -1,3 +1,13 @@
+/**
+ * Nama File: Sidebar.tsx
+ * Fungsi: Komponen sidebar navigasi untuk panel admin.
+ *         Menampilkan menu utama dan submenu berdasarkan hak akses pengguna,
+ *         serta menampilkan logo dan nama sekolah yang diambil dari API.
+ *         Mendukung mode collapsed/expanded dan menyimpan state dropdown terbuka.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import React, { useState, useEffect } from 'react';

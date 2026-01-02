@@ -1,3 +1,9 @@
+// File: rapor_client.tsx
+// Fungsi: Komponen utama untuk menampilkan daftar siswa dan mengunduh
+//         rapor berdasarkan jenis penilaian (PTS/PAS) sesuai status periode aktif.
+// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+// Tanggal: 15 September 2025
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +23,7 @@ interface TahunAjaranInfo {
     status_pas: 'nonaktif' | 'aktif' | 'selesai';
 }
 
-export default function RaporGuruKelasPage() {
+const RaporGuruKelasClient = () => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
     const [jenisPenilaian, setJenisPenilaian] = useState<string>('');
@@ -63,7 +69,6 @@ export default function RaporGuruKelasPage() {
             setError('Gagal terhubung ke server');
         }
     };
-
 
     // === Ambil tahun ajaran aktif saat pertama kali ===
     useEffect(() => {
@@ -221,15 +226,18 @@ export default function RaporGuruKelasPage() {
                     <div className="mb-6 p-3 bg-gray-100 rounded-lg">
                         <p className="text-gray-700">
                             Status {jenisPenilaian.includes('PTS') ? 'PTS' : 'PAS'}:
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${currentStatus === 'aktif'
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
+                                currentStatus === 'aktif'
                                     ? 'bg-green-100 text-green-800'
                                     : currentStatus === 'selesai'
-                                        ? 'bg-gray-200 text-gray-700'
-                                        : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                {currentStatus === 'aktif' ? 'Aktif'
-                                    : currentStatus === 'selesai' ? 'Terkunci'
-                                        : 'Belum Dibuka'}
+                                    ? 'bg-gray-200 text-gray-700'
+                                    : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                                {currentStatus === 'aktif'
+                                    ? 'Aktif'
+                                    : currentStatus === 'selesai'
+                                    ? 'Terkunci'
+                                    : 'Belum Dibuka'}
                             </span>
                         </p>
                     </div>
@@ -270,7 +278,9 @@ export default function RaporGuruKelasPage() {
                                     {siswaList.map((siswa, index) => (
                                         <tr
                                             key={siswa.id}
-                                            className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
+                                            className={`border-b ${
+                                                index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                            } hover:bg-blue-50 transition-colors`}
                                         >
                                             <td className="px-3 py-3 text-center">{index + 1}</td>
                                             <td className="px-3 py-3 font-medium text-gray-800">{siswa.nama}</td>
@@ -279,10 +289,11 @@ export default function RaporGuruKelasPage() {
                                                 <button
                                                     onClick={() => handleDownloadRapor(siswa.id)}
                                                     disabled={!isDownloadAllowed}
-                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${isDownloadAllowed
+                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${
+                                                        isDownloadAllowed
                                                             ? 'bg-green-600 hover:bg-green-700 text-white'
                                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                        }`}
+                                                    }`}
                                                 >
                                                     <Download size={14} />
                                                     <span>{isDownloadAllowed ? 'Unduh' : 'Tidak Tersedia'}</span>
@@ -313,4 +324,6 @@ export default function RaporGuruKelasPage() {
             </div>
         </div>
     );
-}
+};
+
+export default RaporGuruKelasClient;

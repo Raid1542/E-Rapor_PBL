@@ -1,3 +1,13 @@
+/**
+ * Nama File: Header.tsx
+ * Fungsi: Komponen header untuk halaman admin.
+ *         Menampilkan judul halaman dan dropdown profil pengguna dengan foto,
+ *         nama, role, serta opsi menu Profil dan Logout.
+ *         Mendukung deteksi klik di luar dropdown untuk menutupnya secara otomatis.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { LogOut, ChevronDown, User } from 'lucide-react';

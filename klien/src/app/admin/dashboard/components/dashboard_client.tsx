@@ -1,3 +1,12 @@
+/**
+ * Nama File: dashboard_client.tsx
+ * Fungsi: Komponen klien untuk menampilkan dashboard admin,
+ *         mencakup statistik data guru, siswa, admin, ekstrakurikuler, kelas, dan mata pelajaran,
+ *         serta navigasi ke halaman manajemen terkait.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -15,8 +24,7 @@ interface DashboardStats {
     mata_pelajaran: number;
 }
 
-export default function AdminDashboardPage() {
-
+export default function DashboardClient() {
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [stats, setStats] = useState<DashboardStats>({
@@ -25,7 +33,7 @@ export default function AdminDashboardPage() {
         admin: 0,
         ekstrakurikuler: 0,
         kelas: 0,
-        mata_pelajaran: 0
+        mata_pelajaran: 0,
     });
     const router = useRouter();
 
@@ -51,7 +59,7 @@ export default function AdminDashboardPage() {
         const fetchStats = async () => {
             try {
                 const res = await fetch('http://localhost:5000/api/admin/dashboard/stats', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 });
                 const result = await res.json();
                 if (res.ok && result.success) {
@@ -64,8 +72,8 @@ export default function AdminDashboardPage() {
             }
         };
 
-        fetchStats(); // ✅ Panggil di sini
-    }, []); // ✅ Hanya sekali saat komponen mount
+        fetchStats();
+    }, []);
 
     const handleNavigation = (path: string) => {
         router.push(path);
@@ -91,7 +99,7 @@ export default function AdminDashboardPage() {
             {/* Welcome Card */}
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
                 <h2 className="text-2xl font-bold mb-2">
-                    Selamat Datang, {user.nama_lengkap || 'Admin'}! 👋
+                    Selamat Datang, {user.name || 'Admin'}! 👋
                 </h2>
                 <p className="text-orange-100">
                     Anda login sebagai Administrator. Kelola sistem E-Rapor dengan mudah.

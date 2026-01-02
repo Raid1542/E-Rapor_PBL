@@ -1,3 +1,13 @@
+/**
+ * Nama File: data_siswa_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola data siswa oleh admin.
+ *         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
+ *         kelas, jenis kelamin, dan status, serta import data siswa via Excel.
+ *         Hanya tahun ajaran aktif yang memungkinkan aksi edit, hapus, tambah, dan import.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401022 
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';

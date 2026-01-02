@@ -1,3 +1,9 @@
+// File: InputNilaiPage.tsx
+// Fungsi: Halaman untuk menginput dan mengelola nilai siswa
+//         oleh guru kelas, termasuk fitur lihat detail dan edit nilai komponen.
+// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+// Tanggal: 15 September 2025
+
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
@@ -28,7 +34,6 @@ interface Komponen {
 }
 
 const DataInputNilaiPage = () => {
-
     // ====== STATE ======
     const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [mapelList, setMapelList] = useState<Mapel[]>([]);
@@ -121,7 +126,6 @@ const DataInputNilaiPage = () => {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Token tidak ditemukan');
 
-                // Ambil tahun ajaran aktif untuk cek periode
                 const taRes = await fetch('http://localhost:5000/api/guru-kelas/tahun-ajaran/aktif', {
                     headers: { Authorization: `Bearer ${token}` },
                 });

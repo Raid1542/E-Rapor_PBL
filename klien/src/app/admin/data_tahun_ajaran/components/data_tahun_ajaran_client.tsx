@@ -1,3 +1,14 @@
+/**
+ * Nama File: data_tahun_ajaran_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola data tahun ajaran oleh admin.
+ *         Menyediakan fitur CRUD (Create, Read, Update) untuk periode akademik,
+ *         termasuk pengaturan semester (Ganjil/Genap), tanggal pembagian rapor PTS/PAS,
+ *         dan status (aktif/nonaktif). Hanya tahun ajaran nonaktif yang dapat diubah statusnya,
+ *         sedangkan tahun ajaran aktif dapat diedit tetapi tidak dihapus.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

@@ -1,11 +1,21 @@
+/**
+ * Nama File: data_kelas_client.tsx
+ * Fungsi: Komponen klien untuk mengelola data kelas,
+ *         mencakup fitur tambah, edit, hapus, pemilihan tahun ajaran,
+ *         dan penetapan wali kelas.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
+
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
 
 interface Kelas {
     id: number;
     nama_kelas: string;
-    wali_kelas: string; // nama guru atau '-'
+    wali_kelas: string;
     wali_kelas_id: number | null;
     fase: string;
     jumlah_siswa: number;
@@ -19,7 +29,7 @@ interface TahunAjaran {
 }
 
 interface GuruOption {
-    id: number; // ini = user_id
+    id: number;
     nama: string;
 }
 
@@ -30,8 +40,7 @@ interface FormDataType {
     confirmData: boolean;
 }
 
-export default function DataKelasPage() {
-
+export default function DataKelasClient() {
     const [kelasList, setKelasList] = useState<Kelas[]>([]);
     const [loading, setLoading] = useState(true);
     const [showTambah, setShowTambah] = useState(false);
@@ -50,7 +59,7 @@ export default function DataKelasPage() {
         nama_kelas: '',
         fase: '',
         user_id: '',
-        confirmData: false
+        confirmData: false,
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -62,8 +71,8 @@ export default function DataKelasPage() {
                 alert('Silakan login terlebih dahulu');
                 return;
             }
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await fetch('http://localhost:5000/api/admin/tahun-ajaran', {
+                headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
             if (res.ok && data.success) {
@@ -71,7 +80,7 @@ export default function DataKelasPage() {
                     id: ta.id_tahun_ajaran,
                     tahun_ajaran: ta.tahun_ajaran,
                     semester: (ta.semester || 'ganjil').toLowerCase(),
-                    is_aktif: ta.status === 'aktif'
+                    is_aktif: ta.status === 'aktif',
                 }));
                 setTahunAjaranList(options);
             }
@@ -90,8 +99,8 @@ export default function DataKelasPage() {
             return;
         }
         try {
-            const res = await fetch("http://localhost:5000/api/admin/guru-kelas", {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await fetch('http://localhost:5000/api/admin/guru-kelas', {
+                headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
             if (res.ok && data.success) {
@@ -99,7 +108,7 @@ export default function DataKelasPage() {
                     .filter((g: any) => g.user_id != null)
                     .map((g: any) => ({
                         id: g.user_id,
-                        nama: g.nama
+                        nama: g.nama,
                     }));
                 setGuruList(validGuru);
             } else {
@@ -122,14 +131,13 @@ export default function DataKelasPage() {
                 return;
             }
             const res = await fetch(`http://localhost:5000/api/admin/kelas?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                // Pastikan wali_kelas_id ada
                 const listWithId = data.data.map((k: any) => ({
                     ...k,
-                    wali_kelas_id: k.wali_kelas === '-' ? null : k.wali_kelas_id
+                    wali_kelas_id: k.wali_kelas === '-' ? null : k.wali_kelas_id,
                 }));
                 setKelasList(listWithId);
             } else {
@@ -150,7 +158,7 @@ export default function DataKelasPage() {
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const validate = (): boolean => {
@@ -170,28 +178,28 @@ export default function DataKelasPage() {
             return;
         }
         try {
-            const res = await fetch("http://localhost:5000/api/admin/kelas", {
-                method: "POST",
+            const res = await fetch('http://localhost:5000/api/admin/kelas', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     nama_kelas: formData.nama_kelas.trim(),
-                    fase: formData.fase.trim()
-                })
+                    fase: formData.fase.trim(),
+                }),
             });
             if (res.ok) {
-                alert("Kelas berhasil ditambahkan");
+                alert('Kelas berhasil ditambahkan');
                 setShowTambah(false);
                 if (selectedTahunAjaranId) fetchKelas(selectedTahunAjaranId);
                 handleReset();
             } else {
                 const error = await res.json();
-                alert(error.message || "Gagal menambah kelas");
+                alert(error.message || 'Gagal menambah kelas');
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            alert('Gagal terhubung ke server');
         }
     };
 
@@ -201,13 +209,13 @@ export default function DataKelasPage() {
             nama_kelas: kelas.nama_kelas,
             fase: kelas.fase,
             user_id: kelas.wali_kelas_id ? String(kelas.wali_kelas_id) : '',
-            confirmData: false
+            confirmData: false,
         });
         setShowEdit(true);
     };
 
     const handleHapus = async (kelasId: number) => {
-        if (!confirm('Yakin ingin menghapus kelas ini?.')) {
+        if (!confirm('Yakin ingin menghapus kelas ini?')) {
             return;
         }
 
@@ -220,7 +228,7 @@ export default function DataKelasPage() {
         try {
             const res = await fetch(`http://localhost:5000/api/admin/kelas/${kelasId}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.ok) {
@@ -244,17 +252,17 @@ export default function DataKelasPage() {
         }
 
         try {
-            // 1. Update data kelas
+            // Update data kelas
             const resKelas = await fetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
-                method: "PUT",
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     nama_kelas: formData.nama_kelas.trim(),
-                    fase: formData.fase.trim()
-                })
+                    fase: formData.fase.trim(),
+                }),
             });
 
             if (!resKelas.ok) {
@@ -262,7 +270,7 @@ export default function DataKelasPage() {
                 throw new Error(err.message || 'Gagal update kelas');
             }
 
-            // 2. Update wali kelas (hanya jika user_id diisi dan valid)
+            // Update wali kelas (jika dipilih)
             if (formData.user_id && formData.user_id !== '') {
                 const userIdNum = Number(formData.user_id);
                 if (isNaN(userIdNum) || userIdNum <= 0) {
@@ -274,9 +282,9 @@ export default function DataKelasPage() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({ user_id: userIdNum })
+                    body: JSON.stringify({ user_id: userIdNum }),
                 });
 
                 if (!resWali.ok) {
@@ -285,13 +293,13 @@ export default function DataKelasPage() {
                 }
             }
 
-            alert("Data kelas berhasil diperbarui");
+            alert('Data kelas berhasil diperbarui');
             setShowEdit(false);
             setEditId(null);
             if (selectedTahunAjaranId) fetchKelas(selectedTahunAjaranId);
             handleReset();
         } catch (err: any) {
-            alert("Gagal: " + (err.message || 'Terjadi kesalahan'));
+            alert('Gagal: ' + (err.message || 'Terjadi kesalahan'));
         }
     };
 
@@ -300,7 +308,7 @@ export default function DataKelasPage() {
             nama_kelas: '',
             fase: '',
             user_id: '',
-            confirmData: false
+            confirmData: false,
         });
         setErrors({});
     };
@@ -308,10 +316,12 @@ export default function DataKelasPage() {
     // === Filtering & Pagination ===
     const filteredKelas = kelasList.filter((kelas) => {
         const query = searchQuery.toLowerCase().trim();
-        return !query ||
+        return (
+            !query ||
             kelas.nama_kelas.toLowerCase().includes(query) ||
             (kelas.wali_kelas !== '-' && kelas.wali_kelas.toLowerCase().includes(query)) ||
-            kelas.fase.toLowerCase().includes(query);
+            kelas.fase.toLowerCase().includes(query)
+        );
     });
 
     const totalPages = Math.max(1, Math.ceil(filteredKelas.length / itemsPerPage));
@@ -322,23 +332,78 @@ export default function DataKelasPage() {
     const renderPagination = () => {
         const pages: ReactNode[] = [];
         const maxVisible = 5;
-        if (currentPage > 1) pages.push(<button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>);
+        if (currentPage > 1)
+            pages.push(
+                <button
+                    key="prev"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
+                >
+                    «
+                </button>
+            );
         if (totalPages <= maxVisible) {
             for (let i = 1; i <= totalPages; i++) {
-                pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+                pages.push(
+                    <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                            }`}
+                    >
+                        {i}
+                    </button>
+                );
             }
         } else {
-            pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+            pages.push(
+                <button
+                    key={1}
+                    onClick={() => setCurrentPage(1)}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                        }`}
+                >
+                    1
+                </button>
+            );
             if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
             const start = Math.max(2, currentPage - 1);
             const end = Math.min(totalPages - 1, currentPage + 1);
             for (let i = start; i <= end; i++) {
-                pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+                pages.push(
+                    <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                            }`}
+                    >
+                        {i}
+                    </button>
+                );
             }
-            if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-            pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+            if (currentPage < totalPages - 2)
+                pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
+            pages.push(
+                <button
+                    key={totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                        }`}
+                >
+                    {totalPages}
+                </button>
+            );
         }
-        if (currentPage < totalPages) pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
+        if (currentPage < totalPages)
+            pages.push(
+                <button
+                    key="next"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
+                >
+                    »
+                </button>
+            );
         return pages;
     };
 
@@ -348,9 +413,7 @@ export default function DataKelasPage() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Data Kelas</h1>
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-semibold text-gray-800">
-                            {isEdit ? 'Edit Data Kelas' : 'Tambah Data Kelas'}
-                        </h2>
+                        <h2 className="text-xl font-semibold text-gray-800">{isEdit ? 'Edit Data Kelas' : 'Tambah Data Kelas'}</h2>
                         <button
                             onClick={() => {
                                 if (isEdit) setShowEdit(false);
@@ -393,13 +456,9 @@ export default function DataKelasPage() {
                         </div>
                         {isEdit && (
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Guru Kelas
-                                </label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Guru Kelas</label>
                                 {loadingGuru ? (
-                                    <div className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-500">
-                                        Memuat...
-                                    </div>
+                                    <div className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-500">Memuat...</div>
                                 ) : (
                                     <select
                                         name="user_id"
@@ -427,9 +486,7 @@ export default function DataKelasPage() {
                                 onChange={handleInputChange}
                                 className="mt-0.5 w-4 h-4 text-blue-600 rounded"
                             />
-                            <span className="text-sm text-gray-700">
-                                Saya yakin data yang diisi sudah benar
-                            </span>
+                            <span className="text-sm text-gray-700">Saya yakin data yang diisi sudah benar</span>
                         </label>
                         {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
                     </div>
@@ -474,9 +531,7 @@ export default function DataKelasPage() {
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     {/* Dropdown Tahun Ajaran */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Tahun Ajaran
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Tahun Ajaran</label>
                         <select
                             value={selectedTahunAjaranId ?? ''}
                             onChange={(e) => {
@@ -489,7 +544,7 @@ export default function DataKelasPage() {
                                     return;
                                 }
                                 const id = Number(value);
-                                const selectedTa = tahunAjaranList.find(ta => ta.id === id);
+                                const selectedTa = tahunAjaranList.find((ta) => ta.id === id);
                                 setSelectedTahunAjaranId(id);
                                 setSelectedTahunAjaranAktif(selectedTa?.is_aktif || false);
                                 setLoading(true);
@@ -498,11 +553,11 @@ export default function DataKelasPage() {
                             className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-0"
                         >
                             <option value="">-- Pilih Tahun Ajaran --</option>
-                            {tahunAjaranList.map(ta => {
+                            {tahunAjaranList.map((ta) => {
                                 const semesterDisplay = ta.semester === 'ganjil' ? 'Ganjil' : 'Genap';
                                 return (
                                     <option key={ta.id} value={ta.id}>
-                                        {ta.tahun_ajaran} {semesterDisplay} {ta.is_aktif ? "(Aktif)" : ""}
+                                        {ta.tahun_ajaran} {semesterDisplay} {ta.is_aktif ? '(Aktif)' : ''}
                                     </option>
                                 );
                             })}
@@ -562,7 +617,10 @@ export default function DataKelasPage() {
                                         {searchQuery && (
                                             <button
                                                 type="button"
-                                                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                                                onClick={() => {
+                                                    setSearchQuery('');
+                                                    setCurrentPage(1);
+                                                }}
                                                 className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
                                             >
                                                 <X className="w-4 h-4" />
@@ -587,15 +645,22 @@ export default function DataKelasPage() {
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                                    Memuat data...
+                                                </td>
                                             </tr>
                                         ) : currentKelas.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Tidak ada data kelas</td>
+                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                                    Tidak ada data kelas
+                                                </td>
                                             </tr>
                                         ) : (
                                             currentKelas.map((kelas, index) => (
-                                                <tr key={kelas.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                                                <tr
+                                                    key={kelas.id}
+                                                    className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
+                                                >
                                                     <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                                                     <td className="px-4 py-3 text-center align-middle font-medium">{kelas.nama_kelas}</td>
                                                     <td className="px-4 py-3 text-center align-middle">
@@ -641,9 +706,7 @@ export default function DataKelasPage() {
                                     <div className="text-sm text-gray-600">
                                         Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredKelas.length)} dari {filteredKelas.length} data
                                     </div>
-                                    <div className="flex gap-1 flex-wrap justify-center">
-                                        {renderPagination()}
-                                    </div>
+                                    <div className="flex gap-1 flex-wrap justify-center">{renderPagination()}</div>
                                 </div>
                             )}
                         </>

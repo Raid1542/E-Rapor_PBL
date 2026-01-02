@@ -1,3 +1,13 @@
+/**
+ * Nama File: ekstrakurikuler_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola data ekstrakurikuler oleh admin.
+ *         Menyediakan fitur CRUD (Create, Read, Update, Delete) ekstrakurikuler
+ *         berdasarkan tahun ajaran yang dipilih. Hanya tahun ajaran aktif yang
+ *         memungkinkan penambahan, pengeditan, dan penghapusan data.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import React, { useState, useEffect, ChangeEvent } from 'react';

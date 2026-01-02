@@ -1,3 +1,12 @@
+/**
+ * Nama File: arsip_rapor_client.tsx
+ * Fungsi: Komponen klien untuk mengelola arsip rapor oleh admin,
+ *         mencakup pemilihan tahun ajaran, jenis penilaian (PTS/PAS), kelas,
+ *         pengelolaan status (aktif/nonaktif/selesai), dan unduh dokumen rapor.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -56,7 +65,7 @@ export default function ArsipRaporClient() {
                     semester: ta.semester as 'Ganjil' | 'Genap',
                     is_aktif: ta.status === 'aktif',
                     status_pts: ta.status_pts,
-                    status_pas: ta.status_pas
+                    status_pas: ta.status_pas,
                 }));
                 setTahunAjaranList(list);
             } else {
@@ -130,7 +139,7 @@ export default function ArsipRaporClient() {
             return;
         }
 
-        const ta = tahunAjaranList.find(t => t.id === selectedTahunAjaran);
+        const ta = tahunAjaranList.find((t) => t.id === selectedTahunAjaran);
         if (!ta) return;
 
         setLoadingAction(true);
@@ -139,13 +148,13 @@ export default function ArsipRaporClient() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
                 body: JSON.stringify({
                     jenis: selectedJenisPenilaian,
                     semester: ta.semester,
-                    tahun_ajaran_id: selectedTahunAjaran
-                })
+                    tahun_ajaran_id: selectedTahunAjaran,
+                }),
             });
 
             const data = await res.json();
@@ -179,13 +188,13 @@ export default function ArsipRaporClient() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     jenis: selectedJenisPenilaian,
                     status: statusBaru,
-                    tahun_ajaran_id: selectedTahunAjaran
-                })
+                    tahun_ajaran_id: selectedTahunAjaran,
+                }),
             });
 
             const data = await res.json();
@@ -211,14 +220,14 @@ export default function ArsipRaporClient() {
             return;
         }
 
-        const ta = tahunAjaranList.find(t => t.id === selectedTahunAjaran);
+        const ta = tahunAjaranList.find((t) => t.id === selectedTahunAjaran);
         if (!ta) return;
 
         try {
             const res = await fetch(
                 `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${selectedJenisPenilaian}/${ta.semester}/${selectedTahunAjaran}`,
                 {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 }
             );
 
@@ -266,20 +275,24 @@ export default function ArsipRaporClient() {
     }, [selectedKelas]);
 
     const readyToPrint = selectedTahunAjaran && selectedJenisPenilaian && selectedKelas;
-    const ta = tahunAjaranList.find(t => t.id === selectedTahunAjaran);
+    const ta = tahunAjaranList.find((t) => t.id === selectedTahunAjaran);
     const statusSaatIni = selectedJenisPenilaian === 'PTS' ? ta?.status_pts : ta?.status_pas;
 
     // Status display helper
     const getStatusDisplay = (status: string) => {
         switch (status) {
-            case 'aktif': return { text: 'Aktif', color: 'bg-green-100 text-green-800' };
-            case 'selesai': return { text: 'Terkunci', color: 'bg-gray-200 text-gray-700' };
-            case 'nonaktif': return { text: 'Belum Dibuka', color: 'bg-yellow-100 text-yellow-800' };
-            default: return { text: 'Tidak Valid', color: 'bg-red-100 text-red-800' };
+            case 'aktif':
+                return { text: 'Aktif', color: 'bg-green-100 text-green-800' };
+            case 'selesai':
+                return { text: 'Terkunci', color: 'bg-gray-200 text-gray-700' };
+            case 'nonaktif':
+                return { text: 'Belum Dibuka', color: 'bg-yellow-100 text-yellow-800' };
+            default:
+                return { text: 'Tidak Valid', color: 'bg-red-100 text-red-800' };
         }
     };
 
-     return (
+    return (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Arsip Rapor</h1>
@@ -292,7 +305,9 @@ export default function ArsipRaporClient() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Tahun Ajaran</label>
                             <select
                                 value={selectedTahunAjaran ?? ''}
-                                onChange={(e) => setSelectedTahunAjaran(e.target.value ? Number(e.target.value) : null)}
+                                onChange={(e) =>
+                                    setSelectedTahunAjaran(e.target.value ? Number(e.target.value) : null)
+                                }
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 disabled={loadingTA}
                             >
@@ -301,7 +316,8 @@ export default function ArsipRaporClient() {
                                     .sort((a, b) => (b.is_aktif ? 1 : 0) - (a.is_aktif ? 1 : 0))
                                     .map((ta) => (
                                         <option key={ta.id} value={ta.id}>
-                                            {ta.tahun_ajaran} {ta.semester}{ta.is_aktif ? ' (Aktif)' : ''}
+                                            {ta.tahun_ajaran} {ta.semester}
+                                            {ta.is_aktif ? ' (Aktif)' : ''}
                                         </option>
                                     ))}
                             </select>
@@ -327,7 +343,9 @@ export default function ArsipRaporClient() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Kelas</label>
                             <select
                                 value={selectedKelas ?? ''}
-                                onChange={(e) => setSelectedKelas(e.target.value ? Number(e.target.value) : null)}
+                                onChange={(e) =>
+                                    setSelectedKelas(e.target.value ? Number(e.target.value) : null)
+                                }
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 disabled={!selectedJenisPenilaian || loadingKelas}
                             >
@@ -341,72 +359,89 @@ export default function ArsipRaporClient() {
                         </div>
                     </div>
 
-                    {/* PANEL KONTROL STATUS - DITAMPILKAN JIKA TAHUN AJARAN & JENIS SUDAH DIPILIH */}
+                    {/* PANEL KONTROL STATUS */}
                     {selectedTahunAjaran && selectedJenisPenilaian && (
                         <div className="mt-6 pt-4 border-t border-gray-200">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 {/* Status Display */}
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-gray-700">Status Saat Ini:</span>
-                                    <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${getStatusDisplay(statusSaatIni || 'nonaktif').color}`}>
+                                    <span
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${getStatusDisplay(statusSaatIni || 'nonaktif').color
+                                            }`}
+                                    >
                                         {getStatusDisplay(statusSaatIni || 'nonaktif').text}
                                     </span>
                                 </div>
 
                                 {/* Action Buttons */}
                                 <div className="flex flex-wrap gap-2">
-                                    {/* Tombol Aktifkan - hanya tampil jika status nonaktif atau selesai */}
                                     {statusSaatIni !== 'aktif' && (
                                         <button
                                             onClick={() => {
-                                                if (window.confirm(`Yakin ingin mengaktifkan ${selectedJenisPenilaian}?\n\nGuru akan bisa mengedit nilai.`)) {
+                                                if (
+                                                    window.confirm(
+                                                        `Yakin ingin mengaktifkan ${selectedJenisPenilaian}?\n\nGuru akan bisa mengedit nilai.`
+                                                    )
+                                                ) {
                                                     handleUbahStatus('aktif');
                                                 }
                                             }}
                                             disabled={loadingAction}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white
-                                                ${loadingAction ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-sm'}`}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${loadingAction
+                                                    ? 'bg-green-400 cursor-not-allowed'
+                                                    : 'bg-green-600 hover:bg-green-700 shadow-sm'
+                                                }`}
                                         >
                                             <Play size={16} />
                                             Aktifkan
                                         </button>
                                     )}
 
-                                    {/* Tombol Nonaktifkan - hanya tampil jika status aktif */}
                                     {statusSaatIni === 'aktif' && (
                                         <button
                                             onClick={() => {
-                                                if (window.confirm(`Yakin ingin menonaktifkan ${selectedJenisPenilaian}?\n\nGuru tidak akan bisa mengedit nilai sementara.`)) {
+                                                if (
+                                                    window.confirm(
+                                                        `Yakin ingin menonaktifkan ${selectedJenisPenilaian}?\n\nGuru tidak akan bisa mengedit nilai sementara.`
+                                                    )
+                                                ) {
                                                     handleUbahStatus('nonaktif');
                                                 }
                                             }}
                                             disabled={loadingAction}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white
-                                                ${loadingAction ? 'bg-yellow-400 cursor-not-allowed' : 'bg-yellow-600 hover:bg-yellow-700 shadow-sm'}`}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${loadingAction
+                                                    ? 'bg-yellow-400 cursor-not-allowed'
+                                                    : 'bg-yellow-600 hover:bg-yellow-700 shadow-sm'
+                                                }`}
                                         >
                                             <Pause size={16} />
                                             Nonaktifkan
                                         </button>
                                     )}
 
-                                    {/* Tombol Arsipkan (Kunci) - hanya tampil jika status aktif */}
                                     {statusSaatIni === 'aktif' && (
                                         <button
                                             onClick={() => {
-                                                if (window.confirm(`⚠️ PERHATIAN!\n\nAnda yakin ingin mengarsipkan dan mengunci ${selectedJenisPenilaian}?\n\n🔒 Setelah dikunci:\n- Guru TIDAK BISA mengedit nilai lagi\n- Status tidak bisa diubah kembali\n- Data akan permanen terkunci\n\nLanjutkan?`)) {
+                                                if (
+                                                    window.confirm(
+                                                        `⚠️ PERHATIAN!\n\nAnda yakin ingin mengarsipkan dan mengunci ${selectedJenisPenilaian}?\n\n🔒 Setelah dikunci:\n- Guru TIDAK BISA mengedit nilai lagi\n- Status tidak bisa diubah kembali\n- Data akan permanen terkunci\n\nLanjutkan?`
+                                                    )
+                                                ) {
                                                     handleArsipkanRapor();
                                                 }
                                             }}
                                             disabled={loadingAction}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white
-                                                ${loadingAction ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 shadow-sm'}`}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${loadingAction
+                                                    ? 'bg-red-400 cursor-not-allowed'
+                                                    : 'bg-red-600 hover:bg-red-700 shadow-sm'
+                                                }`}
                                         >
                                             <Lock size={16} />
                                             Arsipkan & Kunci
                                         </button>
                                     )}
 
-                                    {/* Info jika sudah terkunci */}
                                     {statusSaatIni === 'selesai' && (
                                         <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm">
                                             <Lock size={16} />
@@ -416,13 +451,15 @@ export default function ArsipRaporClient() {
                                 </div>
                             </div>
 
-                            {/* Keterangan Status */}
                             <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                                 <p className="text-xs text-orange-800">
                                     <strong>Info:</strong>
-                                    {statusSaatIni === 'nonaktif' && ' Penilaian belum dibuka. Guru tidak bisa input nilai.'}
-                                    {statusSaatIni === 'aktif' && ' Penilaian sedang aktif. Guru bisa input/edit nilai.'}
-                                    {statusSaatIni === 'selesai' && ' Penilaian sudah ditutup dan dikunci. Data tidak bisa diubah.'}
+                                    {statusSaatIni === 'nonaktif' &&
+                                        ' Penilaian belum dibuka. Guru tidak bisa input nilai.'}
+                                    {statusSaatIni === 'aktif' &&
+                                        ' Penilaian sedang aktif. Guru bisa input/edit nilai.'}
+                                    {statusSaatIni === 'selesai' &&
+                                        ' Penilaian sudah ditutup dan dikunci. Data tidak bisa diubah.'}
                                 </p>
                             </div>
                         </div>
@@ -453,7 +490,8 @@ export default function ArsipRaporClient() {
                         <>
                             <div className="mb-4 sm:mb-6">
                                 <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-                                    Daftar Siswa {selectedJenisPenilaian} - {kelasList.find(k => k.id_kelas === selectedKelas)?.nama_kelas}
+                                    Daftar Siswa {selectedJenisPenilaian} -{' '}
+                                    {kelasList.find((k) => k.id_kelas === selectedKelas)?.nama_kelas}
                                 </h2>
                             </div>
 
@@ -472,7 +510,8 @@ export default function ArsipRaporClient() {
                                         {siswaList.map((siswa, index) => (
                                             <tr
                                                 key={siswa.id_siswa}
-                                                className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
+                                                className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                    } hover:bg-blue-50 transition-colors`}
                                             >
                                                 <td className="px-3 py-3 text-center">{index + 1}</td>
                                                 <td className="px-3 py-3 font-medium text-gray-800">{siswa.nama}</td>

@@ -1,3 +1,14 @@
+/**
+ * Nama File: data_mata_pelajaran_client.tsx
+ * Fungsi: Komponen utama halaman Data Mata Pelajaran untuk admin.
+ *         Menyediakan fitur CRUD (Create, Read, Update, Delete) mata pelajaran
+ *         berdasarkan tahun ajaran aktif atau non-aktif, termasuk pencarian,
+ *         paginasi, dan input urutan rapor hanya saat edit.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
+
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';

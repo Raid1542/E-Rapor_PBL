@@ -1,4 +1,11 @@
+// File: rekapan_nilai_client.tsx
+// Fungsi: Komponen utama untuk menampilkan dan mengelola rekapan nilai rapor,
+//         termasuk fitur lihat detail per siswa dan ekspor ke Excel.
+// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+// Tanggal: 15 September 2025
+
 'use client';
+
 import { useState, useEffect } from 'react';
 import { Search, Upload, X, Eye } from 'lucide-react';
 
@@ -13,8 +20,7 @@ interface SiswaRekapan {
     ranking: number | null;
 }
 
-export default function RekapanNilaiGuruKelasPage() {
-
+const RekapanNilaiClient = () => {
     const [siswaList, setSiswaList] = useState<SiswaRekapan[]>([]);
     const [mapelList, setMapelList] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,8 +38,8 @@ export default function RekapanNilaiGuruKelasPage() {
                 return;
             }
 
-            const res = await fetch("http://localhost:5000/api/guru-kelas/rekapan-nilai", {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await fetch('http://localhost:5000/api/guru-kelas/rekapan-nilai', {
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             const data = await res.json();
@@ -70,6 +76,7 @@ export default function RekapanNilaiGuruKelasPage() {
     const handleDetail = (siswa: SiswaRekapan) => {
         setDetailSiswa(siswa);
         setShowDetail(true);
+        setDetailClosing(false);
     };
 
     // Filter berdasarkan pencarian DAN urutkan berdasarkan ranking
@@ -89,8 +96,8 @@ export default function RekapanNilaiGuruKelasPage() {
     const handleExportExcel = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch("http://localhost:5000/api/guru-kelas/rekapan-nilai/export-excel", {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await fetch('http://localhost:5000/api/guru-kelas/rekapan-nilai/export-excel', {
+                headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Gagal ekspor');
             const blob = await res.blob();
@@ -150,9 +157,15 @@ export default function RekapanNilaiGuruKelasPage() {
                         <table className="w-full min-w-[600px] table-auto text-sm">
                             <thead>
                                 <tr>
-                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">No</th>
-                                    <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">Nama</th>
-                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">NIS</th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        No
+                                    </th>
+                                    <th className="px-4 py-3 text-left sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        Nama
+                                    </th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        NIS
+                                    </th>
                                     {mapelList.map((kodeMapel) => (
                                         <th
                                             key={kodeMapel}
@@ -161,9 +174,15 @@ export default function RekapanNilaiGuruKelasPage() {
                                             {kodeMapel}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Rata-rata</th>
-                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Detail</th>
-                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">Ranking</th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        Rata-rata
+                                    </th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        Detail
+                                    </th>
+                                    <th className="px-4 py-3 text-center sticky top-0 bg-gray-800 text-white z-10 font-semibold">
+                                        Ranking
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -215,6 +234,7 @@ export default function RekapanNilaiGuruKelasPage() {
                             </tbody>
                         </table>
                     </div>
+
                     {/* Modal Detail - Rekapan Nilai */}
                     {showDetail && detailSiswa && (
                         <div
@@ -224,6 +244,7 @@ export default function RekapanNilaiGuruKelasPage() {
                                 if (detailClosing) {
                                     setShowDetail(false);
                                     setDetailClosing(false);
+                                    setDetailSiswa(null);
                                 }
                             }}
                         >
@@ -274,7 +295,7 @@ export default function RekapanNilaiGuruKelasPage() {
                                     <div>
                                         <h3 className="font-semibold text-gray-800 mb-3">Nilai per Mata Pelajaran:</h3>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                            {mapelList.map(kodeMapel => (
+                                            {mapelList.map((kodeMapel) => (
                                                 <div key={kodeMapel} className="bg-orange-50 p-3 rounded text-center">
                                                     <div className="text-xs font-medium text-orange-700">{kodeMapel}</div>
                                                     <div className="text-lg font-bold mt-1">
@@ -303,6 +324,7 @@ export default function RekapanNilaiGuruKelasPage() {
                 </div>
             </div>
         </div>
-
     );
-}
+};
+
+export default RekapanNilaiClient;

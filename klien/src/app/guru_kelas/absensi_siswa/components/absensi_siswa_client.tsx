@@ -1,3 +1,11 @@
+/**
+ * Nama File: absensi_siswa_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola absensi siswa oleh guru kelas.
+ *         Menampilkan daftar siswa dengan opsi input/edit jumlah sakit, izin, dan alpha.
+ * Pembuat: Raid Aqil Athallah  - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect, ChangeEvent } from 'react';

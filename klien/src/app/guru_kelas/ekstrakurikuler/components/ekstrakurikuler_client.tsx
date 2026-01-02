@@ -1,3 +1,13 @@
+/**
+ * Nama File: ekstrakurikuler_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola ekstrakurikuler siswa oleh guru kelas.
+ *         Memungkinkan melihat, menambah, dan mengedit hingga 3 ekstrakurikuler per siswa,
+ *         lengkap dengan deskripsi aktivitas. Data diambil dan disimpan ke backend API.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
+
+
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';

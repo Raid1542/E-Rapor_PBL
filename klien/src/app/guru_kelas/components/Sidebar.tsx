@@ -1,3 +1,14 @@
+/**
+ * Nama File: Sidebar.tsx
+ * Fungsi: Menyediakan navigasi sidebar untuk halaman guru kelas.
+ *         Menampilkan menu utama seperti Dashboard, Kelola Data (dengan submenu),
+ *         dan Rapor. Sidebar juga menampilkan logo dan nama sekolah yang diambil
+ *         dari API backend. Mendukung mode collapsed/expanded dan mempertahankan
+ *         state dropdown yang terbuka saat berpindah halaman.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,11 +40,11 @@ export default function Sidebar({ user }: SidebarProps) {
         kelolaData: false,
     });
 
-    // ✅ State untuk logo dan nama sekolah
+    //  State untuk logo dan nama sekolah
     const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
     const [schoolName, setSchoolName] = useState<string>('SDIT Ulil Albab');
 
-    // ✅ Fetch data sekolah
+    //  Fetch data sekolah
     const fetchSchoolData = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -59,7 +70,7 @@ export default function Sidebar({ user }: SidebarProps) {
         }
     };
 
-    // ✅ Setup event listener
+    //  Setup event listener
     useEffect(() => {
         console.log("🔄 Sidebar guru kelas: fetchSchoolData dipanggil");
         fetchSchoolData();

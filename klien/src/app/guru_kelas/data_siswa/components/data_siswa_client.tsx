@@ -1,3 +1,13 @@
+/**
+ * Nama File: data_siswa_client.tsx
+ * Fungsi: Komponen client-side untuk menampilkan daftar dan detail data siswa
+ *         yang diajar oleh guru kelas. Menyediakan fitur pencarian dan modal
+ *         detail informasi siswa, termasuk NIS, NISN, tanggal lahir, jenis kelamin, dan fase.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 331240193
+ * Tanggal: 15 September 2025
+ */
+
+
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';

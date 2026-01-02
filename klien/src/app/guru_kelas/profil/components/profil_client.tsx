@@ -1,3 +1,10 @@
+// ============================================================
+// File: profil_client.tsx
+// Fungsi: Komponen utama untuk mengelola profil dan kata sandi
+//         pengguna (guru kelas), termasuk upload foto profil.
+// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+// Tanggal: 15 September 2025
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,8 +23,7 @@ interface UserProfile {
     profileImage?: string;
 }
 
-const ProfilePage = () => {
-
+const ProfilClient = () => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [formData, setFormData] = useState({
@@ -37,7 +43,7 @@ const ProfilePage = () => {
     });
 
     const [isConfirmed, setIsConfirmed] = useState(false);
-    const [roleLabel, setRoleLabel] = useState('Guru Kelas'); // ✅ Default untuk Guru Kelas
+    const [roleLabel, setRoleLabel] = useState('Guru Kelas');
 
     // Foto profil
     const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -75,12 +81,11 @@ const ProfilePage = () => {
                 setProfileImage(imgUrl);
             }
 
-            // ✅ Role mapping untuk Guru Kelas
             const roleMap: Record<string, string> = {
                 admin: 'Admin',
                 guru: 'Guru',
                 'guru kelas': 'Guru Kelas',
-                'guru_kelas': 'Guru Kelas', // fallback untuk underscore
+                'guru_kelas': 'Guru Kelas',
                 'guru bidang studi': 'Guru Bidang Studi'
             };
             setRoleLabel(roleMap[user.role] || 'Guru');
@@ -125,7 +130,6 @@ const ProfilePage = () => {
         formDataUpload.append('foto', file);
 
         try {
-            // ✅ Ganti ke endpoint guru-kelas
             const response = await fetch(`${API_URL}/api/guru-kelas/upload_foto`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
@@ -199,7 +203,6 @@ const ProfilePage = () => {
         }
 
         try {
-            // ✅ Ganti ke endpoint guru-kelas
             const res = await fetch(`${API_URL}/api/guru-kelas/profil`, {
                 method: 'PUT',
                 headers: {
@@ -240,7 +243,7 @@ const ProfilePage = () => {
             window.dispatchEvent(new Event('userDataUpdated'));
 
             alert('✅ Profil berhasil diperbarui!');
-            window.location.reload(); // Reload setelah simpan
+            window.location.reload();
         } catch (err: any) {
             console.error('Error update profil:', err);
             alert('Gagal terhubung ke server: ' + (err.message || ''));
@@ -277,7 +280,6 @@ const ProfilePage = () => {
         }
 
         try {
-            // ✅ Ganti ke endpoint guru-kelas
             const res = await fetch(`${API_URL}/api/guru-kelas/ganti-password`, {
                 method: 'PUT',
                 headers: {
@@ -522,4 +524,4 @@ const ProfilePage = () => {
     );
 };
 
-export default ProfilePage;
+export default ProfilClient;

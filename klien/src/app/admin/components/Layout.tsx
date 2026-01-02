@@ -1,4 +1,14 @@
-// app/admin/components/Layout.tsx
+/**
+ * Nama File: Layout.tsx
+ * Fungsi: Layout utama halaman admin yang menyusun struktur halaman
+ *         dengan Sidebar di kiri dan Header di atas konten utama.
+ *         Mengambil data pengguna dari localStorage dan mengirimkannya
+ *         ke komponen Sidebar dan Header sebagai props.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
+
 'use client';
 
 import { useState, useEffect } from 'react';

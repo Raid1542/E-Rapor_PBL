@@ -1,12 +1,15 @@
+/**
+ * Nama File: Sidebar.tsx
+ * Fungsi: Komponen sidebar navigasi untuk guru bidang studi,
+ *         menampilkan logo sekolah, nama, dan menu akses terbatas sesuai role.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-    Home,
-    Edit,
-    Menu,
-    Settings,
-} from 'lucide-react';
+import { Home, Edit, Menu, Settings } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface SidebarProps {
@@ -22,12 +25,9 @@ export default function Sidebar({ user }: SidebarProps) {
     const router = useRouter();
     const pathname = usePathname();
     const [isExpanded, setIsExpanded] = useState(true);
-
-    // State untuk logo dan nama sekolah
     const [logoUrl, setLogoUrl] = useState<string>('/images/LogoUA.jpg');
     const [schoolName, setSchoolName] = useState<string>('SDIT Ulil Albab');
 
-    // Fetch data sekolah
     const fetchSchoolData = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -53,7 +53,6 @@ export default function Sidebar({ user }: SidebarProps) {
         }
     };
 
-    // ✅ Setup event listener
     useEffect(() => {
         fetchSchoolData();
 
@@ -83,7 +82,6 @@ export default function Sidebar({ user }: SidebarProps) {
     const toggleSidebar = () => setIsExpanded(!isExpanded);
     const handleNavigation = (url: string) => router.push(url);
 
-    // ✅ Hanya 2 menu: Dashboard + Input Nilai
     const mainMenu = [
         {
             name: 'Dashboard',
@@ -102,7 +100,6 @@ export default function Sidebar({ user }: SidebarProps) {
         },
     ];
 
-    // Active state
     const isActive = (url: string) => pathname === url;
 
     return (
@@ -143,7 +140,7 @@ export default function Sidebar({ user }: SidebarProps) {
                 )}
             </div>
 
-            {/* Menu Utama — hanya 2 item */}
+            {/* Menu Utama */}
             <div className="flex-1 overflow-y-auto p-4">
                 {mainMenu.map((item, idx) => {
                     const Icon = item.icon;

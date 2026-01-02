@@ -1,3 +1,14 @@
+/**
+ * Nama File: data_pembelajaran_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola data pembelajaran oleh admin.
+ *         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
+ *         kelas dan mata pelajaran, pencarian, serta paginasi. Hanya tahun ajaran
+ *         aktif yang memungkinkan penambahan dan perubahan data.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
+
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2, Filter } from 'lucide-react';

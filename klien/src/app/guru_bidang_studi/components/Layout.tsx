@@ -1,3 +1,11 @@
+/**
+ * Nama File: Layout.tsx
+ * Fungsi: Komponen klien layout untuk guru bidang studi,
+ *         mencakup sidebar navigasi, header profil, dan area konten utama.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +17,7 @@ interface UserData {
     nama_lengkap: string;
     email_sekolah: string;
     role: string;
-    subject?: string; 
+    subject?: string;
 }
 
 export default function GuruBidangStudiLayout({

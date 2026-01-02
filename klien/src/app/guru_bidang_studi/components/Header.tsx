@@ -1,3 +1,11 @@
+/**
+ * Nama File: Header.tsx
+ * Fungsi: Komponen header untuk layout guru bidang studi,
+ *         menampilkan judul halaman dan menu profil pengguna dengan dropdown.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { LogOut, ChevronDown, User } from 'lucide-react';
@@ -35,7 +43,6 @@ export default function Header() {
                     setUser(userData);
                     if (userData.profileImage) {
                         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-                        // ✅ Pastikan ada '/' antara baseUrl dan path
                         setProfileImage(`${baseUrl}/${userData.profileImage}`);
                     } else {
                         setProfileImage(null);
@@ -96,7 +103,7 @@ export default function Header() {
 
     const handleProfile = () => {
         closeDropdown();
-        router.push('/guru_bidang_studi/profil'); // ✅ Ubah rute profil
+        router.push('/guru_bidang_studi/profil');
     };
 
     // Tutup dropdown saat klik di luar

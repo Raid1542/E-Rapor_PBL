@@ -1,3 +1,14 @@
+/**
+ * Nama File: Header.tsx
+ * Fungsi: Menampilkan header halaman guru kelas yang mencakup judul dashboard,
+ *         nama kelas yang diajar, serta dropdown profil pengguna.
+ *         Dropdown menampilkan foto profil, nama, email, peran, dan opsi
+ *         navigasi ke Profil atau Logout. Mendukung penutupan otomatis
+ *         saat klik di luar area dropdown.
+ * Pembuat: Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { LogOut, User, ChevronDown } from 'lucide-react';
@@ -31,7 +42,6 @@ export default function Header({ user }: HeaderProps) {
                     const userData = JSON.parse(storedUser);
                     if (userData.profileImage) {
                         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-                        // ✅ Pastikan ada '/' antara baseUrl dan path
                         const imgUrl = userData.profileImage.startsWith('/')
                             ? `${baseUrl}${userData.profileImage}`
                             : `${baseUrl}/${userData.profileImage}`;
@@ -106,7 +116,7 @@ export default function Header({ user }: HeaderProps) {
                     </div>
 
                     <div className="relative">
-                        {/* ✅ Tombol hanya berisi avatar + chevron */}
+                        {/*  Tombol hanya berisi avatar + chevron */}
                         <button
                             onClick={toggleDropdown}
                             className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"

@@ -1,3 +1,12 @@
+/**
+ * Nama File: dashboard_client.tsx
+ * Fungsi: Komponen client-side untuk menampilkan ringkasan informasi dashboard guru kelas,
+ *         termasuk jumlah siswa, nama kelas, tahun ajaran, dan semester yang sedang berjalan.
+ *         Memvalidasi peran pengguna dan mengarahkan ke login jika tidak sesuai.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -54,7 +63,6 @@ export default function GuruKelasDashboard() {
                     if (res.ok) {
                         const data = await res.json();
                         if (Array.isArray(data) && data.length > 0) {
-                            // ✅ Sekarang TypeScript tahu bahwa data[0] punya .semester
                             setKelasInfo(data[0]);
                         }
                     }

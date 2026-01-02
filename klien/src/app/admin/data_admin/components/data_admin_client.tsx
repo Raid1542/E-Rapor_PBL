@@ -1,3 +1,11 @@
+/**
+ * Nama File: data_admin_client.tsx
+ * Fungsi: Komponen klien untuk mengelola data admin,
+ *         mencakup fitur tambah, edit, detail, pencarian, dan pagination.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 "use client";
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
@@ -33,8 +41,7 @@ interface FormDataType {
     confirmData: boolean;
 }
 
-export default function DataAdminPage() {
-
+export default function DataAdminClient() {
     const formatGender = (g?: string | null) => {
         if (!g) return '-';
         const s = String(g).trim().toLowerCase();
@@ -45,7 +52,6 @@ export default function DataAdminPage() {
         return g.charAt(0).toUpperCase() + g.slice(1).toLowerCase();
     };
 
-    // Fungsi untuk format tanggal ke YYYY-MM-DD (untuk input date)
     const formatDateInput = (dateString?: string) => {
         if (!dateString) return '';
         try {
@@ -68,14 +74,14 @@ export default function DataAdminPage() {
     const formatTanggalIndo = (dateString?: string | null): string => {
         if (!dateString) return '-';
         if (!dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return dateString; // kembalikan aslinya jika tidak valid
+            return dateString;
         }
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return dateString;
         return new Intl.DateTimeFormat('id-ID', {
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
+            year: 'numeric',
         }).format(date);
     };
 
@@ -83,7 +89,7 @@ export default function DataAdminPage() {
         return name
             .split(' ')
             .slice(0, 2)
-            .map(word => word[0]?.toUpperCase() || '')
+            .map((word) => word[0]?.toUpperCase() || '')
             .join('');
     };
 
@@ -103,16 +109,6 @@ export default function DataAdminPage() {
         fetchAdmin();
     }, []);
 
-    // Debug selectedAdmin
-    useEffect(() => {
-        if (selectedAdmin) {
-            console.log('🔍 SELECTED ADMIN DEBUG:', selectedAdmin);
-            console.log('📍 Tempat Lahir:', selectedAdmin.tempat_lahir);
-            console.log('📅 Tanggal Lahir:', selectedAdmin.tanggal_lahir);
-            console.log('📧 Email:', selectedAdmin.email);
-        }
-    }, [selectedAdmin]);
-
     const fetchAdmin = async (): Promise<void> => {
         try {
             const token = localStorage.getItem('token');
@@ -120,16 +116,11 @@ export default function DataAdminPage() {
                 alert('Silakan login terlebih dahulu');
                 return;
             }
-
-            const res = await fetch("http://localhost:5000/api/admin/admin", {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await fetch('http://localhost:5000/api/admin/admin', {
+                headers: { Authorization: `Bearer ${token}` },
             });
-
             const data = await res.json();
             if (res.ok) {
-                console.log('✅ Data admin berhasil difetch:', data.data);
-
-                // Normalisasi data dari backend
                 const normalizedAdmins = (data.data || []).map((admin: any) => ({
                     id: admin.id,
                     nama: admin.nama,
@@ -142,12 +133,9 @@ export default function DataAdminPage() {
                     jenis_kelamin: admin.jenis_kelamin || admin.jenisKelamin || '',
                     alamat: admin.alamat,
                     no_telepon: admin.no_telepon || admin.noTelepon || '',
-                    profileImage: admin.profileImage || null
+                    profileImage: admin.profileImage || null,
                 }));
-
-                console.log('🚀 Final normalized data:', normalizedAdmins);
                 setAdminList(normalizedAdmins);
-
             } else {
                 alert('Gagal memuat data admin: ' + (data.message || 'Tidak terotorisasi'));
             }
@@ -170,39 +158,37 @@ export default function DataAdminPage() {
         no_telepon: '',
         email: '',
         statusAdmin: 'aktif',
-        confirmData: false
+        confirmData: false,
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleDetail = (admin: Admin): void => {
-        console.log('🔄 Handle Detail dipanggil:', admin);
         setSelectedAdmin(admin);
         setShowDetail(true);
     };
 
     const handleEdit = (admin: Admin): void => {
-        console.log('✏️ Handle Edit dipanggil:', admin);
         setEditId(admin.id);
         setFormData({
             nama: admin.nama || '',
             niy: admin.niy || '',
             nuptk: admin.nuptk || '',
             tempat_lahir: admin.tempat_lahir || '',
-            tanggal_lahir: formatDateInput(admin.tanggal_lahir) || '', // Format untuk input
+            tanggal_lahir: formatDateInput(admin.tanggal_lahir) || '',
             jenisKelamin: (admin.jenis_kelamin as string) || 'Laki-laki',
             alamat: admin.alamat || '',
             no_telepon: admin.no_telepon || '',
             email: admin.email || '',
             statusAdmin: admin.statusAdmin?.toLowerCase() === 'aktif' ? 'aktif' : 'nonaktif',
-            confirmData: false
+            confirmData: false,
         });
         setShowEdit(true);
     };
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const validate = (): boolean => {
@@ -230,13 +216,10 @@ export default function DataAdminPage() {
                 }
             }
         }
-
         if (showEdit && (!formData.statusAdmin || formData.statusAdmin === '')) {
             newErrors.statusAdmin = 'Status wajib dipilih';
         }
-
         if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
-
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
             const firstKey = Object.keys(newErrors)[0];
@@ -251,13 +234,11 @@ export default function DataAdminPage() {
 
     const handleSubmitAdd = async (): Promise<void> => {
         if (!validate()) return;
-
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Sesi login telah habis. Silakan login ulang.');
             return;
         }
-
         try {
             const payload = {
                 nama_lengkap: formData.nama,
@@ -268,44 +249,39 @@ export default function DataAdminPage() {
                 tanggal_lahir: formData.tanggal_lahir,
                 jenis_kelamin: formData.jenisKelamin,
                 alamat: formData.alamat,
-                no_telepon: formData.no_telepon
+                no_telepon: formData.no_telepon,
             };
-
-            const res = await fetch("http://localhost:5000/api/admin/admin", {
-                method: "POST",
+            const res = await fetch('http://localhost:5000/api/admin/admin', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
-
             if (res.ok) {
-                alert("Data admin berhasil ditambahkan");
+                alert('Data admin berhasil ditambahkan');
                 setShowTambah(false);
                 fetchAdmin();
                 handleReset();
             } else {
                 const error = await res.json();
-                alert(error.message || "Gagal menambah data admin");
+                alert(error.message || 'Gagal menambah data admin');
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            alert('Gagal terhubung ke server');
         }
     };
 
     const handleSubmitEdit = async (): Promise<void> => {
         if (!validate()) return;
-
         const token = localStorage.getItem('token');
         if (!token) {
             alert('Sesi login telah habis. Silakan login ulang.');
             return;
         }
-
         try {
             const statusForDB = formData.statusAdmin;
-
             const payload = {
                 nama_lengkap: formData.nama,
                 email_sekolah: formData.email,
@@ -316,30 +292,28 @@ export default function DataAdminPage() {
                 tanggal_lahir: formData.tanggal_lahir,
                 jenis_kelamin: formData.jenisKelamin,
                 alamat: formData.alamat,
-                no_telepon: formData.no_telepon
+                no_telepon: formData.no_telepon,
             };
-
             const res = await fetch(`http://localhost:5000/api/admin/admin/${editId}`, {
-                method: "PUT",
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
-
             if (res.ok) {
-                alert("Data admin berhasil diperbarui");
+                alert('Data admin berhasil diperbarui');
                 setShowEdit(false);
                 setEditId(null);
                 fetchAdmin();
                 handleReset();
             } else {
                 const error = await res.json();
-                alert(error.message || "Gagal memperbarui data admin");
+                alert(error.message || 'Gagal memperbarui data admin');
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            alert('Gagal terhubung ke server');
         }
     };
 
@@ -355,24 +329,18 @@ export default function DataAdminPage() {
             no_telepon: '',
             email: '',
             statusAdmin: 'aktif',
-            confirmData: false
+            confirmData: false,
         });
         setErrors({});
     };
 
-    const filteredAdmin = adminList.filter(admin => {
+    const filteredAdmin = adminList.filter((admin) => {
         const nama = admin.nama?.toLowerCase() || '';
         const email = admin.email?.toLowerCase() || '';
         const niy = admin.niy?.toLowerCase() || '';
         const nuptk = admin.nuptk?.toLowerCase() || '';
         const query = searchQuery.toLowerCase();
-
-        return (
-            nama.includes(query) ||
-            email.includes(query) ||
-            niy.includes(query) ||
-            nuptk.includes(query)
-        );
+        return nama.includes(query) || email.includes(query) || niy.includes(query) || nuptk.includes(query);
     });
 
     const totalPages = Math.ceil(filteredAdmin.length / itemsPerPage);
@@ -383,35 +351,79 @@ export default function DataAdminPage() {
     const renderPagination = () => {
         const pages: ReactNode[] = [];
         const maxVisible = 5;
-
         if (currentPage > 1) {
             pages.push(
-                <button key="prev" onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">«</button>
+                <button
+                    key="prev"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
+                >
+                    «
+                </button>
             );
         }
-
         if (totalPages <= maxVisible) {
             for (let i = 1; i <= totalPages; i++) {
                 pages.push(
-                    <button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>
+                    <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                            }`}
+                    >
+                        {i}
+                    </button>
                 );
             }
         } else {
-            pages.push(<button key={1} onClick={() => setCurrentPage(1)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>1</button>);
+            pages.push(
+                <button
+                    key={1}
+                    onClick={() => setCurrentPage(1)}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                        }`}
+                >
+                    1
+                </button>
+            );
             if (currentPage > 3) pages.push(<span key="dots1" className="px-2 text-gray-600">...</span>);
             const start = Math.max(2, currentPage - 1);
             const end = Math.min(totalPages - 1, currentPage + 1);
             for (let i = start; i <= end; i++) {
-                pages.push(<button key={i} onClick={() => setCurrentPage(i)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{i}</button>);
+                pages.push(
+                    <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                            }`}
+                    >
+                        {i}
+                    </button>
+                );
             }
             if (currentPage < totalPages - 2) pages.push(<span key="dots2" className="px-2 text-gray-600">...</span>);
-            pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}>{totalPages}</button>);
+            pages.push(
+                <button
+                    key={totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                        }`}
+                >
+                    {totalPages}
+                </button>
+            );
         }
-
         if (currentPage < totalPages) {
-            pages.push(<button key="next" onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition">»</button>);
+            pages.push(
+                <button
+                    key="next"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition"
+                >
+                    »
+                </button>
+            );
         }
-
         return pages;
     };
 
@@ -435,7 +447,6 @@ export default function DataAdminPage() {
                             <X size={24} />
                         </button>
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                         {/* Nama */}
                         <div>
@@ -452,7 +463,6 @@ export default function DataAdminPage() {
                             />
                             {errors.nama && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.nama}</p>}
                         </div>
-
                         {/* Email */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">Email Akun</label>
@@ -465,7 +475,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* NIY */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">NIY</label>
@@ -478,7 +487,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* NUPTK */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">NUPTK</label>
@@ -491,7 +499,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* Tempat Lahir */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">Tempat Lahir</label>
@@ -504,7 +511,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* Telepon */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">Telepon</label>
@@ -517,7 +523,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* Tanggal Lahir */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">
@@ -532,7 +537,6 @@ export default function DataAdminPage() {
                             />
                             {errors.tanggal_lahir && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.tanggal_lahir}</p>}
                         </div>
-
                         {/* Jenis Kelamin */}
                         <div>
                             <label className="block text-xs sm:text-sm font-medium mb-2">
@@ -550,7 +554,6 @@ export default function DataAdminPage() {
                             </select>
                             {errors.jenisKelamin && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.jenisKelamin}</p>}
                         </div>
-
                         {/* Alamat */}
                         <div className="sm:col-span-2">
                             <label className="block text-xs sm:text-sm font-medium mb-2">Alamat</label>
@@ -563,7 +566,6 @@ export default function DataAdminPage() {
                                 className="w-full border border-gray-300 rounded px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-
                         {/* Status Admin — Hanya di Edit */}
                         {isEdit && (
                             <div>
@@ -584,7 +586,6 @@ export default function DataAdminPage() {
                             </div>
                         )}
                     </div>
-
                     <div className="mt-6 sm:mt-7">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -598,7 +599,6 @@ export default function DataAdminPage() {
                         </label>
                         {errors.confirmData && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.confirmData}</p>}
                     </div>
-
                     <div className="mt-6 sm:mt-8">
                         <div className="grid grid-cols-3 gap-2 sm:gap-3">
                             <button
@@ -646,7 +646,6 @@ export default function DataAdminPage() {
                             <Plus size={20} />
                             Tambah Admin
                         </button>
-
                         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                             <div className="flex items-center gap-2 whitespace-nowrap">
                                 <span className="text-gray-700 text-sm">Tampilkan</span>
@@ -665,7 +664,6 @@ export default function DataAdminPage() {
                                 </select>
                                 <span className="text-gray-700 text-sm">data</span>
                             </div>
-
                             <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-[400px]">
                                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                                     <Search className="w-4 h-4 text-gray-400" />
@@ -683,7 +681,10 @@ export default function DataAdminPage() {
                                 {searchQuery && (
                                     <button
                                         type="button"
-                                        onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setCurrentPage(1);
+                                        }}
                                         className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
                                     >
                                         <X className="w-4 h-4" />
@@ -692,7 +693,6 @@ export default function DataAdminPage() {
                             </div>
                         </div>
                     </div>
-
                     <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                         <table className="w-full min-w-[600px] table-auto text-sm">
                             <thead>
@@ -708,17 +708,22 @@ export default function DataAdminPage() {
                             </thead>
                             <tbody>
                                 {currentAdmin.map((admin, index) => (
-                                    <tr key={admin.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                                    <tr
+                                        key={admin.id}
+                                        className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
+                                    >
                                         <td className="px-4 py-3 text-center align-middle font-medium">{startIndex + index + 1}</td>
                                         <td className="px-4 py-3 align-middle font-medium">{admin.nama}</td>
                                         <td className="px-4 py-3 text-center align-middle">{formatGender(admin.jenis_kelamin || admin.lp)}</td>
                                         <td className="px-4 py-3 text-center align-middle">{admin.niy || '-'}</td>
                                         <td className="px-4 py-3 text-center align-middle">{admin.nuptk || '-'}</td>
                                         <td className="px-4 py-3 text-center align-middle">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${admin.statusAdmin === 'AKTIF' || admin.statusAdmin === 'aktif'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700'
-                                                }`}>
+                                            <span
+                                                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${admin.statusAdmin === 'AKTIF' || admin.statusAdmin === 'aktif'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-red-100 text-red-700'
+                                                    }`}
+                                            >
                                                 {admin.statusAdmin?.toUpperCase() || 'AKTIF'}
                                             </span>
                                         </td>
@@ -745,14 +750,11 @@ export default function DataAdminPage() {
                             </tbody>
                         </table>
                     </div>
-
                     <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
                         <div className="text-sm text-gray-600">
                             Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredAdmin.length)} dari {filteredAdmin.length} data
                         </div>
-                        <div className="flex gap-1 flex-wrap justify-center">
-                            {renderPagination()}
-                        </div>
+                        <div className="flex gap-1 flex-wrap justify-center">{renderPagination()}</div>
                     </div>
                 </div>
             </div>
@@ -760,7 +762,8 @@ export default function DataAdminPage() {
             {/* Modal Detail */}
             {showDetail && selectedAdmin && (
                 <div
-                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'
+                        } p-3 sm:p-4`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) {
                             setDetailClosing(true);
@@ -772,7 +775,10 @@ export default function DataAdminPage() {
                     }}
                 >
                     <div className="absolute inset-0 bg-gray-900/70"></div>
-                    <div className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+                    <div
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                            }`}
+                    >
                         <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Admin</h2>
                             <button
@@ -798,14 +804,11 @@ export default function DataAdminPage() {
                                             className="w-full h-full object-cover rounded-full"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
-                                                target.src = ''; // fallback ke inisial
                                                 target.style.display = 'none';
                                             }}
                                         />
                                     ) : (
-                                        <span className="text-black text-xl font-semibold">
-                                            {getInitials(selectedAdmin.nama || '??')}
-                                        </span>
+                                        <span className="text-black text-xl font-semibold">{getInitials(selectedAdmin.nama || '??')}</span>
                                     )}
                                 </div>
                                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 text-center break-words">{selectedAdmin.nama}</h3>
@@ -815,10 +818,12 @@ export default function DataAdminPage() {
                                     <span className="font-semibold text-xs sm:text-sm col-span-1 sm:col-span-1">Status</span>
                                     <span className="text-xs sm:text-sm">:</span>
                                     <div className="col-span-1 sm:col-span-2">
-                                        <span className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${selectedAdmin.statusAdmin === 'AKTIF' || selectedAdmin.statusAdmin === 'aktif'
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-red-500 text-white'
-                                            }`}>
+                                        <span
+                                            className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${selectedAdmin.statusAdmin === 'AKTIF' || selectedAdmin.statusAdmin === 'aktif'
+                                                    ? 'bg-green-500 text-white'
+                                                    : 'bg-red-500 text-white'
+                                                }`}
+                                        >
                                             {selectedAdmin.statusAdmin?.toUpperCase() || 'AKTIF'}
                                         </span>
                                     </div>
@@ -836,7 +841,9 @@ export default function DataAdminPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Jenis Kelamin</span>
                                     <span className="text-xs sm:text-sm">:</span>
-                                    <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">{formatGender(selectedAdmin.jenis_kelamin || selectedAdmin.lp)}</span>
+                                    <span className="text-xs sm:text-sm col-span-1 sm:col-span-2">
+                                        {formatGender(selectedAdmin.jenis_kelamin || selectedAdmin.lp)}
+                                    </span>
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Tempat Lahir</span>

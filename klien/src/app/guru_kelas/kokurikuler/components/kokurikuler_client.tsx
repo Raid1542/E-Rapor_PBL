@@ -1,3 +1,9 @@
+// File: kokurikuler_client.tsx
+// Fungsi: Komponen utama untuk mengelola input dan tampilan nilai kokurikuler
+//         siswa oleh guru kelas, termasuk detail, edit, dan simpan nilai.
+// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+// Tanggal: 15 September 2025
+
 'use client';
 
 import { useState, useEffect, ReactNode, useMemo } from 'react';
@@ -38,12 +44,11 @@ const ASPEK_ID = {
     proyek: 4,
 };
 
-export default function DataKokurikulerPage() {
-
+export default function KokurikulerClient() {
     const [siswaList, setSiswaList] = useState<SiswaKokurikuler[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDetail, setShowDetail] = useState(false);
-    const [isDetailClosing, setIsDetailClosing] = useState(false); // ← tambahan untuk animasi
+    const [isDetailClosing, setIsDetailClosing] = useState(false);
     const [detailId, setDetailId] = useState<number | null>(null);
     const [detailData, setDetailData] = useState<KokurikulerData | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -121,7 +126,6 @@ export default function DataKokurikulerPage() {
                 return { grade: c.grade, deskripsi: c.deskripsi };
             }
         }
-        // Jika tidak cocok (seharusnya tidak terjadi)
         return { grade: null, deskripsi: null };
     };
 
@@ -134,7 +138,7 @@ export default function DataKokurikulerPage() {
         setDetailId(siswa.id);
         setDetailData({ ...siswa.kokurikuler });
         setShowDetail(true);
-        setIsDetailClosing(false); // reset animasi
+        setIsDetailClosing(false);
     };
 
     const closeDetail = () => {
@@ -269,8 +273,7 @@ export default function DataKokurikulerPage() {
                     <button
                         key={`page-${i}`}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -281,8 +284,7 @@ export default function DataKokurikulerPage() {
                 <button
                     key="page-1"
                     onClick={() => setCurrentPage(1)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     1
                 </button>
@@ -295,8 +297,7 @@ export default function DataKokurikulerPage() {
                     <button
                         key={`page-${i}`}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -308,8 +309,7 @@ export default function DataKokurikulerPage() {
                 <button
                     key={`page-${totalPages}`}
                     onClick={() => setCurrentPage(totalPages)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     {totalPages}
                 </button>
@@ -335,7 +335,6 @@ export default function DataKokurikulerPage() {
                     Nilai Kokurikuler Siswa
                 </h1>
 
-                {/* Header */}
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
@@ -393,7 +392,6 @@ export default function DataKokurikulerPage() {
                     </div>
                 </div>
 
-                {/* Tabel Kokurikuler */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
                     <table className="w-full min-w-[600px] table-auto text-sm">
                         <thead>
@@ -426,8 +424,7 @@ export default function DataKokurikulerPage() {
                                 currentSiswa.map((siswa, index) => (
                                     <tr
                                         key={siswa.id}
-                                        className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                            } hover:bg-blue-50 transition`}
+                                        className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}
                                     >
                                         <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle font-medium">
                                             {startIndex + index + 1}
@@ -481,7 +478,6 @@ export default function DataKokurikulerPage() {
                     </table>
                 </div>
 
-                {/* Pagination */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 text-sm">
                     <div className="text-gray-600">
                         Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredSiswa.length)} dari{' '}
@@ -494,9 +490,7 @@ export default function DataKokurikulerPage() {
             {/* Modal Detail dengan Animasi */}
             {showDetail && detailData && (
                 <div
-                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
-                        isDetailClosing ? 'opacity-0' : 'opacity-100'
-                    } p-3 sm:p-4`}
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${isDetailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) closeDetail();
                     }}
@@ -511,9 +505,7 @@ export default function DataKokurikulerPage() {
                 >
                     <div className="absolute inset-0 bg-black/50"></div>
                     <div
-                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${
-                            isDetailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                        }`}
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${isDetailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                     >
                         <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 flex justify-between items-center">
                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Detail Nilai Kokurikuler</h2>
@@ -686,7 +678,6 @@ export default function DataKokurikulerPage() {
                                 </div>
                             </div>
 
-                            {/* Tombol Simpan */}
                             <div className="mt-6 flex justify-end gap-2">
                                 <button
                                     onClick={closeDetail}

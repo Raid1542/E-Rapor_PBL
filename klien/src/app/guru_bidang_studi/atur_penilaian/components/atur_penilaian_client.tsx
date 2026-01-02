@@ -1,4 +1,13 @@
+/**
+ * Nama File: atur_penilaian_client.tsx
+ * Fungsi: Komponen klien untuk mengatur konfigurasi penilaian akademik
+ *         oleh guru bidang studi, mencakup kategori nilai dan bobot komponen.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Syahrul Ramadhan - NIM: 3312301093
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
+
 import { useState, useEffect } from 'react';
 import { Pencil, X, Plus, Trash2 } from 'lucide-react';
 
@@ -8,6 +17,7 @@ interface MapelItem {
     nama_mapel: string;
     jenis: 'wajib' | 'pilihan';
 }
+
 interface KategoriAkademik {
     id: number;
     min_nilai: number;
@@ -15,11 +25,13 @@ interface KategoriAkademik {
     deskripsi: string;
     urutan: number;
 }
+
 interface KomponenPenilaian {
     id_komponen: number;
     nama_komponen: string;
     urutan: number;
 }
+
 interface BobotItem {
     komponen_id: number;
     bobot: number;
@@ -27,7 +39,7 @@ interface BobotItem {
 }
 
 // ====== MAIN COMPONENT ======
-export default function AturPenilaianPage() {
+export default function AturPenilaianClient() {
     const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [activeTab, setActiveTab] = useState<'akademik' | 'bobot'>('akademik');
     const [loading, setLoading] = useState(true);
@@ -41,7 +53,7 @@ export default function AturPenilaianPage() {
     const [editKategoriData, setEditKategoriData] = useState({
         min_nilai: 0,
         max_nilai: 100,
-        deskripsi: ''
+        deskripsi: '',
     });
     const [initialEditKategoriData, setInitialEditKategoriData] = useState<null | typeof editKategoriData>(null);
 
@@ -66,7 +78,7 @@ export default function AturPenilaianPage() {
                 if (!token) throw new Error('Token tidak ditemukan');
 
                 const taRes = await fetch('http://localhost:5000/api/guru-bidang-studi/tahun-ajaran/aktif', {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
                 const taData = await taRes.json();
@@ -77,11 +89,11 @@ export default function AturPenilaianPage() {
                 // ✅ Ganti ke endpoint guru bidang studi
                 const [resKomponen, resMapel] = await Promise.all([
                     fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/komponen', {
-                        headers: { Authorization: `Bearer ${token}` }
+                        headers: { Authorization: `Bearer ${token}` },
                     }),
                     fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/mapel', {
-                        headers: { Authorization: `Bearer ${token}` }
-                    })
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
                 ]);
 
                 if (!resKomponen.ok || !resMapel.ok) {
@@ -91,11 +103,7 @@ export default function AturPenilaianPage() {
                 const komponenData = await resKomponen.json();
                 const mapelData = await resMapel.json();
 
-                console.log('Komponen data:', komponenData);
-                console.log('Mapel data:', mapelData);
-
                 setKomponenList(komponenData.data || []);
-                // Semua mapel yang diajar oleh guru bidang studi (termasuk pilihan)
                 setMapelList(mapelData.data || []);
             } catch (err: any) {
                 console.error('Error fetch data pendukung:', err);
@@ -163,10 +171,10 @@ export default function AturPenilaianPage() {
                     bobotMap.set(b.komponen_id, isNaN(numBobot) ? 0 : numBobot);
                 });
 
-                const fullBobot = komponenList.map(k => ({
+                const fullBobot = komponenList.map((k) => ({
                     komponen_id: k.id_komponen,
                     bobot: bobotMap.get(k.id_komponen) || 0,
-                    is_active: true
+                    is_active: true,
                 }));
 
                 setBobotList(fullBobot);
@@ -188,7 +196,7 @@ export default function AturPenilaianPage() {
             setEditKategoriData({
                 min_nilai: kategori.min_nilai,
                 max_nilai: kategori.max_nilai,
-                deskripsi: kategori.deskripsi
+                deskripsi: kategori.deskripsi,
             });
         } else {
             setEditKategoriId(null);
@@ -230,7 +238,7 @@ export default function AturPenilaianPage() {
                 max_nilai: editKategoriData.max_nilai,
                 deskripsi: editKategoriData.deskripsi,
                 urutan: 0,
-                mapel_id: selectedMapelAkademik
+                mapel_id: selectedMapelAkademik,
             };
 
             const url = editKategoriId
@@ -241,9 +249,9 @@ export default function AturPenilaianPage() {
                 method: editKategoriId ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
 
             if (res.ok) {
@@ -275,11 +283,11 @@ export default function AturPenilaianPage() {
                 `http://localhost:5000/api/guru-bidang-studi/atur-penilaian/kategori/${id}`,
                 {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
                 }
             );
             if (res.ok) {
-                setKategoriList(kategoriList.filter(k => k.id !== id));
+                setKategoriList(kategoriList.filter((k) => k.id !== id));
                 alert('Kategori berhasil dihapus');
             } else {
                 alert('Gagal menghapus kategori');
@@ -292,9 +300,9 @@ export default function AturPenilaianPage() {
     const hasInvalidBobot = () => {
         if (!jenisPenilaianAktif || jenisPenilaianAktif !== 'PTS') return false;
         const ptsKomponenIds = komponenList
-            .filter(k => k.nama_komponen.toLowerCase().includes('pts'))
-            .map(k => k.id_komponen);
-        return bobotList.some(b => {
+            .filter((k) => k.nama_komponen.toLowerCase().includes('pts'))
+            .map((k) => k.id_komponen);
+        return bobotList.some((b) => {
             return !ptsKomponenIds.includes(b.komponen_id) && b.bobot > 0;
         });
     };
@@ -312,8 +320,8 @@ export default function AturPenilaianPage() {
     // ====== BOBOT HANDLERS ======
     const handleBobotChange = (komponenId: number, value: string) => {
         const newValue = parseFloat(value) || 0;
-        setBobotList(prev =>
-            prev.map(b => (b.komponen_id === komponenId ? { ...b, bobot: newValue } : b))
+        setBobotList((prev) =>
+            prev.map((b) => (b.komponen_id === komponenId ? { ...b, bobot: newValue } : b))
         );
     };
 
@@ -343,9 +351,9 @@ export default function AturPenilaianPage() {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
+                        Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify(bobotList)
+                    body: JSON.stringify(bobotList),
                 }
             );
 
@@ -392,8 +400,8 @@ export default function AturPenilaianPage() {
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
                         className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik'
-                            ? 'text-blue-600 border-b-2 border-blue-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-gray-500 hover:text-gray-700'
                             }`}
                         onClick={() => setActiveTab('akademik')}
                     >
@@ -401,8 +409,8 @@ export default function AturPenilaianPage() {
                     </button>
                     <button
                         className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot'
-                            ? 'text-blue-600 border-b-2 border-blue-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                : 'text-gray-500 hover:text-gray-700'
                             }`}
                         onClick={() => setActiveTab('bobot')}
                     >
@@ -418,12 +426,14 @@ export default function AturPenilaianPage() {
                             <div className="max-w-xs">
                                 <select
                                     value={selectedMapelAkademik || ''}
-                                    onChange={(e) => setSelectedMapelAkademik(e.target.value ? Number(e.target.value) : null)}
+                                    onChange={(e) =>
+                                        setSelectedMapelAkademik(e.target.value ? Number(e.target.value) : null)
+                                    }
                                     className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     {mapelList
-                                        .filter(mapel => mapel.jenis === 'pilihan')
+                                        .filter((mapel) => mapel.jenis === 'pilihan')
                                         .map((mapel) => (
                                             <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
                                                 {mapel.nama_mapel} ({mapel.jenis})
@@ -518,12 +528,14 @@ export default function AturPenilaianPage() {
                             <div className="max-w-xs">
                                 <select
                                     value={selectedMapelId || ''}
-                                    onChange={(e) => setSelectedMapelId(e.target.value ? Number(e.target.value) : null)}
+                                    onChange={(e) =>
+                                        setSelectedMapelId(e.target.value ? Number(e.target.value) : null)
+                                    }
                                     className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     {mapelList
-                                        .filter(mapel => mapel.jenis === 'pilihan')
+                                        .filter((mapel) => mapel.jenis === 'pilihan')
                                         .map((mapel) => (
                                             <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
                                                 {mapel.nama_mapel} ({mapel.jenis})
@@ -568,8 +580,8 @@ export default function AturPenilaianPage() {
                                             <span className="font-semibold text-xs sm:text-sm">Total Bobot:</span>
                                             <span
                                                 className={`text-sm sm:text-lg font-bold ${Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1
-                                                    ? 'text-green-600'
-                                                    : 'text-red-600'
+                                                        ? 'text-green-600'
+                                                        : 'text-red-600'
                                                     }`}
                                             >
                                                 {bobotList.reduce((sum, b) => sum + b.bobot, 0).toFixed(2)}%
@@ -633,7 +645,9 @@ export default function AturPenilaianPage() {
                                         min="0"
                                         max="100"
                                         value={editKategoriData.min_nilai}
-                                        onChange={(e) => setEditKategoriData({ ...editKategoriData, min_nilai: Number(e.target.value) })}
+                                        onChange={(e) =>
+                                            setEditKategoriData({ ...editKategoriData, min_nilai: Number(e.target.value) })
+                                        }
                                         className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                     />
                                 </div>
@@ -644,7 +658,9 @@ export default function AturPenilaianPage() {
                                         min="0"
                                         max="100"
                                         value={editKategoriData.max_nilai}
-                                        onChange={(e) => setEditKategoriData({ ...editKategoriData, max_nilai: Number(e.target.value) })}
+                                        onChange={(e) =>
+                                            setEditKategoriData({ ...editKategoriData, max_nilai: Number(e.target.value) })
+                                        }
                                         className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                     />
                                 </div>
@@ -653,7 +669,9 @@ export default function AturPenilaianPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                                 <textarea
                                     value={editKategoriData.deskripsi}
-                                    onChange={(e) => setEditKategoriData({ ...editKategoriData, deskripsi: e.target.value })}
+                                    onChange={(e) =>
+                                        setEditKategoriData({ ...editKategoriData, deskripsi: e.target.value })
+                                    }
                                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                     rows={3}
                                     placeholder="Contoh: Sangat Baik, Perlu Bimbingan, dll."

@@ -1,3 +1,12 @@
+/**
+ * Nama File: catatan_wali_kelas_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola catatan wali kelas dan keputusan
+ *         naik tingkat siswa. Di semester Ganjil hanya catatan yang bisa diisi,
+ *         sedangkan di semester Genap juga mencakup keputusan naik/tidak naik.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 Septemebr 2025
+ */
+
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';

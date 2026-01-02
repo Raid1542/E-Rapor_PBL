@@ -1,3 +1,11 @@
+/**
+ * Nama File: profil_client.tsx
+ * Fungsi: Komponen klien untuk mengelola profil guru bidang studi,
+ *         mencakup edit data pribadi, upload foto profil, dan ganti kata sandi.
+ * Pembuat: Raid Aqil Athallah - NIM: 312401022 & Syahrul Ramadhan - NIM: 3312301093
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,8 +24,7 @@ interface UserProfile {
     profileImage?: string;
 }
 
-const ProfilePage = () => {
-
+export default function ProfilClient() {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [formData, setFormData] = useState({
@@ -27,17 +34,17 @@ const ProfilePage = () => {
         jenisKelamin: 'Laki-laki',
         telepon: '',
         email: '',
-        alamat: ''
+        alamat: '',
     });
 
     const [passwordData, setPasswordData] = useState({
         oldPassword: '',
         newPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
     });
 
     const [isConfirmed, setIsConfirmed] = useState(false);
-    const [roleLabel, setRoleLabel] = useState('Guru Bidang Studi'); // ✅ Ubah default
+    const [roleLabel, setRoleLabel] = useState('Guru Bidang Studi');
 
     // Foto profil
     const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -63,25 +70,23 @@ const ProfilePage = () => {
                 jenisKelamin: user.jenis_kelamin || 'Laki-laki',
                 telepon: user.no_telepon || '',
                 email: user.email_sekolah || '',
-                alamat: user.alamat || ''
+                alamat: user.alamat || '',
             };
             setFormData(initialData);
             setInitialFormData(initialData);
 
             if (user.profileImage) {
-                // ✅ Tambahkan slash jika perlu (pastikan konsisten dengan backend)
                 const imgUrl = user.profileImage.startsWith('/')
                     ? `${API_URL}${user.profileImage}`
                     : `${API_URL}/${user.profileImage}`;
                 setProfileImage(imgUrl);
             }
 
-            // ✅ Perbarui roleMap untuk "guru bidang studi"
             const roleMap: Record<string, string> = {
                 admin: 'Admin',
                 guru: 'Guru',
                 'guru bidang studi': 'Guru Bidang Studi',
-                'guru_kelas': 'Guru Kelas' // opsional, untuk backward compatibility
+                guru_kelas: 'Guru Kelas',
             };
             setRoleLabel(roleMap[user.role] || 'Guru');
         } catch (e) {
@@ -125,11 +130,10 @@ const ProfilePage = () => {
         formDataUpload.append('foto', file);
 
         try {
-            // ✅ Ubah endpoint ke guru-bidang-studi
             const response = await fetch(`${API_URL}/api/guru-bidang-studi/upload_foto`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
-                body: formDataUpload
+                body: formDataUpload,
             });
 
             const result = await response.json();
@@ -143,7 +147,7 @@ const ProfilePage = () => {
                 updatedUser = {
                     ...result.user,
                     profileImage: result.user.profileImage || result.user.foto_path || null,
-                    role: result.user.role || 'guru bidang studi' // ✅ default role
+                    role: result.user.role || 'guru bidang studi',
                 };
             } else if (result.fotoPath) {
                 const storedUser = localStorage.getItem('currentUser');
@@ -197,12 +201,11 @@ const ProfilePage = () => {
         }
 
         try {
-            // ✅ Ubah endpoint ke guru-bidang-studi
             const res = await fetch(`${API_URL}/api/guru-bidang-studi/profil`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
@@ -211,8 +214,8 @@ const ProfilePage = () => {
                     nuptk: formData.nuptk,
                     jenis_kelamin: formData.jenisKelamin,
                     no_telepon: formData.telepon,
-                    alamat: formData.alamat
-                })
+                    alamat: formData.alamat,
+                }),
             });
 
             if (!res.ok) {
@@ -231,14 +234,14 @@ const ProfilePage = () => {
             const normalizedUser = {
                 ...result.user,
                 profileImage: result.user.profileImage || result.user.foto_path || null,
-                role: result.user.role || 'guru bidang studi' // ✅
+                role: result.user.role || 'guru bidang studi',
             };
 
             localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
             window.dispatchEvent(new Event('userDataUpdated'));
 
             alert('✅ Profil berhasil diperbarui!');
-            window.location.reload(); // ✅ Tetap reload seperti yang Anda inginkan
+            window.location.reload();
         } catch (err: any) {
             console.error('Error update profil:', err);
             alert('Gagal terhubung ke server: ' + (err.message || ''));
@@ -275,14 +278,13 @@ const ProfilePage = () => {
         }
 
         try {
-            // ✅ Ubah endpoint ke guru-bidang-studi
             const res = await fetch(`${API_URL}/api/guru-bidang-studi/ganti-password`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ oldPassword, newPassword })
+                body: JSON.stringify({ oldPassword, newPassword }),
             });
 
             const result = await res.json();
@@ -518,6 +520,4 @@ const ProfilePage = () => {
             </div>
         </div>
     );
-};
-
-export default ProfilePage;
+}

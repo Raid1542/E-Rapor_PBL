@@ -1,3 +1,14 @@
+/**
+ * Nama File: Layout.tsx
+ * Fungsi: Menyusun tata letak halaman utama untuk guru kelas.
+ *         Menggabungkan Sidebar di kiri, Header di atas, dan konten utama di tengah.
+ *         Mengambil data pengguna dari localStorage dan meneruskannya ke komponen
+ *         Sidebar dan Header sebagai props. Menampilkan indikator loading
+ *         saat data pengguna belum tersedia.
+ * Pembuat: Frima Rizky lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

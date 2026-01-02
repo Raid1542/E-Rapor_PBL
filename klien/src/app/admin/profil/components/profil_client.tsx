@@ -1,3 +1,14 @@
+/**
+ * Nama File: profil_client.tsx
+ * Fungsi: Komponen client-side untuk manajemen profil pengguna admin.
+ *         Memungkinkan pengeditan data pribadi (nama, NUPTK, alamat, dsb.),
+ *         pengunggahan foto profil, dan penggantian kata sandi.
+ *         Setelah ganti password, pengguna otomatis logout dan diarahkan ke login.
+ *         Data profil disinkronkan antara localStorage dan API backend.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
