@@ -88,42 +88,59 @@ router.post('/nilai', authenticate, guruKelasOnly, guruKelasController.simpanNil
 
 // ====== ATUR PENILAIAN ======
 
-// 1. Atur Kategori Nilai (Kokurikuler/Akademik)
-router.get('/atur-penilaian/kategori', authenticate, guruKelasOnly, guruKelasController.getKategoriNilai);
-router.post('/atur-penilaian/kategori', authenticate, guruKelasOnly, guruKelasController.createKategoriNilai);
-router.put('/atur-penilaian/kategori/:id', authenticate, guruKelasOnly, (req, res, next) => {
+// 1. Atur Kategori Nilai Akademik (HANYA untuk mata pelajaran, TIDAK PAKAI GRADE)
+router.get('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, guruKelasController.getKategoriNilaiAkademik);
+router.post('/atur-penilaian/kategori-akademik', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiAkademik);
+router.put('/atur-penilaian/kategori-akademik/:id', authenticate, guruKelasOnly, (req, res, next) => {
     const id = parseInt(req.params.id);
     if (isNaN(id) || id <= 0) {
         return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
     }
     next();
-}, guruKelasController.updateKategoriNilai);
-router.delete('/atur-penilaian/kategori/:id', authenticate, guruKelasOnly, (req, res, next) => {
+}, guruKelasController.updateKategoriNilaiAkademik);
+router.delete('/atur-penilaian/kategori-akademik/:id', authenticate, guruKelasOnly, (req, res, next) => {
     const id = parseInt(req.params.id);
     if (isNaN(id) || id <= 0) {
         return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
     }
     next();
-}, guruKelasController.deleteKategoriNilai);
+}, guruKelasController.deleteKategoriNilaiAkademik);
 
-// 2. Atur Bobot Penilaian per Mata Pelajaran
-router.get('/atur-penilaian/bobot/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
+// 2. Atur Bobot Penilaian Akademik per Mata Pelajaran
+router.get('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
     const mapelId = parseInt(req.params.mapelId);
     if (isNaN(mapelId) || mapelId <= 0) {
         return res.status(400).json({ success: false, message: 'ID mata pelajaran tidak valid' });
     }
     next();
-}, guruKelasController.getBobotByMapel);
+}, guruKelasController.getBobotAkademikByMapel);
 
-router.put('/atur-penilaian/bobot/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
+router.put('/atur-penilaian/bobot-akademik/:mapelId', authenticate, guruKelasOnly, (req, res, next) => {
     const mapelId = parseInt(req.params.mapelId);
     if (isNaN(mapelId) || mapelId <= 0) {
         return res.status(400).json({ success: false, message: 'ID mata pelajaran tidak valid' });
     }
     next();
-}, guruKelasController.updateBobotByMapel);
+}, guruKelasController.updateBobotAkademikByMapel);
 
-// 3. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
+// 3. Atur Kategori Nilai Non-Akademik (Kokurikuler - MENGGUNAKAN GRADE)
+router.get('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.getKategoriNilaiKokurikuler);
+router.post('/atur-penilaian/kategori-kokurikuler', authenticate, guruKelasOnly, guruKelasController.createKategoriNilaiKokurikuler);
+router.put('/atur-penilaian/kategori-kokurikuler/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.updateKategoriNilaiKokurikuler);
+router.delete('/atur-penilaian/kategori-kokurikuler/:id', authenticate, guruKelasOnly, (req, res, next) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'ID kategori tidak valid' });
+    }
+    next();
+}, guruKelasController.deleteKategoriNilaiKokurikuler);
+
+// 4. Ambil Daftar Komponen Penilaian (UH1, UH2, PTS, PAS, dll)
 router.get('/atur-penilaian/komponen', authenticate, guruKelasOnly, guruKelasController.getKomponenPenilaian);
-
 module.exports = router;

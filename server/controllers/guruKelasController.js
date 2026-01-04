@@ -9,7 +9,8 @@ const ekstrakurikulerModel = require('../models/ekstrakurikulerModel');
 const kokurikulerModel = require('../models/kokurikulerModel');
 const guruModel = require('../models/guruModel');
 const nilaiModel = require('../models/nilaiModel');
-const konfigurasiNilaiModel = require('../models/konfigurasiNilaiModel');
+const konfigurasiNilaiRaporModel = require('../models/konfigurasiNilaiRaporModel');
+const konfigurasiNilaiKokurikulerModel = require('../models/konfigurasiNilaiKokurikuler');
 const bobotPenilaianModel = require('../models/bobotPenilaianModel');
 const komponenPenilaianModel = require('../models/komponenPenilaianModel');
 
@@ -597,6 +598,14 @@ exports.uploadFotoProfil = async (req, res) => {
 
 // === NILAI ===
 
+const getGradeDeskripsiByNilai = async (nilai, kategori = 'akademik') => {
+    const result = await konfigurasiNilaiModel.getGradeDeskripsiByNilai(nilai, kategori);
+    return {
+        grade: result.grade,
+        deskripsi: result.deskripsi
+    };
+};
+
 exports.getMapelForGuruKelas = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -644,100 +653,145 @@ exports.getMapelForGuruKelas = async (req, res) => {
 };
 
 exports.getNilaiByMapel = async (req, res) => {
-    console.log('🔵 Mulai getNilaiByMapel, mapelId:', req.params.mapelId);
-
     try {
         const { mapelId } = req.params;
         const userId = req.user?.id;
-
         if (!userId) {
             return res.status(401).json({ message: 'Tidak terautentikasi' });
         }
 
-        // Ambil kelas guru
+        // Ambil kelas & tahun ajaran aktif guru
         const [kelasRow] = await db.execute(`
-      SELECT kelas_id, tahun_ajaran_id 
-      FROM guru_kelas 
-      WHERE user_id = ? AND tahun_ajaran_id = (
-        SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1
-      )
-    `, [userId]);
-
+            SELECT kelas_id, tahun_ajaran_id 
+            FROM guru_kelas 
+            WHERE user_id = ? AND tahun_ajaran_id = (
+                SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1
+            )
+        `, [userId]);
         if (kelasRow.length === 0) {
-            console.log('❌ Kelas tidak ditemukan untuk user:', userId);
             return res.status(403).json({ message: 'Anda tidak memiliki kelas aktif' });
         }
-
         const { kelas_id, tahun_ajaran_id } = kelasRow[0];
-        console.log('✅ Kelas ditemukan:', kelas_id, 'Tahun Ajaran:', tahun_ajaran_id);
 
         // Ambil nama kelas
-        const [namaKelasRow] = await db.execute(`
-            SELECT nama_kelas FROM kelas WHERE id_kelas = ?
-        `, [kelas_id]);
-
+        const [namaKelasRow] = await db.execute(`SELECT nama_kelas FROM kelas WHERE id_kelas = ?`, [kelas_id]);
         const kelasNama = namaKelasRow[0]?.nama_kelas || 'Kelas Tidak Diketahui';
 
-        // Ambil siswa di kelas ini
+        // Ambil daftar siswa di kelas
         const [siswaRows] = await db.execute(`
-        SELECT id_siswa, nis, nisn, nama_lengkap 
-        FROM siswa 
-        WHERE id_siswa IN (
-        SELECT siswa_id FROM siswa_kelas 
-        WHERE kelas_id = ? AND tahun_ajaran_id = ?
-        )
-        ORDER BY nama_lengkap
-    `, [kelas_id, tahun_ajaran_id]);
+            SELECT id_siswa, nis, nisn, nama_lengkap 
+            FROM siswa 
+            WHERE id_siswa IN (
+                SELECT siswa_id FROM siswa_kelas 
+                WHERE kelas_id = ? AND tahun_ajaran_id = ?
+            )
+            ORDER BY nama_lengkap
+        `, [kelas_id, tahun_ajaran_id]);
 
-        console.log('✅ Siswa ditemukan:', siswaRows.length);
-
-        // Ambil nilai detail untuk mapel ini
+        // Ambil nilai detail
         const [nilaiRows] = await db.execute(`
-        SELECT siswa_id, komponen_id, nilai 
-        FROM nilai_detail 
-        WHERE mapel_id = ? AND tahun_ajaran_id = ?
-    `, [mapelId, tahun_ajaran_id]);
+            SELECT siswa_id, komponen_id, nilai 
+            FROM nilai_detail 
+            WHERE mapel_id = ? AND tahun_ajaran_id = ?
+        `, [mapelId, tahun_ajaran_id]);
 
-        console.log('✅ Nilai ditemukan:', nilaiRows.length);
-
-        // Ambil komponen
+        // Ambil daftar komponen
         const [komponenRows] = await db.execute(`
-        SELECT id_komponen, nama_komponen 
-        FROM komponen_penilaian 
-        ORDER BY urutan
-    `);
+            SELECT id_komponen, nama_komponen 
+            FROM komponen_penilaian 
+            ORDER BY urutan
+        `);
 
-        console.log('✅ Komponen ditemukan:', komponenRows.length);
+        // Ambil bobot per komponen untuk mapel ini
+        const [bobotRows] = await db.execute(`
+            SELECT komponen_id, bobot 
+            FROM konfigurasi_mapel_komponen 
+            WHERE mapel_id = ?
+        `, [mapelId]);
 
-        // Gabungkan data di JavaScript
+        // Mapping nilai & bobot
         const nilaiMap = {};
         nilaiRows.forEach(n => {
             if (!nilaiMap[n.siswa_id]) nilaiMap[n.siswa_id] = {};
             nilaiMap[n.siswa_id][n.komponen_id] = n.nilai;
         });
 
+        const bobotMap = new Map();
+        bobotRows.forEach(b => {
+            bobotMap.set(b.komponen_id, parseFloat(b.bobot) || 0);
+        });
+
+        // Identifikasi komponen berdasarkan nama
+        const uhKomponenIds = komponenRows
+            .filter(k => k.nama_komponen.toLowerCase().includes('uh'))
+            .map(k => k.id_komponen);
+
+        const ptsKomponenIds = komponenRows
+            .filter(k => k.nama_komponen.toLowerCase().includes('pts'))
+            .map(k => k.id_komponen);
+
+        const pasKomponenIds = komponenRows
+            .filter(k => k.nama_komponen.toLowerCase().includes('pas'))
+            .map(k => k.id_komponen);
+
+        // Hitung nilai rapor per siswa
         const siswaList = siswaRows.map(s => {
             const nilai = nilaiMap[s.id_siswa] || {};
-            const nilaiArray = Object.values(nilai).filter(v => v !== null && v !== undefined);
-            const nilaiRapor = nilaiArray.length > 0
-                ? nilaiArray.reduce((a, b) => a + b, 0) / nilaiArray.length
-                : 0;
+
+            // Rata-rata UH
+            const nilaiUH = uhKomponenIds
+                .map(id => nilai[id])
+                .filter(v => v != null);
+            const rataUH = nilaiUH.length > 0 ? nilaiUH.reduce((a, b) => a + b, 0) / nilaiUH.length : 0;
+
+            // Nilai PTS & PAS
+            const nilaiPTS = ptsKomponenIds.length > 0 ? (nilai[ptsKomponenIds[0]] || 0) : 0;
+            const nilaiPAS = pasKomponenIds.length > 0 ? (nilai[pasKomponenIds[0]] || 0) : 0;
+
+            // Total bobot per jenis
+            const totalBobotUH = uhKomponenIds.reduce((sum, id) => sum + (bobotMap.get(id) || 0), 0);
+            const bobotPTS = ptsKomponenIds.length > 0 ? (bobotMap.get(ptsKomponenIds[0]) || 0) : 0;
+            const bobotPAS = pasKomponenIds.length > 0 ? (bobotMap.get(pasKomponenIds[0]) || 0) : 0;
+
+            // Hitung nilai rapor akhir (asli, belum dibulatkan)
+            let nilaiRapor = 0;
+            if (totalBobotUH > 0) nilaiRapor += (rataUH * totalBobotUH);
+            if (bobotPTS > 0) nilaiRapor += (nilaiPTS * bobotPTS);
+            if (bobotPAS > 0) nilaiRapor += (nilaiPAS * bobotPAS);
+            nilaiRapor = nilaiRapor / 100;
+
+            // HITUNG GRADE & DESKRIPSI BERDASARKAN NILAI ASLI
+            let deskripsiRapor = 'Belum ada deskripsi';
+            if (!isNaN(nilaiRapor) && nilaiRapor >= 0) {
+                const result = getGradeDeskripsiByNilaiSync(nilaiRapor); // Akan kita buat helper sync
+                deskripsiRapor = result?.deskripsi || 'Belum ada deskripsi';
+            }
+
+            //  BULATKAN KE BAWAH HANYA UNTUK NILAI RAPOR YANG DIKIRIM
+            const nilaiRaporBulat = Math.floor(nilaiRapor);
+
+            // Siapkan objek nilai per komponen
+            const nilaiDetail = {};
+            Object.keys(nilai).forEach(komponenId => {
+                nilaiDetail[komponenId] = nilai[komponenId];
+            });
 
             return {
                 id: s.id_siswa,
                 nama: s.nama_lengkap,
                 nis: s.nis,
                 nisn: s.nisn,
-                nilai_rapor: parseFloat(nilaiRapor.toFixed(2)),
-                nilai
+                nilai_rapor: nilaiRaporBulat,
+                deskripsi: deskripsiRapor, 
+                nilai: nilaiDetail
             };
         });
 
-        // Hitung ranking
+        // Urutkan & tambahkan ranking
         siswaList.sort((a, b) => b.nilai_rapor - a.nilai_rapor);
-        siswaList.forEach((s, i) => s.ranking = i + 1);
-
-        console.log('✅ Selesai getNilaiByMapel, mengembalikan:', siswaList.length, 'siswa');
+        siswaList.forEach((s, i) => {
+            s.ranking = i + 1;
+        });
 
         res.json({
             success: true,
@@ -747,8 +801,28 @@ exports.getNilaiByMapel = async (req, res) => {
         });
 
     } catch (err) {
-        console.error(' Error getNilaiByMapel:', err);
+        console.error('Error getNilaiByMapel:', err);
         res.status(500).json({ success: false, message: 'Gagal mengambil data nilai' });
+    }
+};
+
+// ✅ Helper: versi sinkron untuk getGradeDeskripsiByNilai (karena dipakai di .map)
+const getGradeDeskripsiByNilaiSync = (nilai) => {
+    try {
+        const config = [
+            { min: 90, max: 100, grade: 'A', deskripsi: 'Sangat Baik' },
+            { min: 80, max: 89, grade: 'B', deskripsi: 'Baik' },
+            { min: 70, max: 79, grade: 'C', deskripsi: 'Cukup' },
+            { min: 0, max: 69, grade: 'D', deskripsi: 'Kurang' }
+        ];
+        for (const c of config) {
+            if (nilai >= c.min && nilai <= c.max) {
+                return { grade: c.grade, deskripsi: c.deskripsi };
+            }
+        }
+        return { grade: 'D', deskripsi: 'Kurang' };
+    } catch (e) {
+        return { grade: 'D', deskripsi: 'Kurang' };
     }
 };
 
@@ -964,111 +1038,192 @@ exports.eksporNilaiExcel = async (req, res) => {
 
 // =============== ATUR PENILAIAN ===============
 
+// ===  KATEGORI & KONFIGURASI NILAI AKADEMIK (TANPA GRADE) ===
+
 /**
- * Ambil semua kategori nilai
+ * Ambil semua konfigurasi nilai akademik
  */
-exports.getKategoriNilai = async (req, res) => {
+exports.getKategoriNilaiAkademik = async (req, res) => {
     try {
-        const kategori = req.query.kategori || 'umum';
-        const data = await konfigurasiNilaiModel.getAllKategori(kategori);
+        const data = await konfigurasiNilaiRaporModel.getAllKategori();
         res.json({ success: true, data });
     } catch (err) {
-        console.error('Error getKategoriNilai:', err);
-        res.status(500).json({ success: false, message: 'Gagal mengambil kategori nilai' });
+        console.error('Error getKategoriNilaiAkademik:', err);
+        res.status(500).json({ success: false, message: 'Gagal mengambil konfigurasi nilai akademik' });
     }
 };
 
 /**
- * Tambah kategori nilai baru
+ * Tambah konfigurasi nilai akademik baru
  */
-exports.createKategoriNilai = async (req, res) => {
+exports.createKategoriNilaiAkademik = async (req, res) => {
     try {
-        const { min_nilai, max_nilai, kategori = 'umum', grade, deskripsi } = req.body;
-
-        // Validasi
-        if (min_nilai == null || max_nilai == null || grade == null || deskripsi == null) {
-            return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+        const { min_nilai, max_nilai, deskripsi, urutan } = req.body;
+        if (min_nilai == null || max_nilai == null || deskripsi == null) {
+            return res.status(400).json({ success: false, message: 'Field min_nilai, max_nilai, dan deskripsi wajib diisi' });
         }
         if (min_nilai < 0 || max_nilai > 100 || min_nilai > max_nilai) {
-            return res.status(400).json({ success: false, message: 'Range nilai tidak valid' });
+            return res.status(400).json({ success: false, message: 'Rentang nilai tidak valid' });
         }
-
-        const newKategori = await konfigurasiNilaiModel.createKategori({
+        const newKategori = await konfigurasiNilaiRaporModel.createKategori({
             min_nilai: parseFloat(min_nilai),
             max_nilai: parseFloat(max_nilai),
-            kategori,
-            grade,
-            deskripsi
+            deskripsi,
+            urutan: urutan != null ? parseInt(urutan) : 0
         });
-
-        res.status(201).json({ success: true, message: 'Kategori nilai berhasil ditambahkan', data: newKategori });
+        res.status(201).json({ success: true, message: 'Konfigurasi nilai akademik berhasil ditambahkan', data: newKategori });
     } catch (err) {
-        console.error('Error createKategoriNilai:', err);
-        res.status(500).json({ success: false, message: 'Gagal menambah kategori nilai' });
+        console.error('Error createKategoriNilaiAkademik:', err);
+        res.status(500).json({ success: false, message: 'Gagal menambah konfigurasi nilai akademik' });
     }
 };
 
 /**
- * Update kategori nilai
+ * Update konfigurasi nilai akademik
  */
-exports.updateKategoriNilai = async (req, res) => {
+exports.updateKategoriNilaiAkademik = async (req, res) => {
     try {
         const { id } = req.params;
-        const { min_nilai, max_nilai, kategori = 'umum', grade, deskripsi } = req.body;
-
-        if (min_nilai == null || max_nilai == null || grade == null || deskripsi == null) {
-            return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+        const { min_nilai, max_nilai, deskripsi, urutan } = req.body;
+        if (min_nilai == null || max_nilai == null || deskripsi == null) {
+            return res.status(400).json({ success: false, message: 'Field min_nilai, max_nilai, dan deskripsi wajib diisi' });
         }
         if (min_nilai < 0 || max_nilai > 100 || min_nilai > max_nilai) {
-            return res.status(400).json({ success: false, message: 'Range nilai tidak valid' });
+            return res.status(400).json({ success: false, message: 'Rentang nilai tidak valid' });
         }
-
-        const updated = await konfigurasiNilaiModel.updateKategori(id, {
+        const updated = await konfigurasiNilaiRaporModel.updateKategori(id, {
             min_nilai: parseFloat(min_nilai),
             max_nilai: parseFloat(max_nilai),
-            kategori,
-            grade,
-            deskripsi
+            deskripsi,
+            urutan: urutan != null ? parseInt(urutan) : 0
         });
-
         if (!updated) {
-            return res.status(404).json({ success: false, message: 'Kategori tidak ditemukan' });
+            return res.status(404).json({ success: false, message: 'Konfigurasi akademik tidak ditemukan' });
         }
-
-        res.json({ success: true, message: 'Kategori nilai berhasil diperbarui' });
+        res.json({ success: true, message: 'Konfigurasi nilai akademik berhasil diperbarui' });
     } catch (err) {
-        console.error('Error updateKategoriNilai:', err);
-        res.status(500).json({ success: false, message: 'Gagal memperbarui kategori nilai' });
+        console.error('Error updateKategoriNilaiAkademik:', err);
+        res.status(500).json({ success: false, message: 'Gagal memperbarui konfigurasi nilai akademik' });
     }
 };
 
 /**
- * Hapus kategori nilai
+ * Hapus konfigurasi nilai akademik
  */
-exports.deleteKategoriNilai = async (req, res) => {
+exports.deleteKategoriNilaiAkademik = async (req, res) => {
     try {
         const { id } = req.params;
-        const deleted = await konfigurasiNilaiModel.deleteKategori(id);
+        const deleted = await konfigurasiNilaiRaporModel.deleteKategori(id);
         if (!deleted) {
-            return res.status(404).json({ success: false, message: 'Kategori tidak ditemukan atau gagal dihapus' });
+            return res.status(404).json({ success: false, message: 'Konfigurasi tidak ditemukan' });
         }
-        res.json({ success: true, message: 'Kategori nilai berhasil dihapus' });
+        res.json({ success: true, message: 'Konfigurasi nilai akademik berhasil dihapus' });
     } catch (err) {
-        console.error('Error deleteKategoriNilai:', err);
-        res.status(500).json({ success: false, message: 'Gagal menghapus kategori nilai' });
+        console.error('Error deleteKategoriNilaiAkademik:', err);
+        res.status(500).json({ success: false, message: 'Gagal menghapus konfigurasi nilai akademik' });
     }
 };
+
+// ===  KATEGORI & KONFIGURASI NILAI KOKURIKULER (DENGAN GRADE) ===
+
+/**
+ * Ambil semua konfigurasi nilai kokurikuler
+ */
+exports.getKategoriNilaiKokurikuler = async (req, res) => {
+    try {
+        const data = await konfigurasiNilaiKokurikulerModel.getAllKategori();
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error('Error getKategoriNilaiKokurikuler:', err);
+        res.status(500).json({ success: false, message: 'Gagal mengambil konfigurasi nilai kokurikuler' });
+    }
+};
+
+/**
+ * Tambah konfigurasi nilai kokurikuler baru
+ */
+exports.createKategoriNilaiKokurikuler = async (req, res) => {
+    try {
+        const { min_nilai, max_nilai, grade, deskripsi, urutan } = req.body;
+        if (min_nilai == null || max_nilai == null || grade == null || deskripsi == null) {
+            return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+        }
+        if (min_nilai < 0 || max_nilai > 100 || min_nilai > max_nilai) {
+            return res.status(400).json({ success: false, message: 'Rentang nilai tidak valid' });
+        }
+        const newKategori = await konfigurasiNilaiKokurikulerModel.createKategori({
+            min_nilai: parseFloat(min_nilai),
+            max_nilai: parseFloat(max_nilai),
+            grade,
+            deskripsi,
+            urutan: urutan != null ? parseInt(urutan) : 0
+        });
+        res.status(201).json({ success: true, message: 'Konfigurasi nilai kokurikuler berhasil ditambahkan', data: newKategori });
+    } catch (err) {
+        console.error('Error createKategoriNilaiKokurikuler:', err);
+        res.status(500).json({ success: false, message: 'Gagal menambah konfigurasi nilai kokurikuler' });
+    }
+};
+
+/**
+ * Update konfigurasi nilai kokurikuler
+ */
+exports.updateKategoriNilaiKokurikuler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { min_nilai, max_nilai, grade, deskripsi, urutan } = req.body;
+        if (min_nilai == null || max_nilai == null || grade == null || deskripsi == null) {
+            return res.status(400).json({ success: false, message: 'Semua field wajib diisi' });
+        }
+        if (min_nilai < 0 || max_nilai > 100 || min_nilai > max_nilai) {
+            return res.status(400).json({ success: false, message: 'Rentang nilai tidak valid' });
+        }
+        const updated = await konfigurasiNilaiKokurikulerModel.updateKategori(id, {
+            min_nilai: parseFloat(min_nilai),
+            max_nilai: parseFloat(max_nilai),
+            grade,
+            deskripsi,
+            urutan: urutan != null ? parseInt(urutan) : 0
+        });
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Konfigurasi kokurikuler tidak ditemukan' });
+        }
+        res.json({ success: true, message: 'Konfigurasi nilai kokurikuler berhasil diperbarui' });
+    } catch (err) {
+        console.error('Error updateKategoriNilaiKokurikuler:', err);
+        res.status(500).json({ success: false, message: 'Gagal memperbarui konfigurasi nilai kokurikuler' });
+    }
+};
+
+/**
+ * Hapus konfigurasi nilai kokurikuler
+ */
+exports.deleteKategoriNilaiKokurikuler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await konfigurasiNilaiKokurikulerModel.deleteKategori(id);
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Konfigurasi tidak ditemukan' });
+        }
+        res.json({ success: true, message: 'Konfigurasi nilai kokurikuler berhasil dihapus' });
+    } catch (err) {
+        console.error('Error deleteKategoriNilaiKokurikuler:', err);
+        res.status(500).json({ success: false, message: 'Gagal menghapus konfigurasi nilai kokurikuler' });
+    }
+};
+
+// ===  BOBOT PENILAIAN AKADEMIK PER MATA PELAJARAN ===
 
 /**
  * Ambil bobot penilaian untuk satu mata pelajaran
  */
-exports.getBobotByMapel = async (req, res) => {
+exports.getBobotAkademikByMapel = async (req, res) => {
     try {
         const { mapelId } = req.params;
         const bobot = await bobotPenilaianModel.getBobotByMapel(mapelId);
         res.json({ success: true, data: bobot });
     } catch (err) {
-        console.error('Error getBobotByMapel:', err);
+        console.error('Error getBobotAkademikByMapel:', err);
         res.status(500).json({ success: false, message: 'Gagal mengambil bobot penilaian' });
     }
 };
@@ -1076,16 +1231,13 @@ exports.getBobotByMapel = async (req, res) => {
 /**
  * Update bobot penilaian untuk satu mata pelajaran
  */
-exports.updateBobotByMapel = async (req, res) => {
+exports.updateBobotAkademikByMapel = async (req, res) => {
     try {
         const { mapelId } = req.params;
         const bobotList = req.body;
-
         if (!Array.isArray(bobotList)) {
             return res.status(400).json({ success: false, message: 'Data bobot harus berupa array' });
         }
-
-        // Validasi setiap item
         for (const item of bobotList) {
             if (!item.komponen_id || item.bobot == null) {
                 return res.status(400).json({ success: false, message: 'Setiap bobot harus memiliki komponen_id dan nilai bobot' });
@@ -1094,24 +1246,23 @@ exports.updateBobotByMapel = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Bobot harus antara 0–100' });
             }
         }
-
-        // Opsional: validasi total bobot = 100%
         const total = bobotList.reduce((sum, item) => sum + parseFloat(item.bobot), 0);
         if (Math.abs(total - 100) > 0.1) {
             return res.status(400).json({ success: false, message: 'Total bobot harus 100%' });
         }
-
         await bobotPenilaianModel.updateBobotByMapel(mapelId, bobotList);
-        res.json({ success: true, message: 'Bobot penilaian berhasil diperbarui' });
-
+        res.json({ success: true, message: 'Bobot penilaian akademik berhasil diperbarui' });
     } catch (err) {
-        console.error('Error updateBobotByMapel:', err);
+        console.error('Error updateBobotAkademikByMapel:', err);
         res.status(500).json({ success: false, message: 'Gagal memperbarui bobot penilaian' });
     }
 };
 
+
+// ===  AMBIL DAFTAR KOMPONEN PENILAIAN ===
+
 /**
- * Ambil daftar komponen penilaian
+ * Ambil daftar komponen penilaian (UH1, UH2, PTS, PAS, dll)
  */
 exports.getKomponenPenilaian = async (req, res) => {
     try {
