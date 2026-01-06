@@ -4,27 +4,32 @@
  *         Menangani formulir login, validasi input, komunikasi API,
  *         dan navigasi berdasarkan role pengguna.
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 Spetember 2025
+ * Tanggal: 15 September 2025
  */
 
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
+/**
+ * Komponen utama halaman login.
+ * Mengelola state form, komunikasi dengan API login,
+ * dan redirect ke dashboard berdasarkan role pengguna.
+ */
 export default function LoginClient() {
     const router = useRouter();
     const [formData, setFormData] = useState({
-        email_sekolah: "",
-        password: "",
-        role: "",
+        email_sekolah: '',
+        password: '',
+        role: '',
     });
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState('');
 
     // State untuk data sekolah (nama dan logo)
-    const [namaSekolah, setNamaSekolah] = useState("Sekolah");
+    const [namaSekolah, setNamaSekolah] = useState('Sekolah');
     const [logoSekolah, setLogoSekolah] = useState<string | null>(null);
     const [logoError, setLogoError] = useState(false);
 
@@ -32,87 +37,92 @@ export default function LoginClient() {
     useEffect(() => {
         const fetchSekolah = async () => {
             try {
-                const res = await fetch("http://localhost:5000/api/sekolah/publik");
+                const res = await fetch('http://localhost:5000/api/sekolah/publik');
                 if (res.ok) {
                     const data = await res.json();
-                    setNamaSekolah(data.nama_sekolah || "Sekolah");
+                    setNamaSekolah(data.nama_sekolah || 'Sekolah');
                     if (data.logo_path) {
                         setLogoSekolah(`http://localhost:5000${data.logo_path}`);
                     }
                 }
             } catch (err) {
-                console.warn("Gagal memuat data sekolah publik");
+                console.warn('Gagal memuat data sekolah publik');
             }
         };
 
         fetchSekolah();
     }, []);
 
-    // Tangani submit formulir login
+    /**
+     * Menangani submit formulir login.
+     * Mengirim data ke API, menyimpan data pengguna (opsional),
+     * dan mengarahkan ke dashboard sesuai role.
+     */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
+        setError('');
 
         const { email_sekolah, password, role } = formData;
 
         if (!email_sekolah.trim() || !password || !role) {
-            setError("Email, password, dan role wajib diisi");
+            setError('Email, password, dan role wajib diisi');
             return;
         }
 
         setLoading(true);
 
         try {
-            const res = await fetch("http://localhost:5000/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            const res = await fetch('http://localhost:5000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email_sekolah: email_sekolah.trim(),
                     password,
                     role,
                 }),
+                credentials: 'include', // WAJIB: agar cookie disimpan
             });
 
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.message || "Login gagal");
-                setLoading(false);
+                setError(data.message || 'Login gagal');
                 return;
             }
 
-            // Simpan data pengguna dan token ke localStorage
+            // Simpan hanya data pengguna (tanpa token) untuk keperluan tampilan profil
             if (data.user) {
                 const normalizedUser = {
                     ...data.user,
                     role: formData.role,
                     profileImage: data.user.profileImage || data.user.foto_path || null,
                 };
-
-                localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
-                localStorage.setItem("token", data.token);
-                window.dispatchEvent(new Event("userDataUpdated"));
+                localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
             }
 
             // Arahkan ke dashboard berdasarkan role
-            if (role === "admin") {
-                router.push("/admin/dashboard");
-            } else if (role === "guru kelas") {
-                router.push("/guru_kelas/dashboard");
-            } else if (role === "guru bidang studi") {
-                router.push("/guru_bidang_studi/dashboard");
+            if (role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (role === 'guru kelas') {
+                router.push('/guru_kelas/dashboard');
+            } else if (role === 'guru bidang studi') {
+                router.push('/guru_bidang_studi/dashboard');
             }
         } catch (err) {
-            console.error("💥 Error koneksi:", err);
-            setError("Gagal terhubung ke server. Silakan coba lagi");
-            setLoading(false);
+            console.error('💥 Error koneksi:', err);
+            setError('Gagal terhubung ke server. Silakan coba lagi');
+        } finally {
+            setLoading(false); // Pastikan loading di-reset baik sukses maupun gagal
         }
     };
 
-    // Tangani perubahan input form
+    /**
+     * Menangani perubahan input form.
+     * Memperbarui state formData sesuai input pengguna.
+     */
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const trimmedValue = name === "email_sekolah" ? value.trim() : value;
+        const trimmedValue = name === 'email_sekolah' ? value.trim() : value;
         setFormData((prev) => ({ ...prev, [name]: trimmedValue }));
     };
 
@@ -236,7 +246,7 @@ export default function LoginClient() {
                                     disabled={loading}
                                     className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {loading ? "Loading..." : "LOGIN"}
+                                    {loading ? 'Loading...' : 'LOGIN'}
                                 </button>
                             </form>
 
