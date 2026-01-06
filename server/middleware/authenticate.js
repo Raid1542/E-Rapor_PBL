@@ -1,47 +1,72 @@
 /**
  * Nama File: authenticate.js
  * Fungsi: Middleware untuk memverifikasi token JWT pada setiap request yang memerlukan autentikasi.
- *         Mendukung token dari header Authorization (Bearer) atau query string (?token=...).
+ *         Mendukung token dari cookie (utama), header Authorization (Bearer), dan query string.
+ *         Menangani token tidak ditemukan, tidak valid, atau kedaluwarsa dengan pesan jelas.
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022
- * Tanggal: 1 Oktober 2025
+ * Tanggal: 6 Januari 2026
  */
 
 const jwt = require('jsonwebtoken');
 
-// Middleware autentikasi untuk memvalidasi token JWT
+/**
+ * Middleware autentikasi yang memprioritaskan token dari cookie,
+ * sesuai dengan cara token disimpan saat login.
+ */
 const authenticate = (req, res, next) => {
-  // Coba ambil token dari header Authorization (format: Bearer <token>)
   let token = null;
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  }
 
-  // Jika token tidak ditemukan di header, coba ambil dari query string (?token=...)
-  if (!token && req.query && req.query.token) {
+  // Prioritas utama: ambil dari cookie (karena login menyimpan di cookie)
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+  // Fallback: header Authorization
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  // Fallback: query string (misal untuk testing)
+  else if (req.query && req.query.token) {
     token = req.query.token;
   }
 
-  // Jika token tetap tidak ditemukan, tolak permintaan
+  // Jika tidak ada token sama sekali
   if (!token) {
-    return res.status(401).json({ message: 'Token tidak ditemukan' });
+    return res.status(401).json({
+      success: false,
+      message: 'Sesi Anda telah berakhir. Silakan login ulang.',
+    });
   }
 
   try {
-    // Verifikasi token menggunakan secret key dari environment
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Pastikan payload token berisi ID dan role pengguna
+    // Pastikan payload minimal memiliki id dan role
     if (!decoded.id || !decoded.role) {
-      return res.status(403).json({ message: 'Token tidak valid: payload tidak lengkap' });
+      return res.status(401).json({
+        success: false,
+        message: 'Token tidak valid: data pengguna tidak lengkap.',
+      });
     }
 
-    // Simpan data pengguna terverifikasi ke objek request
-    req.user = decoded;
+    // Simpan ke req.user untuk middleware/rute berikutnya
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,
+    };
+
     next();
   } catch (err) {
-    // Tangani error token tidak valid atau kadaluarsa
-    return res.status(403).json({ message: 'Token tidak valid' });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Sesi Anda telah berakhir. Silakan login ulang.',
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Token tidak valid. Silakan login ulang.',
+    });
   }
 };
 
