@@ -12,11 +12,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * Komponen utama halaman login.
- * Mengelola state form, komunikasi dengan API login,
- * dan redirect ke dashboard berdasarkan role pengguna.
- */
 export default function LoginClient() {
     const router = useRouter();
     const [formData, setFormData] = useState({
@@ -80,7 +75,6 @@ export default function LoginClient() {
                     password,
                     role,
                 }),
-                // credentials: 'include' dihapus karena tidak pakai cookie
             });
 
             const data = await res.json();
@@ -93,19 +87,34 @@ export default function LoginClient() {
             // Simpan token dan data pengguna ke localStorage
             if (data.token && data.user) {
                 localStorage.setItem('token', data.token);
+
+                // 🔥 SESUAIKAN DENGAN RESPON BACKEND DAN KONVENSI FRONTEND
                 const normalizedUser = {
-                    ...data.user,
-                    role: formData.role,
-                    profileImage: data.user.profileImage || data.user.foto_path || null,
+                    id: data.user.id,
+                    name: data.user.nama_lengkap || '', // ⭐ HARUS 'name'
+                    email: data.user.email_sekolah || '', // ⭐ HARUS 'email'
+                    role: formData.role, // pastikan ini string: 'admin', 'guru kelas', dll
+                    niy: data.user.niy || '',
+                    nuptk: data.user.nuptk || '',
+                    tempat_lahir: data.user.tempat_lahir || '',
+                    tanggal_lahir: data.user.tanggal_lahir || '',
+                    jenisKelamin: data.user.jenis_kelamin || '', // ⭐ camelCase
+                    alamat: data.user.alamat || '',
+                    no_telepon: data.user.no_telepon || '',
+                    profileImage: data.user.profileImage || null,
                 };
+
                 localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
             }
+
+            // Tunda sebentar agar localStorage benar-benar tersimpan
+            await new Promise(resolve => setTimeout(resolve, 10));
 
             // Arahkan ke dashboard berdasarkan role
             if (role === 'admin') {
                 router.push('/admin/dashboard');
             } else if (role === 'guru kelas') {
-                router.push('/g guru_kelas/dashboard');
+                router.push('/guru_kelas/dashboard');
             } else if (role === 'guru bidang studi') {
                 router.push('/guru_bidang_studi/dashboard');
             }
@@ -129,7 +138,8 @@ export default function LoginClient() {
 
     return (
         <>
-            <style>{`
+            <style>
+                {`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         * { font-family: 'Poppins', sans-serif; }
         .bg-image {
@@ -143,7 +153,8 @@ export default function LoginClient() {
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
         }
-      `}</style>
+      `}
+            </style>
 
             <div className="min-h-screen relative bg-image">
                 <div className="absolute inset-0 glass-overlay"></div>
@@ -233,8 +244,7 @@ export default function LoginClient() {
                                         value={formData.role}
                                         onChange={handleChange}
                                         className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 cursor-pointer"
-                                        required
-                                    >
+                                        required>
                                         <option value="">Pilih Role</option>
                                         <option value="admin">Admin</option>
                                         <option value="guru kelas">Guru Kelas</option>
@@ -245,8 +255,7 @@ export default function LoginClient() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
+                                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 mt-8 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {loading ? 'Loading...' : 'LOGIN'}
                                 </button>
                             </form>

@@ -11,7 +11,6 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronRight, Users, UserCircle, Award, School, Book } from 'lucide-react';
-import { UserData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 // Definisikan tipe stats
@@ -22,6 +21,22 @@ interface DashboardStats {
     ekstrakurikuler: number;
     kelas: number;
     mata_pelajaran: number;
+}
+
+// Definisikan tipe user secara inline (karena tidak pakai lib/types.ts)
+interface UserData {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    niy?: string;
+    nuptk?: string;
+    tempat_lahir?: string;
+    tanggal_lahir?: string;
+    jenisKelamin?: string;
+    alamat?: string;
+    no_telepon?: string;
+    profileImage?: string | null;
 }
 
 export default function DashboardClient() {
@@ -41,19 +56,23 @@ export default function DashboardClient() {
         const token = localStorage.getItem('token');
         const userData = localStorage.getItem('currentUser');
 
-        if (!token) {
-            window.location.href = '/login';
+        if (!token || !userData) {
+            router.push('/login');
             return;
         }
 
-        if (userData) {
-            const parsedUser: UserData = JSON.parse(userData);
+        try {
+            const parsedUser = JSON.parse(userData) as UserData;
             if (parsedUser.role !== 'admin') {
                 alert('Anda tidak memiliki akses ke halaman ini');
-                window.location.href = '/login';
+                router.push('/login');
                 return;
             }
             setUser(parsedUser);
+        } catch (e) {
+            console.error('Invalid user data', e);
+            router.push('/login');
+            return;
         }
 
         const fetchStats = async () => {
@@ -73,7 +92,7 @@ export default function DashboardClient() {
         };
 
         fetchStats();
-    }, []);
+    }, [router]);
 
     const handleNavigation = (path: string) => {
         router.push(path);
