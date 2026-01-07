@@ -71,15 +71,6 @@ const login = async (req, res) => {
       { expiresIn: '6h' }
     );
 
-    // KIRIM TOKEN SEBAGAI COOKIE (INI YANG KURANG)
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 6 * 60 * 60 * 1000,
-      path: '/',
-      sameSite: 'lax'
-    });
-
     // Ambil data guru
     const [guruRows] = await db.execute(
       `SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, foto_path 
@@ -90,7 +81,7 @@ const login = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      token, // tetap kirim di JSON (opsional, untuk kebutuhan frontend langsung)
+      token, 
       user: {
         id: user.id_user,
         role: selectedRole,

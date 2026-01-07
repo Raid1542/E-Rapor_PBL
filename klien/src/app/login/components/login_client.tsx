@@ -55,7 +55,7 @@ export default function LoginClient() {
 
     /**
      * Menangani submit formulir login.
-     * Mengirim data ke API, menyimpan data pengguna (opsional),
+     * Mengirim data ke API, menyimpan token dan data pengguna,
      * dan mengarahkan ke dashboard sesuai role.
      */
     const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +80,7 @@ export default function LoginClient() {
                     password,
                     role,
                 }),
-                credentials: 'include', // WAJIB: agar cookie disimpan
+                // credentials: 'include' dihapus karena tidak pakai cookie
             });
 
             const data = await res.json();
@@ -90,8 +90,9 @@ export default function LoginClient() {
                 return;
             }
 
-            // Simpan hanya data pengguna (tanpa token) untuk keperluan tampilan profil
-            if (data.user) {
+            // Simpan token dan data pengguna ke localStorage
+            if (data.token && data.user) {
+                localStorage.setItem('token', data.token);
                 const normalizedUser = {
                     ...data.user,
                     role: formData.role,
@@ -104,7 +105,7 @@ export default function LoginClient() {
             if (role === 'admin') {
                 router.push('/admin/dashboard');
             } else if (role === 'guru kelas') {
-                router.push('/guru_kelas/dashboard');
+                router.push('/g guru_kelas/dashboard');
             } else if (role === 'guru bidang studi') {
                 router.push('/guru_bidang_studi/dashboard');
             }
@@ -112,7 +113,7 @@ export default function LoginClient() {
             console.error('💥 Error koneksi:', err);
             setError('Gagal terhubung ke server. Silakan coba lagi');
         } finally {
-            setLoading(false); // Pastikan loading di-reset baik sukses maupun gagal
+            setLoading(false);
         }
     };
 

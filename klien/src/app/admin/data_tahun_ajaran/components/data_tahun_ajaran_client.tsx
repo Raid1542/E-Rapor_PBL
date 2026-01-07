@@ -104,9 +104,6 @@ export default function DataTahunAjaranPage() {
         if (!formData.semester) {
             newErrors.semester = 'Semester wajib dipilih';
         }
-        if (!formData.tanggal_pembagian_pas) {
-            newErrors.tanggal_pas = 'Tanggal pembagian PAS wajib diisi';
-        }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -333,7 +330,7 @@ export default function DataTahunAjaranPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Tanggal Pembagian PAS <span className="text-red-500">*</span>
+                                Tanggal Pembagian PAS
                             </label>
                             <input
                                 type="date"
@@ -342,7 +339,6 @@ export default function DataTahunAjaranPage() {
                                 onChange={handleInputChange}
                                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            {errors.tanggal_pas && <p className="text-red-500 text-xs mt-1">{errors.tanggal_pas}</p>}
                         </div>
                     </div>
                     <div className="mt-6 sm:mt-8">

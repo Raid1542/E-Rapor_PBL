@@ -28,10 +28,6 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// parsing cookie
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
-
 // Pastikan folder uploads tersedia
 const uploadsPath = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsPath)) {
