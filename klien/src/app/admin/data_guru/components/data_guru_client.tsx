@@ -563,9 +563,8 @@ export default function DataGuruClient() {
                 name="tanggalLahir"
                 value={formData.tanggalLahir}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.tanggalLahir ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2`}
+                className={`w-full border border-gray-300 rounded px-3 py-2`}
               />
-              {/* ❌ Tidak ada error message → opsional */}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -575,13 +574,12 @@ export default function DataGuruClient() {
                 name="jenisKelamin"
                 value={formData.jenisKelamin}
                 onChange={handleInputChange}
-                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5`}
               >
                 <option value="">-- Pilih --</option>
                 <option value="Laki-laki">Laki-laki</option>
                 <option value="Perempuan">Perempuan</option>
               </select>
-              {/* ❌ Tidak ada error message → opsional */}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">

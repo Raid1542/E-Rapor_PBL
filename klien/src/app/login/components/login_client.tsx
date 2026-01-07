@@ -88,17 +88,17 @@ export default function LoginClient() {
             if (data.token && data.user) {
                 localStorage.setItem('token', data.token);
 
-                // 🔥 SESUAIKAN DENGAN RESPON BACKEND DAN KONVENSI FRONTEND
+                // 🔑 Normalisasi data: nama_lengkap → name
                 const normalizedUser = {
                     id: data.user.id,
-                    name: data.user.nama_lengkap || '', // ⭐ HARUS 'name'
-                    email: data.user.email_sekolah || '', // ⭐ HARUS 'email'
-                    role: formData.role, // pastikan ini string: 'admin', 'guru kelas', dll
+                    name: data.user.nama_lengkap || '',
+                    email: data.user.email_sekolah || '',
+                    role: formData.role,
                     niy: data.user.niy || '',
                     nuptk: data.user.nuptk || '',
                     tempat_lahir: data.user.tempat_lahir || '',
                     tanggal_lahir: data.user.tanggal_lahir || '',
-                    jenisKelamin: data.user.jenis_kelamin || '', // ⭐ camelCase
+                    jenisKelamin: data.user.jenis_kelamin || '',
                     alamat: data.user.alamat || '',
                     no_telepon: data.user.no_telepon || '',
                     profileImage: data.user.profileImage || null,
@@ -106,9 +106,6 @@ export default function LoginClient() {
 
                 localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
             }
-
-            // Tunda sebentar agar localStorage benar-benar tersimpan
-            await new Promise(resolve => setTimeout(resolve, 10));
 
             // Arahkan ke dashboard berdasarkan role
             if (role === 'admin') {

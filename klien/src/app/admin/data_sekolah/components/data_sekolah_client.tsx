@@ -232,7 +232,7 @@ export default function DataSekolahPage() {
                                 { label: 'Nama Sekolah', name: 'namaSekolah', type: 'text' },
                                 { label: 'NPSN', name: 'npsn', type: 'text' },
                                 { label: 'NSS', name: 'nss', type: 'text' },
-                                { label: 'Kode POS', name: 'kodePos', type: 'text' },
+                                { label: 'Kode Pos', name: 'kodePos', type: 'text' },
                                 { label: 'Telepon', name: 'telepon', type: 'text' },
                                 { label: 'Email', name: 'email', type: 'email' },
                                 { label: 'Website', name: 'website', type: 'text' },

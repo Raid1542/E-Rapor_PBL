@@ -268,7 +268,6 @@ export default function DataSiswaPage() {
         }
         if (!formData.nis) newErrors.nis = 'NIS wajib diisi';
         if (!formData.nisn) newErrors.nisn = 'NISN wajib diisi';
-        if (!formData.jenisKelamin) newErrors.jenisKelamin = 'Pilih jenis kelamin';
         if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -572,19 +571,18 @@ export default function DataSiswaPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Jenis Kelamin <span className="text-red-500">*</span>
+                                Jenis Kelamin
                             </label>
                             <select
                                 name="jenisKelamin"
                                 value={formData.jenisKelamin}
                                 onChange={handleInputChange}
-                                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5`}
                             >
                                 <option value="">-- Pilih --</option>
                                 <option value="LAKI-LAKI">Laki-laki</option>
                                 <option value="PEREMPUAN">Perempuan</option>
                             </select>
-                            {errors.jenisKelamin && <p className="text-red-500 text-xs mt-1">{errors.jenisKelamin}</p>}
                         </div>
                         {isEdit && (
                             <div>
@@ -709,8 +707,8 @@ export default function DataSiswaPage() {
                         </select>
                     </div>
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>
@@ -965,7 +963,7 @@ export default function DataSiswaPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Jenis Kelamin</span>
                                     <span className="text-xs sm:text-sm">:</span>
-                                    <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.jenisKelamin}</span>
+                                    <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.jenisKelamin || '-'}</span>
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Alamat</span>
