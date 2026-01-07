@@ -9,7 +9,7 @@
 import { Metadata } from 'next';
 import AturPenilaianClient from './components/atur_penilaian_client';
 
-export const meta:Metadata = {
+export const metadata: Metadata = {
     title: 'Atur Penilaian',
 };
 

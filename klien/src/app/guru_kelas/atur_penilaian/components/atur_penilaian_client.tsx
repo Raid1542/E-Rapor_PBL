@@ -506,19 +506,19 @@ export default function AturPenilaianPage() {
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
-                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'kokurikuler' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'kokurikuler' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-orange-500 hover:text-orange-700'}`}
                         onClick={() => setActiveTab('kokurikuler')}
                     >
                         Kategori Kokurikuler
                     </button>
                     <button
-                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-orange-500 hover:text-orange-700'}`}
                         onClick={() => setActiveTab('akademik')}
                     >
                         Kategori Akademik
                     </button>
                     <button
-                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-orange-500 hover:text-orange-700'}`}
                         onClick={() => setActiveTab('bobot')}
                     >
                         Atur Bobot Penilaian
@@ -681,8 +681,8 @@ export default function AturPenilaianPage() {
                                 </div>
                             </>
                         ) : (
-                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                                <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                            <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                                <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                             </div>
                         )}
                     </div>
@@ -713,7 +713,7 @@ export default function AturPenilaianPage() {
                                 <div className="text-gray-500 text-xs sm:text-sm">Memuat bobot...</div>
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
-                                    {getPTSPesan()} 
+                                    {getPTSPesan()}
 
                                     {bobotList.map((bobot) => {
                                         const komponen = komponenList.find(k => k.id_komponen === bobot.komponen_id);
@@ -756,8 +756,8 @@ export default function AturPenilaianPage() {
                                 </div>
                             )
                         ) : (
-                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                                <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                            <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                                <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                             </div>
                         )}
                     </div>

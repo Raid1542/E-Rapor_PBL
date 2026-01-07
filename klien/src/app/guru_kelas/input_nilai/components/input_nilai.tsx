@@ -393,7 +393,7 @@ const DataInputNilaiPage = () => {
     return (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai Siswa</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai</h1>
 
                 <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
                     {/* Dropdown Mapel */}
@@ -706,8 +706,8 @@ const DataInputNilaiPage = () => {
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                         </div>
                     )}
                 </div>

@@ -7,12 +7,12 @@
  */
 
 import { Metadata } from 'next';
-import AbsensiSiswaClient from './components/absensi_siswa_client';
+import DataAbsensiClient from './components/absensi_siswa_client';
 
-export const meta: Metadata = {
-    title: 'Absensi Siswa',
+export const metadata: Metadata = {
+    title: 'Data Absensi',
 };
 
 export default function DataAbsensiPage() {
-    return <AbsensiSiswaClient />;
+    return <DataAbsensiClient />;
 }

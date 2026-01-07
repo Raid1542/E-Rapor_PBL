@@ -7,12 +7,12 @@
  */
 
 import { Metadata } from 'next';
-import DataEkstrakurikulerClient from './components/ekstrakurikuler_client';
+import EkstrakurikulerClient from './components/ekstrakurikuler_client';
 
-export const meta: Metadata = {
+export const metadata: Metadata = {
     title: 'Data Ekstrakurikuler',
 };
 
-export default function DataEkstrakurikulerPage() {
-    return <DataEkstrakurikulerClient />;
+export default function EkstrakurikulerPage() {
+    return <EkstrakurikulerClient />;
 }

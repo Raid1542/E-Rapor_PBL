@@ -116,9 +116,6 @@ export default function InputNilaiClient() {
                 const data = await res.json();
                 if (data.success) {
                     setKelasList(data.data || []);
-                    if (data.data && data.data.length === 1) {
-                        setSelectedKelasId(data.data[0].kelas_id);
-                    }
                 }
             } catch (err) {
                 console.error('Error fetch kelas:', err);
@@ -772,11 +769,11 @@ export default function InputNilaiClient() {
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                            <p className="text-gray-700 text-lg font-medium">
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">
                                 {selectedMapelId && !selectedKelasId
-                                    ? 'Silakan pilih Kelas terlebih dahulu.'
-                                    : 'Silakan pilih Mata Pelajaran terlebih dahulu.'}
+                                    ? 'Pilih Kelas Terlebih Dahulu.'
+                                    : 'Pilih Mapel Terlebih Dahulu.'}
                             </p>
                         </div>
                     )}

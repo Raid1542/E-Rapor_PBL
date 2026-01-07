@@ -86,7 +86,6 @@ export default function AturPenilaianClient() {
                 const jenisAktif = status_pts === 'aktif' ? 'PTS' : status_pas === 'aktif' ? 'PAS' : null;
                 setJenisPenilaianAktif(jenisAktif);
 
-                // ✅ Ganti ke endpoint guru bidang studi
                 const [resKomponen, resMapel] = await Promise.all([
                     fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/komponen', {
                         headers: { Authorization: `Bearer ${token}` },
@@ -258,7 +257,6 @@ export default function AturPenilaianClient() {
                 alert(editKategoriId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan');
                 closeEditKategori();
 
-                // Reload
                 const reloadRes = await fetch(
                     `http://localhost:5000/api/guru-bidang-studi/atur-penilaian/kategori?mapel_id=${selectedMapelAkademik}`,
                     { headers: { Authorization: `Bearer ${token}` } }
@@ -400,8 +398,8 @@ export default function AturPenilaianClient() {
                 <div className="flex border-b border-gray-200 mb-6 gap-2">
                     <button
                         className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'akademik'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
+                            ? 'text-orange-600 border-b-2 border-orange-600'
+                            : 'text-orange-500 hover:text-orange-700'
                             }`}
                         onClick={() => setActiveTab('akademik')}
                     >
@@ -409,8 +407,8 @@ export default function AturPenilaianClient() {
                     </button>
                     <button
                         className={`px-3 py-2 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm ${activeTab === 'bobot'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
-                                : 'text-gray-500 hover:text-gray-700'
+                            ? 'text-orange-600 border-b-2 border-orange-600'
+                            : 'text-orange-500 hover:text-orange-700'
                             }`}
                         onClick={() => setActiveTab('bobot')}
                     >
@@ -429,7 +427,7 @@ export default function AturPenilaianClient() {
                                     onChange={(e) =>
                                         setSelectedMapelAkademik(e.target.value ? Number(e.target.value) : null)
                                     }
-                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     {mapelList
@@ -514,10 +512,8 @@ export default function AturPenilaianClient() {
                                 </div>
                             </>
                         ) : (
-                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                                <p className="text-gray-700 text-lg font-medium">
-                                    Silakan pilih Mata Pelajaran terlebih dahulu.
-                                </p>
+                            <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                                <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                             </div>
                         )}
                     </div>
@@ -531,7 +527,7 @@ export default function AturPenilaianClient() {
                                     onChange={(e) =>
                                         setSelectedMapelId(e.target.value ? Number(e.target.value) : null)
                                     }
-                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="w-full border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     {mapelList
@@ -551,37 +547,36 @@ export default function AturPenilaianClient() {
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
                                     {getPTSPesan()}
-                                    {bobotList.map((bobot) => {
-                                        const komponen = komponenList.find((k) => k.id_komponen === bobot.komponen_id);
-                                        return (
-                                            <div
-                                                key={bobot.komponen_id}
-                                                className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 sm:p-3 bg-gray-50 rounded"
-                                            >
-                                                <span className="font-medium min-w-[100px] text-xs sm:text-sm">
-                                                    {komponen?.nama_komponen || 'Komponen'}
-                                                </span>
-                                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        max="100"
-                                                        value={bobot.bobot}
-                                                        onChange={(e) => handleBobotChange(bobot.komponen_id, e.target.value)}
-                                                        className="w-full sm:w-20 border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm"
-                                                    />
-                                                    <span className="text-gray-600 text-xs sm:text-sm">%</span>
+                                    <div className="space-y-2">
+                                        {bobotList.map((bobot) => {
+                                            const komponen = komponenList.find((k) => k.id_komponen === bobot.komponen_id);
+                                            return (
+                                                <div key={bobot.komponen_id} className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium w-32 sm:w-40">
+                                                        {komponen?.nama_komponen || 'Komponen'}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 w-32">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            value={bobot.bobot}
+                                                            onChange={(e) => handleBobotChange(bobot.komponen_id, e.target.value)}
+                                                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                                                        />
+                                                        <span className="text-gray-600 text-sm">%</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                     <div className="pt-3 sm:pt-4 border-t">
                                         <div className="flex justify-between items-center">
                                             <span className="font-semibold text-xs sm:text-sm">Total Bobot:</span>
                                             <span
                                                 className={`text-sm sm:text-lg font-bold ${Math.abs(bobotList.reduce((sum, b) => sum + b.bobot, 0) - 100) < 0.1
-                                                        ? 'text-green-600'
-                                                        : 'text-red-600'
+                                                    ? 'text-green-600'
+                                                    : 'text-red-600'
                                                     }`}
                                             >
                                                 {bobotList.reduce((sum, b) => sum + b.bobot, 0).toFixed(2)}%
@@ -599,10 +594,8 @@ export default function AturPenilaianClient() {
                                 </div>
                             )
                         ) : (
-                            <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                                <p className="text-gray-700 text-lg font-medium">
-                                    Silakan pilih Mata Pelajaran terlebih dahulu.
-                                </p>
+                            <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                                <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                             </div>
                         )}
                     </div>
