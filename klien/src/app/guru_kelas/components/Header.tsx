@@ -17,8 +17,8 @@ import { useState, useEffect, useRef } from 'react';
 
 interface UserData {
     id: number;
-    nama_lengkap: string;
-    email_sekolah: string;
+    name: string;
+    email: string;
     role: string;
     class?: string;
     profileImage?: string;
@@ -132,7 +132,7 @@ export default function Header({ user }: HeaderProps) {
                                     />
                                 ) : (
                                     <span className="text-black text-xs font-semibold">
-                                        {(user.nama_lengkap || '??')
+                                        {(user.name || '??')
                                             .split(' ')
                                             .slice(0, 2)
                                             .map(word => word[0]?.toUpperCase() || '')
@@ -151,8 +151,8 @@ export default function Header({ user }: HeaderProps) {
                             className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
                         >
                             <div className="p-4 border-b border-gray-200">
-                                <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
-                                <p className="text-sm text-gray-500">{user.email_sekolah}</p>
+                                <p className="font-semibold text-gray-900">{user.name}</p>
+                                <p className="text-sm text-gray-500">{user.email}</p>
                                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                                     {user.role.toUpperCase()} {user.class && `– Kelas ${user.class}`}
                                 </span>
