@@ -11,32 +11,28 @@ const db = require('../config/db');
 
 const catatanWaliKelasModel = {
   // Mengambil daftar siswa beserta catatan wali kelas berdasarkan kelas, tahun ajaran, dan semester
-  async getCatatanByKelas(kelasId, tahunAjaranId, semester) {
+  async getCatatanByKelas(kelasId, tahunAjaranId, semester, jenisPenilaian) {
     const [rows] = await db.execute(
       `
-        SELECT 
-          s.id_siswa,
-          s.nama_lengkap AS nama,
-          s.nis,
-          s.nisn,
-          s.jenis_kelamin,
-          COALESCE(c.catatan_wali_kelas, '') AS catatan_wali_kelas,
-          COALESCE(c.naik_tingkat, 
-            CASE WHEN ? = 'Genap' THEN 'tidak' ELSE NULL END
-          ) AS naik_tingkat
-        FROM siswa s
-        INNER JOIN siswa_kelas sk 
-          ON s.id_siswa = sk.siswa_id
-          AND sk.kelas_id = ?
-          AND sk.tahun_ajaran_id = ?
-        LEFT JOIN catatan_wali_kelas c 
-          ON s.id_siswa = c.siswa_id
-          AND c.kelas_id = ?
-          AND c.tahun_ajaran_id = ?
-          AND c.semester = ?
-        ORDER BY s.nama_lengkap
-      `,
-      [semester, kelasId, tahunAjaranId, kelasId, tahunAjaranId, semester]
+      SELECT 
+        s.id_siswa AS id,
+        s.nama_lengkap AS nama,
+        s.nis,
+        s.nisn,
+        COALESCE(c.catatan_wali_kelas, '') AS catatan_wali_kelas,
+        c.naik_tingkat,
+        CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS sudah_diinput
+      FROM siswa s
+      JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+      LEFT JOIN catatan_wali_kelas c 
+        ON s.id_siswa = c.siswa_id 
+        AND sk.tahun_ajaran_id = c.tahun_ajaran_id
+        AND c.semester = ?
+        AND c.jenis_penilaian = ?
+      WHERE sk.kelas_id = ? AND sk.tahun_ajaran_id = ?
+      ORDER BY s.nama_lengkap
+    `,
+      [semester, jenisPenilaian, kelasId, tahunAjaranId]
     );
     return rows;
   },
