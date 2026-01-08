@@ -118,62 +118,109 @@ const RaporGuruKelasClient = () => {
 
     // === Download rapor ===
     const handleDownloadRapor = async (siswaId: number) => {
-        const token = localStorage.getItem('token');
-        if (!token || !jenisPenilaian || !tahunAjaranInfo) {
-            alert('Data tidak lengkap. Silakan pilih jenis penilaian.');
-            return;
+    const token = localStorage.getItem('token');
+    if (!token || !jenisPenilaian || !tahunAjaranInfo) {
+        alert('Data tidak lengkap. Silakan pilih jenis penilaian.');
+        return;
+    }
+
+    const jenisMurni = jenisPenilaian.split('-')[0];
+    if (!['PTS', 'PAS'].includes(jenisMurni)) {
+        alert('Jenis penilaian tidak valid');
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${jenisMurni}/${tahunAjaranInfo.semester}`,
+            {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            try {
+                const errorJson = JSON.parse(errorText);
+                throw new Error(errorJson.message || 'Gagal mengunduh rapor');
+            } catch {
+                throw new Error('Terjadi kesalahan pada server');
+            }
         }
 
-        const jenisMurni = jenisPenilaian.split('-')[0];
-        if (!['PTS', 'PAS'].includes(jenisMurni)) {
-            alert('Jenis penilaian tidak valid');
-            return;
+        const contentType = res.headers.get('content-type');
+        if (!contentType?.includes('application/vnd.openxmlformats')) {
+            const errorText = await res.text();
+            try {
+                const errorJson = JSON.parse(errorText);
+                throw new Error(errorJson.message || 'Data rapor tidak tersedia');
+            } catch {
+                throw new Error('Respons bukan file rapor yang valid');
+            }
         }
 
-        try {
-            const res = await fetch(
-                `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${jenisMurni}/${tahunAjaranInfo.semester}`,
-                {
-                    method: 'GET',
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+        // ✅ DEBUG: Cek semua headers yang diterima
+        console.log('=== DEBUG HEADERS ===');
+        console.log('Content-Type:', res.headers.get('content-type'));
+        console.log('Content-Disposition (raw):', res.headers.get('content-disposition'));
+        
+        // Lihat semua headers yang tersedia
+        res.headers.forEach((value, key) => {
+            console.log(`${key}: ${value}`);
+        });
+        console.log('=====================');
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    throw new Error(errorJson.message || 'Gagal mengunduh rapor');
-                } catch {
-                    throw new Error('Terjadi kesalahan pada server');
+        const blob = await res.blob();
+        
+        // Ambil nama file dari response header
+        const contentDisposition = res.headers.get('content-disposition');
+        let fileName = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
+        
+        console.log('Content-Disposition value:', contentDisposition);
+        
+        if (contentDisposition) {
+            // Method 1: Try simple filename= extraction
+            let match = contentDisposition.match(/filename="?([^";\n]+)"?/i);
+            
+            if (match && match[1]) {
+                fileName = match[1];
+                console.log('✅ Nama file dari method 1:', fileName);
+            } else {
+                // Method 2: More complex regex
+                const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (fileNameMatch && fileNameMatch[1]) {
+                    fileName = fileNameMatch[1].replace(/['"]/g, '');
+                    console.log('✅ Nama file dari method 2:', fileName);
+                } else {
+                    console.log('❌ Gagal extract filename dari:', contentDisposition);
                 }
             }
-
-            const contentType = res.headers.get('content-type');
-            if (!contentType?.includes('application/vnd.openxmlformats')) {
-                const errorText = await res.text();
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    throw new Error(errorJson.message || 'Data rapor tidak tersedia');
-                } catch {
-                    throw new Error('Respons bukan file rapor yang valid');
-                }
-            }
-
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        } catch (err: any) {
-            console.error('Download error:', err);
-            alert('Gagal mengunduh rapor: ' + (err.message || 'Silakan coba lagi'));
+        } else {
+            console.log('❌ Content-Disposition header tidak ditemukan!');
         }
-    };
+        
+        console.log('📥 Nama file final:', fileName);
+        
+        // Download file
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName; 
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('✅ Download selesai');
+        
+    } catch (err: any) {
+        console.error('Download error:', err);
+        alert('Gagal mengunduh rapor: ' + (err.message || 'Silakan coba lagi'));
+    }
+};
 
     const currentStatus = getCurrentStatus();
     const isDownloadAllowed = currentStatus === 'aktif';
@@ -227,10 +274,10 @@ const RaporGuruKelasClient = () => {
                         <p className="text-gray-700">
                             Status {jenisPenilaian.includes('PTS') ? 'PTS' : 'PAS'}:
                             <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${currentStatus === 'aktif'
-                                    ? 'bg-green-100 text-green-800'
-                                    : currentStatus === 'selesai'
-                                        ? 'bg-gray-200 text-gray-700'
-                                        : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-green-100 text-green-800'
+                                : currentStatus === 'selesai'
+                                    ? 'bg-gray-200 text-gray-700'
+                                    : 'bg-yellow-100 text-yellow-800'
                                 }`}>
                                 {currentStatus === 'aktif'
                                     ? 'Aktif'
@@ -288,8 +335,8 @@ const RaporGuruKelasClient = () => {
                                                     onClick={() => handleDownloadRapor(siswa.id)}
                                                     disabled={!isDownloadAllowed}
                                                     className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${isDownloadAllowed
-                                                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                         }`}
                                                 >
                                                     <Download size={14} />

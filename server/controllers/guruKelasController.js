@@ -2490,12 +2490,20 @@ exports.generateRaporPDF = async (req, res) => {
     // === Keputusan kenaikan kelas (PAS Genap) ===
     let tingkat = '–';
     let naikKelas = '–';
+
     if (jenisNorm === 'PAS' && semesterNorm === 'Genap') {
       const [naikRows] = await db.execute(
-        `SELECT naik_tingkat FROM catatan_wali_kelas WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = 'Genap'`,
+        `SELECT naik_tingkat FROM catatan_wali_kelas 
+     WHERE siswa_id = ? AND tahun_ajaran_id = ? 
+     AND semester = 'Genap' AND jenis_penilaian = 'PAS'`,
         [siswaId, id_tahun_ajaran]
       );
+
       const statusNaik = naikRows[0]?.naik_tingkat;
+
+      // Debug untuk troubleshooting
+      console.log('🔍 DEBUG Kenaikan:', { siswaId, statusNaik, nama_kelas });
+
       if (statusNaik === 'ya') {
         tingkat = 'Naik';
         const kelasAngka = parseInt(nama_kelas.match(/\d+/)?.[0] || '1');
@@ -2503,10 +2511,13 @@ exports.generateRaporPDF = async (req, res) => {
         const romawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
         const terbilang = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam'];
         naikKelas = `${romawi[tingkatBerikutnya] || tingkatBerikutnya} (${terbilang[tingkatBerikutnya] || tingkatBerikutnya})`;
+        console.log('✅ Naik ke:', naikKelas);
       } else if (statusNaik === 'tidak') {
         tingkat = 'Tidak Naik';
+        naikKelas = '–'; // TAMBAHAN: Set nilai default
       } else {
         tingkat = 'Belum ditentukan';
+        naikKelas = '–'; // TAMBAHAN: Set nilai default
       }
     }
 
@@ -2564,9 +2575,22 @@ exports.generateRaporPDF = async (req, res) => {
     const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 
     // === Nama file output ===
-    const cleanNama = (nama_lengkap || 'siswa').replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 30);
-    const cleanNis = (nis || 'NIS').toString().replace(/[^a-zA-Z0-9]/g, '');
-    const fileName = `Rapor_${jenisNorm}_${semesterNorm}_${tahun_ajaran}_${cleanNis}_${cleanNama}.docx`;
+    const cleanNama = (nama_lengkap || 'siswa')
+      .replace(/[^a-zA-Z0-9\s]/g, '') 
+      .trim()                           
+      .replace(/\s+/g, '_')            
+      .substring(0, 30);              
+
+    const cleanNis = (nis || 'NIS')
+      .toString()
+      .replace(/[^0-9]/g, '')           
+      .substring(0, 10);
+
+    const tahunClean = tahun_ajaran.replace(/\//g, '-');
+
+    const fileName = `rapor_${jenisNorm.toLowerCase()}_${semesterNorm.toLowerCase()}.docx`;
+
+    console.log('📄 Nama file:', fileName); 
 
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
