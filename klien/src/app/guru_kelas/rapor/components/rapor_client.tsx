@@ -226,26 +226,25 @@ const RaporGuruKelasClient = () => {
                     <div className="mb-6 p-3 bg-gray-100 rounded-lg">
                         <p className="text-gray-700">
                             Status {jenisPenilaian.includes('PTS') ? 'PTS' : 'PAS'}:
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                                currentStatus === 'aktif'
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${currentStatus === 'aktif'
                                     ? 'bg-green-100 text-green-800'
                                     : currentStatus === 'selesai'
-                                    ? 'bg-gray-200 text-gray-700'
-                                    : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                                        ? 'bg-gray-200 text-gray-700'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                }`}>
                                 {currentStatus === 'aktif'
                                     ? 'Aktif'
                                     : currentStatus === 'selesai'
-                                    ? 'Terkunci'
-                                    : 'Belum Dibuka'}
+                                        ? 'Terkunci'
+                                        : 'Belum Dibuka'}
                             </span>
                         </p>
                     </div>
                 )}
 
                 {jenisPenilaian === '' ? (
-                    <div className="mt-8 text-center py-10 bg-yellow-50 border border-dashed border-yellow-300 rounded-xl">
-                        <p className="text-gray-700 text-lg font-medium">Silakan pilih jenis penilaian terlebih dahulu.</p>
+                    <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                        <p className="text-orange-800 text-lg font-semibold">Pilih Jenis Penilaian Terlebih Dahulu.</p>
                     </div>
                 ) : loading ? (
                     <div className="mt-8 text-center py-10">
@@ -278,9 +277,8 @@ const RaporGuruKelasClient = () => {
                                     {siswaList.map((siswa, index) => (
                                         <tr
                                             key={siswa.id}
-                                            className={`border-b ${
-                                                index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                            } hover:bg-blue-50 transition-colors`}
+                                            className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                } hover:bg-blue-50 transition-colors`}
                                         >
                                             <td className="px-3 py-3 text-center">{index + 1}</td>
                                             <td className="px-3 py-3 font-medium text-gray-800">{siswa.nama}</td>
@@ -289,11 +287,10 @@ const RaporGuruKelasClient = () => {
                                                 <button
                                                     onClick={() => handleDownloadRapor(siswa.id)}
                                                     disabled={!isDownloadAllowed}
-                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${
-                                                        isDownloadAllowed
+                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${isDownloadAllowed
                                                             ? 'bg-green-600 hover:bg-green-700 text-white'
                                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Download size={14} />
                                                     <span>{isDownloadAllowed ? 'Unduh' : 'Tidak Tersedia'}</span>
