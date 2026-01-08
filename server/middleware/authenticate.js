@@ -2,9 +2,9 @@
  * Nama File: authenticate.js
  * Fungsi: Middleware untuk memverifikasi token JWT pada setiap request yang memerlukan autentikasi.
  *         Mendukung token dari cookie (utama), header Authorization (Bearer), dan query string.
- *         Menangani token tidak ditemukan, tidak valid, atau kedaluwarsa dengan pesan umum.
+ *         Menangani token tidak ditemukan, tidak valid, atau kedaluwarsa dengan pesan yang sesuai.
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022
- * Tanggal: 7 Januari 2026
+ * Tanggal: 08 Januari 2026
  */
 
 const jwt = require('jsonwebtoken');
@@ -46,10 +46,18 @@ const authenticate = (req, res, next) => {
     };
     next();
   } catch (err) {
-    return res.status(401).json({
-      success: false,
-      message: 'Akses ditolak. Silakan login.',
-    });
+    // 🔥 Deteksi jenis error JWT
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token telah kadaluarsa',
+      });
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Token tidak valid',
+      });
+    }
   }
 };
 
