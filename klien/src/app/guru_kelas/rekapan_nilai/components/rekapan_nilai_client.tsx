@@ -1,26 +1,31 @@
-// File: rekapan_nilai_client.tsx
-// Fungsi: Komponen utama untuk menampilkan dan mengelola rekapan nilai rapor,
-//         termasuk fitur lihat detail per siswa dan ekspor ke Excel.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: rekapan_nilai_client.tsx
+ * Fungsi: Komponen utama untuk menampilkan dan mengelola rekapan nilai rapor,
+ *         termasuk fitur lihat detail per siswa dan ekspor ke Excel.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Search, Upload, X, Eye } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 // Tipe data siswa dalam rekapan nilai
 interface SiswaRekapan {
     id: number;
     nama: string;
     nis: string;
-    nilaiMapel: Record<string, number | null>; // key: kode_mapel
+    nilaiMapel: Record<string, number | null>; 
     rataRata: number | null;
     deskripsiRataRata: string;
     ranking: number | null;
 }
 
 const RekapanNilaiClient = () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
     const [siswaList, setSiswaList] = useState<SiswaRekapan[]>([]);
     const [mapelList, setMapelList] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,16 +37,7 @@ const RekapanNilaiClient = () => {
     // Fetch data rekapan nilai
     const fetchRekapanNilai = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-
-            const res = await fetch('http://localhost:5000/api/guru-kelas/rekapan-nilai', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/rekapan-nilai`);
             const data = await res.json();
             if (res.ok && data.siswa && data.mapel_list) {
                 const siswa: SiswaRekapan[] = data.siswa.map((s: any) => ({
@@ -62,7 +58,7 @@ const RekapanNilaiClient = () => {
             }
         } catch (err) {
             console.error('Error fetch rekapan:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect
         } finally {
             setLoading(false);
         }
@@ -70,7 +66,7 @@ const RekapanNilaiClient = () => {
 
     useEffect(() => {
         fetchRekapanNilai();
-    }, []);
+    }, [API_URL]);
 
     // Fungsi untuk menampilkan detail siswa
     const handleDetail = (siswa: SiswaRekapan) => {
@@ -95,10 +91,7 @@ const RekapanNilaiClient = () => {
     // Ekspor Excel
     const handleExportExcel = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/guru-kelas/rekapan-nilai/export-excel', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/rekapan-nilai/export-excel`);
             if (!res.ok) throw new Error('Gagal ekspor');
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);

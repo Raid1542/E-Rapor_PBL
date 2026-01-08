@@ -1,13 +1,16 @@
-// File: rapor_client.tsx
-// Fungsi: Komponen utama untuk menampilkan daftar siswa dan mengunduh
-//         rapor berdasarkan jenis penilaian (PTS/PAS) sesuai status periode aktif.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: rapor_client.tsx
+ * Fungsi: Komponen utama untuk menampilkan daftar siswa dan mengunduh
+ *         rapor berdasarkan jenis penilaian (PTS/PAS) sesuai status periode aktif.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface Siswa {
     id: number;
@@ -24,7 +27,8 @@ interface TahunAjaranInfo {
 }
 
 const RaporGuruKelasClient = () => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const API_BASE = `${API_URL}/api`;
 
     const [jenisPenilaian, setJenisPenilaian] = useState<string>('');
     const [siswaList, setSiswaList] = useState<Siswa[]>([]);
@@ -44,14 +48,7 @@ const RaporGuruKelasClient = () => {
     // === Fungsi untuk fetch tahun ajaran aktif ===
     const fetchTahunAjaranAktif = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`${API_BASE}/guru-kelas/tahun-ajaran/aktif`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await apiFetch(`${API_BASE}/guru-kelas/tahun-ajaran/aktif`);
             const data = await res.json();
             if (res.ok && data.success) {
                 const ta = data.data;
@@ -66,14 +63,14 @@ const RaporGuruKelasClient = () => {
             }
         } catch (err) {
             console.error('Gagal ambil tahun ajaran aktif:', err);
-            setError('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect
         }
     };
 
     // === Ambil tahun ajaran aktif saat pertama kali ===
     useEffect(() => {
         fetchTahunAjaranAktif();
-    }, []);
+    }, [API_URL]);
 
     // === Ambil daftar siswa ===
     useEffect(() => {
@@ -83,14 +80,7 @@ const RaporGuruKelasClient = () => {
         }
         const fetchSiswa = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    setError('Silakan login terlebih dahulu');
-                    return;
-                }
-                const res = await fetch(`${API_BASE}/guru-kelas/siswa`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await apiFetch(`${API_BASE}/guru-kelas/siswa`);
                 const data = await res.json();
                 if (res.ok && data.success) {
                     setSiswaList(data.data);
@@ -99,14 +89,14 @@ const RaporGuruKelasClient = () => {
                 }
             } catch (err) {
                 console.error('Error fetch siswa:', err);
-                setError('Gagal terhubung ke server');
+                // Jika sesi habis, apiFetch sudah redirect
             } finally {
                 setLoading(false);
             }
         };
         setLoading(true);
         fetchSiswa();
-    }, [jenisPenilaian, tahunAjaranInfo]);
+    }, [jenisPenilaian, tahunAjaranInfo, API_URL]);
 
     // === Helper: dapatkan status penilaian saat ini ===
     const getCurrentStatus = () => {
@@ -118,109 +108,62 @@ const RaporGuruKelasClient = () => {
 
     // === Download rapor ===
     const handleDownloadRapor = async (siswaId: number) => {
-    const token = localStorage.getItem('token');
-    if (!token || !jenisPenilaian || !tahunAjaranInfo) {
-        alert('Data tidak lengkap. Silakan pilih jenis penilaian.');
-        return;
-    }
-
-    const jenisMurni = jenisPenilaian.split('-')[0];
-    if (!['PTS', 'PAS'].includes(jenisMurni)) {
-        alert('Jenis penilaian tidak valid');
-        return;
-    }
-
-    try {
-        const res = await fetch(
-            `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${jenisMurni}/${tahunAjaranInfo.semester}`,
-            {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` }
-            }
-        );
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            try {
-                const errorJson = JSON.parse(errorText);
-                throw new Error(errorJson.message || 'Gagal mengunduh rapor');
-            } catch {
-                throw new Error('Terjadi kesalahan pada server');
-            }
+        if (!jenisPenilaian || !tahunAjaranInfo) {
+            alert('Data tidak lengkap. Silakan pilih jenis penilaian.');
+            return;
         }
 
-        const contentType = res.headers.get('content-type');
-        if (!contentType?.includes('application/vnd.openxmlformats')) {
-            const errorText = await res.text();
-            try {
-                const errorJson = JSON.parse(errorText);
-                throw new Error(errorJson.message || 'Data rapor tidak tersedia');
-            } catch {
-                throw new Error('Respons bukan file rapor yang valid');
-            }
+        const jenisMurni = jenisPenilaian.split('-')[0];
+        if (!['PTS', 'PAS'].includes(jenisMurni)) {
+            alert('Jenis penilaian tidak valid');
+            return;
         }
 
-        // ✅ DEBUG: Cek semua headers yang diterima
-        console.log('=== DEBUG HEADERS ===');
-        console.log('Content-Type:', res.headers.get('content-type'));
-        console.log('Content-Disposition (raw):', res.headers.get('content-disposition'));
-        
-        // Lihat semua headers yang tersedia
-        res.headers.forEach((value, key) => {
-            console.log(`${key}: ${value}`);
-        });
-        console.log('=====================');
+        try {
+            const res = await apiFetch(
+                `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${jenisMurni}/${tahunAjaranInfo.semester}`,
+                { method: 'GET' }
+            );
 
-        const blob = await res.blob();
-        
-        // Ambil nama file dari response header
-        const contentDisposition = res.headers.get('content-disposition');
-        let fileName = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
-        
-        console.log('Content-Disposition value:', contentDisposition);
-        
-        if (contentDisposition) {
-            // Method 1: Try simple filename= extraction
-            let match = contentDisposition.match(/filename="?([^";\n]+)"?/i);
-            
-            if (match && match[1]) {
-                fileName = match[1];
-                console.log('✅ Nama file dari method 1:', fileName);
-            } else {
-                // Method 2: More complex regex
-                const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                if (fileNameMatch && fileNameMatch[1]) {
-                    fileName = fileNameMatch[1].replace(/['"]/g, '');
-                    console.log('✅ Nama file dari method 2:', fileName);
-                } else {
-                    console.log('❌ Gagal extract filename dari:', contentDisposition);
+            if (!res.ok) {
+                const errorText = await res.text();
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    throw new Error(errorJson.message || 'Gagal mengunduh rapor');
+                } catch {
+                    throw new Error('Terjadi kesalahan pada server');
                 }
             }
-        } else {
-            console.log('❌ Content-Disposition header tidak ditemukan!');
+
+            const contentType = res.headers.get('content-type');
+            if (!contentType?.includes('application/vnd.openxmlformats')) {
+                throw new Error('Respons bukan file rapor yang valid');
+            }
+
+            const contentDisposition = res.headers.get('content-disposition');
+            let fileName = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
+
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?([^";\n]+)"?/i);
+                if (match && match[1]) {
+                    fileName = match[1].replace(/['"]/g, '');
+                }
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err: any) {
+            console.error('Download error:', err);
+            alert('Gagal mengunduh rapor: ' + (err.message || 'Silakan coba lagi'));
         }
-        
-        console.log('📥 Nama file final:', fileName);
-        
-        // Download file
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName; 
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        console.log('✅ Download selesai');
-        
-    } catch (err: any) {
-        console.error('Download error:', err);
-        alert('Gagal mengunduh rapor: ' + (err.message || 'Silakan coba lagi'));
-    }
-};
+    };
 
     const currentStatus = getCurrentStatus();
     const isDownloadAllowed = currentStatus === 'aktif';
