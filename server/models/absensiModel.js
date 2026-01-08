@@ -30,62 +30,32 @@ const absensiModel = {
   },
 
   // Mengambil data absensi semua siswa di kelas tertentu pada tahun ajaran aktif
-  async getAbsensiByKelas(kelasId, tahunAjaranId) {
+  async getAbsensiByKelas(kelasId, tahunAjaranId, semester, jenisPenilaian) {
     const [rows] = await db.execute(
       `
-        SELECT 
-          s.id_siswa AS id,
-          s.nama_lengkap AS nama,
-          s.nis,
-          s.nisn,
-          COALESCE(a.sakit, 0) AS jumlah_sakit,
-          COALESCE(a.izin, 0) AS jumlah_izin,
-          COALESCE(a.alpha, 0) AS jumlah_alpha,
-          CASE WHEN a.id_absensi IS NOT NULL THEN 1 ELSE 0 END AS sudah_diinput
-        FROM siswa s
-        JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
-        LEFT JOIN absensi a ON s.id_siswa = a.siswa_id 
-          AND sk.kelas_id = a.kelas_id 
-          AND sk.tahun_ajaran_id = a.tahun_ajaran_id
-        WHERE sk.kelas_id = ? AND sk.tahun_ajaran_id = ?
-        ORDER BY s.nama_lengkap
-      `,
-      [kelasId, tahunAjaranId]
+      SELECT 
+        s.id_siswa AS id,
+        s.nama_lengkap AS nama,
+        s.nis,
+        s.nisn,
+        COALESCE(a.sakit, 0) AS jumlah_sakit,
+        COALESCE(a.izin, 0) AS jumlah_izin,
+        COALESCE(a.alpha, 0) AS jumlah_alpha,
+        CASE WHEN a.id_absensi IS NOT NULL THEN 1 ELSE 0 END AS sudah_diinput
+      FROM siswa s
+      JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id
+      LEFT JOIN absensi a ON s.id_siswa = a.siswa_id 
+        AND sk.kelas_id = a.kelas_id 
+        AND sk.tahun_ajaran_id = a.tahun_ajaran_id
+        AND a.semester = ?
+        AND a.jenis_penilaian = ?
+      WHERE sk.kelas_id = ? AND sk.tahun_ajaran_id = ?
+      ORDER BY s.nama_lengkap
+    `,
+      [semester, jenisPenilaian, kelasId, tahunAjaranId]
     );
     return rows;
-  },
-
-  // Menyimpan atau memperbarui data absensi siswa (upsert)
-  async upsertAbsensi(siswaId, kelasId, tahunAjaranId, sakit, izin, alpha) {
-    const [existing] = await db.execute(
-      `
-        SELECT id_absensi FROM absensi
-        WHERE siswa_id = ? AND kelas_id = ? AND tahun_ajaran_id = ?
-      `,
-      [siswaId, kelasId, tahunAjaranId]
-    );
-
-    if (existing.length > 0) {
-      // Jika data sudah ada, lakukan update
-      await db.execute(
-        `
-          UPDATE absensi
-          SET sakit = ?, izin = ?, alpha = ?, updated_at = NOW()
-          WHERE id_absensi = ?
-        `,
-        [sakit, izin, alpha, existing[0].id_absensi]
-      );
-    } else {
-      // Jika data belum ada, lakukan insert
-      await db.execute(
-        `
-          INSERT INTO absensi (siswa_id, kelas_id, tahun_ajaran_id, sakit, izin, alpha)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `,
-        [siswaId, kelasId, tahunAjaranId, sakit, izin, alpha]
-      );
-    }
-  },
+  }
 };
 
 module.exports = absensiModel;

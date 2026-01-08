@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/apiFetch';
 
 export default function DataSekolahPage() {
 
@@ -39,43 +40,29 @@ export default function DataSekolahPage() {
 
     const fetchSekolahData = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
+            const res = await apiFetch('http://localhost:5000/api/admin/sekolah');
+            const response = await res.json();
+            const s = response.data || response.sekolah || {};
 
-            const res = await fetch('http://localhost:5000/api/admin/sekolah', {
-                headers: { 'Authorization': `Bearer ${token}` }
+            setFormData({
+                namaSekolah: s.nama_sekolah || '',
+                npsn: s.npsn || '',
+                nss: s.nss || '',
+                kodePos: s.kode_pos || '',
+                telepon: s.telepon || '',
+                alamat: s.alamat || '',
+                email: s.email || '',
+                website: s.website || '',
+                kepalaSekolah: s.kepala_sekolah || '',
+                niyKepalaSekolah: s.niy_kepala_sekolah || '',
+                confirmData: false
             });
 
-            if (res.ok) {
-                const response = await res.json();
-                const s = response.data || response.sekolah || {};
-
-                setFormData({
-                    namaSekolah: s.nama_sekolah || '',
-                    npsn: s.npsn || '',
-                    nss: s.nss || '',
-                    kodePos: s.kode_pos || '',
-                    telepon: s.telepon || '',
-                    alamat: s.alamat || '',
-                    email: s.email || '',
-                    website: s.website || '',
-                    kepalaSekolah: s.kepala_sekolah || '',
-                    niyKepalaSekolah: s.niy_kepala_sekolah || '',
-                    confirmData: false
-                });
-
-                if (s.logo_path) {
-                    const logoUrl = `http://localhost:5000${s.logo_path}`;
-                    setLogoPreview(logoUrl);
-                } else {
-                    setLogoPreview(null);
-                }
+            if (s.logo_path) {
+                const logoUrl = `http://localhost:5000${s.logo_path}`;
+                setLogoPreview(logoUrl);
             } else {
-                const err = await res.json();
-                alert(err.message || 'Gagal memuat data sekolah');
+                setLogoPreview(null);
             }
         } catch (err) {
             console.error('❌ Error fetch sekolah:', err);
@@ -118,13 +105,8 @@ export default function DataSekolahPage() {
 
         setSaving(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/admin/sekolah', {
+            const res = await apiFetch('http://localhost:5000/api/admin/sekolah', {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nama_sekolah: formData.namaSekolah,
                     npsn: formData.npsn,
@@ -168,12 +150,8 @@ export default function DataSekolahPage() {
         formDataLogo.append('logo', file);
 
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/admin/sekolah/logo', {
+            const res = await apiFetch('http://localhost:5000/api/admin/sekolah/logo', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formDataLogo
             });
 
@@ -232,7 +210,7 @@ export default function DataSekolahPage() {
                                 { label: 'Nama Sekolah', name: 'namaSekolah', type: 'text' },
                                 { label: 'NPSN', name: 'npsn', type: 'text' },
                                 { label: 'NSS', name: 'nss', type: 'text' },
-                                { label: 'Kode POS', name: 'kodePos', type: 'text' },
+                                { label: 'Kode Pos', name: 'kodePos', type: 'text' },
                                 { label: 'Telepon', name: 'telepon', type: 'text' },
                                 { label: 'Email', name: 'email', type: 'email' },
                                 { label: 'Website', name: 'website', type: 'text' },

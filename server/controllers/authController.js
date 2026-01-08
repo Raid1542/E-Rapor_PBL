@@ -18,7 +18,6 @@ const userModel = require('../models/userModel');
 const login = async (req, res) => {
   const { email_sekolah, password, role: selectedRole } = req.body;
 
-  // Validasi input wajib
   if (!email_sekolah || !password || !selectedRole) {
     return res.status(400).json({
       success: false,
@@ -27,12 +26,11 @@ const login = async (req, res) => {
   }
 
   try {
-    // Ambil data pengguna berdasarkan email
     const [userRows] = await db.execute(
       `SELECT u.id_user, u.email_sekolah, u.password, u.nama_lengkap, u.status, ur.role
-            FROM user u
-            JOIN user_role ur ON u.id_user = ur.id_user
-            WHERE u.email_sekolah = ?`,
+       FROM user u
+       JOIN user_role ur ON u.id_user = ur.id_user
+       WHERE u.email_sekolah = ?`,
       [email_sekolah]
     );
 
@@ -44,8 +42,6 @@ const login = async (req, res) => {
     }
 
     const user = userRows[0];
-
-    // Periksa status akun
     if (user.status !== 'aktif') {
       return res.status(403).json({
         success: false,
@@ -53,7 +49,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Verifikasi password
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
@@ -62,7 +57,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Ambil semua role pengguna
     const roles = await userModel.getRolesByUserId(user.id_user);
     if (!roles.includes(selectedRole)) {
       return res.status(403).json({
@@ -71,26 +65,23 @@ const login = async (req, res) => {
       });
     }
 
-    // Buat token JWT dengan role yang dipilih
     const token = jwt.sign(
       { id: user.id_user, role: selectedRole },
       process.env.JWT_SECRET,
       { expiresIn: '6h' }
     );
 
-    // Ambil data tambahan dari tabel guru (jika ada)
+    // Ambil data guru
     const [guruRows] = await db.execute(
       `SELECT niy, nuptk, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, no_telepon, foto_path 
-            FROM guru 
-            WHERE user_id = ?`,
+       FROM guru WHERE user_id = ?`,
       [user.id_user]
     );
     const guruData = guruRows[0] || {};
 
-    // Respons sukses
     return res.status(200).json({
       success: true,
-      token,
+      token, 
       user: {
         id: user.id_user,
         role: selectedRole,

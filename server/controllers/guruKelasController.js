@@ -269,7 +269,35 @@ exports.getAbsensiTotal = async (req, res) => {
     }
 
     const { kelas_id, id_tahun_ajaran, nama_kelas } = guruKelas;
-    const data = await absensiModel.getAbsensiByKelas(kelas_id, id_tahun_ajaran);
+
+    // Ambil semester dan status periode dari tahun ajaran aktif
+    const [taRow] = await db.execute(
+      'SELECT semester, status_pts, status_pas FROM tahun_ajaran WHERE id_tahun_ajaran = ?',
+      [id_tahun_ajaran]
+    );
+    if (taRow.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tahun ajaran tidak valid.' });
+    }
+    const { semester, status_pts, status_pas } = taRow[0];
+
+    let jenis_penilaian = 'PAS'; // default
+    if (status_pts === 'aktif') {
+      jenis_penilaian = 'PTS';
+    } else if (status_pas !== 'aktif') {
+      return res.status(403).json({
+        success: false,
+        message: 'Tidak ada periode penilaian (PTS/PAS) yang aktif.',
+      });
+    }
+
+    // Kirim 4 parameter: kelas, tahun ajaran, semester, jenis_penilaian
+    const data = await absensiModel.getAbsensiByKelas(
+      kelas_id,
+      id_tahun_ajaran,
+      semester,
+      jenis_penilaian
+    );
+
     res.json({ success: true, data, kelas: nama_kelas });
   } catch (err) {
     console.error('Error getAbsensiTotal:', err);
@@ -285,11 +313,26 @@ exports.updateAbsensiTotal = async (req, res) => {
     const userId = req.user.id;
 
     if (!siswa_id) {
-      return res.status(400).json({ message: 'ID siswa wajib diisi' });
+      return res.status(400).json({ success: false, message: 'ID siswa wajib diisi' });
     }
 
-    // Ambil status periode aktif dari middleware
-    const { status_pts, status_pas } = req.tahunAjaranAktif;
+    const guruKelas = await absensiModel.getGuruKelasAktif(userId);
+    if (!guruKelas) {
+      return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
+    }
+
+    const { kelas_id, id_tahun_ajaran } = guruKelas;
+
+    // Ambil semester dan status periode
+    const [taRow] = await db.execute(
+      'SELECT semester, status_pts, status_pas FROM tahun_ajaran WHERE id_tahun_ajaran = ?',
+      [id_tahun_ajaran]
+    );
+    if (taRow.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tahun ajaran tidak valid.' });
+    }
+    const { semester, status_pts, status_pas } = taRow[0];
+
     let jenis_penilaian;
     if (status_pts === 'aktif') {
       jenis_penilaian = 'PTS';
@@ -302,21 +345,12 @@ exports.updateAbsensiTotal = async (req, res) => {
       });
     }
 
-    const guruKelas = await absensiModel.getGuruKelasAktif(userId);
-    if (!guruKelas) {
-      return res.status(404).json({ success: false, message: 'Kelas aktif tidak ditemukan.' });
-    }
+    // Validasi input
+    const sakit = parseInt(jumlah_sakit) || 0;
+    const izin = parseInt(jumlah_izin) || 0;
+    const alpha = parseInt(jumlah_alpha) || 0;
 
-    const { kelas_id, id_tahun_ajaran } = guruKelas;
-    const [taRow] = await db.execute(
-      'SELECT semester FROM tahun_ajaran WHERE id_tahun_ajaran = ?',
-      [id_tahun_ajaran]
-    );
-    if (taRow.length === 0) {
-      return res.status(400).json({ success: false, message: 'Tahun ajaran tidak valid.' });
-    }
-    const semester = taRow[0].semester;
-
+    // Simpan ke database dengan ON DUPLICATE KEY UPDATE
     await db.execute(
       `
         INSERT INTO absensi (
@@ -329,16 +363,7 @@ exports.updateAbsensiTotal = async (req, res) => {
           alpha = VALUES(alpha),
           updated_at = NOW()
       `,
-      [
-        siswa_id,
-        kelas_id,
-        id_tahun_ajaran,
-        semester,
-        jenis_penilaian,
-        jumlah_sakit || 0,
-        jumlah_izin || 0,
-        jumlah_alpha || 0,
-      ]
+      [siswa_id, kelas_id, id_tahun_ajaran, semester, jenis_penilaian, sakit, izin, alpha]
     );
 
     res.json({ success: true, message: 'Absensi berhasil diperbarui' });
@@ -358,10 +383,30 @@ exports.getCatatanWaliKelas = async (req, res) => {
     }
 
     const { kelas_id, id_tahun_ajaran, nama_kelas, semester } = guruKelas;
-    const data = await catatanWaliKelasModel.getCatatanByKelas(kelas_id, id_tahun_ajaran, semester);
+
+    // Ambil status periode aktif dari middleware (pastikan middleware sudah mengisi req.tahunAjaranAktif)
+    const { status_pts, status_pas } = req.tahunAjaranAktif;
+    let jenis_penilaian = 'PAS'; // default
+    if (status_pts === 'aktif') {
+      jenis_penilaian = 'PTS';
+    } else if (status_pas !== 'aktif') {
+      return res.status(403).json({
+        success: false,
+        message: 'Tidak ada periode penilaian (PTS/PAS) yang aktif.',
+      });
+    }
+
+    // Kirim 4 parameter
+    const data = await catatanWaliKelasModel.getCatatanByKelas(
+      kelas_id,
+      id_tahun_ajaran,
+      semester,
+      jenis_penilaian
+    );
+
     res.json({ success: true, data, kelas: nama_kelas, semester });
   } catch (err) {
-    console.error('Error getCatanWaliKelas:', err);
+    console.error('Error getCatatanWaliKelas:', err);
     res.status(500).json({ success: false, message: 'Gagal mengambil data catatan' });
   }
 };
@@ -2445,12 +2490,20 @@ exports.generateRaporPDF = async (req, res) => {
     // === Keputusan kenaikan kelas (PAS Genap) ===
     let tingkat = '–';
     let naikKelas = '–';
+
     if (jenisNorm === 'PAS' && semesterNorm === 'Genap') {
       const [naikRows] = await db.execute(
-        `SELECT naik_tingkat FROM catatan_wali_kelas WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = 'Genap'`,
+        `SELECT naik_tingkat FROM catatan_wali_kelas 
+     WHERE siswa_id = ? AND tahun_ajaran_id = ? 
+     AND semester = 'Genap' AND jenis_penilaian = 'PAS'`,
         [siswaId, id_tahun_ajaran]
       );
+
       const statusNaik = naikRows[0]?.naik_tingkat;
+
+      // Debug untuk troubleshooting
+      console.log('🔍 DEBUG Kenaikan:', { siswaId, statusNaik, nama_kelas });
+
       if (statusNaik === 'ya') {
         tingkat = 'Naik';
         const kelasAngka = parseInt(nama_kelas.match(/\d+/)?.[0] || '1');
@@ -2458,10 +2511,13 @@ exports.generateRaporPDF = async (req, res) => {
         const romawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
         const terbilang = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam'];
         naikKelas = `${romawi[tingkatBerikutnya] || tingkatBerikutnya} (${terbilang[tingkatBerikutnya] || tingkatBerikutnya})`;
+        console.log('✅ Naik ke:', naikKelas);
       } else if (statusNaik === 'tidak') {
         tingkat = 'Tidak Naik';
+        naikKelas = '–'; // TAMBAHAN: Set nilai default
       } else {
         tingkat = 'Belum ditentukan';
+        naikKelas = '–'; // TAMBAHAN: Set nilai default
       }
     }
 
@@ -2519,9 +2575,22 @@ exports.generateRaporPDF = async (req, res) => {
     const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 
     // === Nama file output ===
-    const cleanNama = (nama_lengkap || 'siswa').replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 30);
-    const cleanNis = (nis || 'NIS').toString().replace(/[^a-zA-Z0-9]/g, '');
-    const fileName = `Rapor_${jenisNorm}_${semesterNorm}_${tahun_ajaran}_${cleanNis}_${cleanNama}.docx`;
+    const cleanNama = (nama_lengkap || 'siswa')
+      .replace(/[^a-zA-Z0-9\s]/g, '') 
+      .trim()                           
+      .replace(/\s+/g, '_')            
+      .substring(0, 30);              
+
+    const cleanNis = (nis || 'NIS')
+      .toString()
+      .replace(/[^0-9]/g, '')           
+      .substring(0, 10);
+
+    const tahunClean = tahun_ajaran.replace(/\//g, '-');
+
+    const fileName = `rapor_${jenisNorm.toLowerCase()}_${semesterNorm.toLowerCase()}.docx`;
+
+    console.log('📄 Nama file:', fileName); 
 
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');

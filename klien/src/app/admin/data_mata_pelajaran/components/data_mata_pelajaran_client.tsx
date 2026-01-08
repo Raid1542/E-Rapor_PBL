@@ -8,10 +8,10 @@
  * Tanggal: 15 September 2025
  */
 
-
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface MataPelajaran {
     id: number;
@@ -67,14 +67,7 @@ export default function DataMataPelajaranPage() {
     // === Fetch Tahun Ajaran ===
     const fetchTahunAjaran = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
             const data = await res.json();
             if (res.ok && data.success) {
                 const options = data.data.map((ta: any) => ({
@@ -94,14 +87,7 @@ export default function DataMataPelajaranPage() {
     // === Fetch Data Mata Pelajaran (berdasarkan tahun ajaran) ===
     const fetchMataPelajaran = async (tahunAjaranId: number) => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`http://localhost:5000/api/admin/mata-pelajaran?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch(`http://localhost:5000/api/admin/mata-pelajaran?tahun_ajaran_id=${tahunAjaranId}`);
             const data = await res.json();
             if (res.ok) {
                 const camelCasedData = (Array.isArray(data.data) ? data.data : []).map((mp: any) => ({
@@ -138,12 +124,12 @@ export default function DataMataPelajaranPage() {
         // ✅ Auto-lowercase untuk field jenis
         if (name === 'jenis') {
             setFormData(prev => ({ ...prev, [name]: value.toLowerCase().trim() }));
-        } 
+        }
         // Handle checkbox
         else if (type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
             setFormData(prev => ({ ...prev, [name]: checked }));
-        } 
+        }
         // Handle input lain
         else {
             setFormData(prev => ({ ...prev, [name]: value.trim() }));
@@ -187,22 +173,13 @@ export default function DataMataPelajaranPage() {
 
     const handleSubmitTambah = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
-            return;
-        }
         if (!selectedTahunAjaranId) {
             alert('Tahun ajaran aktif belum dipilih.');
             return;
         }
         try {
-            const res = await fetch("http://localhost:5000/api/admin/mata-pelajaran", {
+            const res = await apiFetch("http://localhost:5000/api/admin/mata-pelajaran", {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     kode_mapel: formData.kode_mapel.trim().toUpperCase(),
                     nama_mapel: formData.nama_mapel.trim(),
@@ -239,66 +216,48 @@ export default function DataMataPelajaranPage() {
     };
 
     const handleSubmitEdit = async () => {
-    console.log('=== DEBUG: Mulai edit ===');
-    if (!validate()) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-        alert('Sesi login telah habis. Silakan login ulang.');
-        return;
-    }
-    if (!editId) return;
+        if (!validate()) return;
+        if (!editId) return;
 
-    try {
-        // ✅ Pastikan nama variabel konsisten
-        const urutanRaporInput = formData.urutan_rapor?.trim() || '';
-        const urutan_rapor = urutanRaporInput ? Number(urutanRaporInput) : null;
+        try {
+            // Pastikan nama variabel konsisten
+            const urutanRaporInput = formData.urutan_rapor?.trim() || '';
+            const urutan_rapor = urutanRaporInput ? Number(urutanRaporInput) : null;
 
-        // ✅ Logging untuk memastikan nilai
-        console.log('Urutan rapor final:', urutan_rapor);
+            const res = await apiFetch(`http://localhost:5000/api/admin/mata-pelajaran/${editId}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    kode_mapel: formData.kode_mapel.trim().toUpperCase(),
+                    nama_mapel: formData.nama_mapel.trim(),
+                    jenis: formData.jenis,
+                    kurikulum: formData.kurikulum.trim(),
+                    urutan_rapor
+                })
+            });
 
-        const res = await fetch(`http://localhost:5000/api/admin/mata-pelajaran/${editId}`, {
-            method: "PUT",
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                kode_mapel: formData.kode_mapel.trim().toUpperCase(),
-                nama_mapel: formData.nama_mapel.trim(),
-                jenis: formData.jenis,
-                kurikulum: formData.kurikulum.trim(),
-                urutan_rapor // ✅ Pakai nama yang sama dengan yang didefinisikan
-            })
-        });
-
-        if (res.ok) {
-            alert("Data mata pelajaran berhasil diperbarui");
-            setShowEdit(false);
-            setEditId(null);
-            if (selectedTahunAjaranId) fetchMataPelajaran(selectedTahunAjaranId);
-            handleReset();
-        } else {
-            const error = await res.json();
-            console.error('Error dari backend:', error);
-            alert('Error: ' + (error.message || 'Gagal memperbarui'));
+            if (res.ok) {
+                alert("Data mata pelajaran berhasil diperbarui");
+                setShowEdit(false);
+                setEditId(null);
+                if (selectedTahunAjaranId) fetchMataPelajaran(selectedTahunAjaranId);
+                handleReset();
+            } else {
+                const error = await res.json();
+                console.error('Error dari backend:', error);
+                alert('Error: ' + (error.message || 'Gagal memperbarui'));
+            }
+        } catch (err) {
+            console.error('Error saat edit:', err);
+            alert("Gagal terhubung ke server");
         }
-    } catch (err) {
-        console.error('Error saat edit:', err);
-        alert("Gagal terhubung ke server");
-    }
-};
+    };
 
     const handleDelete = async (id: number) => {
         if (!confirm('Yakin ingin menghapus mata pelajaran ini?')) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis.');
-            return;
-        }
+
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/mata-pelajaran/${id}`, {
+            const res = await apiFetch(`http://localhost:5000/api/admin/mata-pelajaran/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 alert('Mata pelajaran berhasil dihapus');
@@ -427,7 +386,7 @@ export default function DataMataPelajaranPage() {
                             >
                                 <option value="">-- Pilih --</option>
                                 <option value="wajib">Wajib</option>
-                                <option value="pilihan">pilihan</option>
+                                <option value="pilihan">Pilihan</option>
                             </select>
                             {errors.jenis && <p className="text-red-500 text-xs mt-1">{errors.jenis}</p>}
                         </div>
@@ -555,8 +514,8 @@ export default function DataMataPelajaranPage() {
                     </div>
 
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>

@@ -1,13 +1,16 @@
-// File: rapor_client.tsx
-// Fungsi: Komponen utama untuk menampilkan daftar siswa dan mengunduh
-//         rapor berdasarkan jenis penilaian (PTS/PAS) sesuai status periode aktif.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: rapor_client.tsx
+ * Fungsi: Komponen utama untuk menampilkan daftar siswa dan mengunduh
+ *         rapor berdasarkan jenis penilaian (PTS/PAS) sesuai status periode aktif.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface Siswa {
     id: number;
@@ -24,7 +27,8 @@ interface TahunAjaranInfo {
 }
 
 const RaporGuruKelasClient = () => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const API_BASE = `${API_URL}/api`;
 
     const [jenisPenilaian, setJenisPenilaian] = useState<string>('');
     const [siswaList, setSiswaList] = useState<Siswa[]>([]);
@@ -44,14 +48,7 @@ const RaporGuruKelasClient = () => {
     // === Fungsi untuk fetch tahun ajaran aktif ===
     const fetchTahunAjaranAktif = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`${API_BASE}/guru-kelas/tahun-ajaran/aktif`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await apiFetch(`${API_BASE}/guru-kelas/tahun-ajaran/aktif`);
             const data = await res.json();
             if (res.ok && data.success) {
                 const ta = data.data;
@@ -66,14 +63,14 @@ const RaporGuruKelasClient = () => {
             }
         } catch (err) {
             console.error('Gagal ambil tahun ajaran aktif:', err);
-            setError('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect
         }
     };
 
     // === Ambil tahun ajaran aktif saat pertama kali ===
     useEffect(() => {
         fetchTahunAjaranAktif();
-    }, []);
+    }, [API_URL]);
 
     // === Ambil daftar siswa ===
     useEffect(() => {
@@ -83,14 +80,7 @@ const RaporGuruKelasClient = () => {
         }
         const fetchSiswa = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    setError('Silakan login terlebih dahulu');
-                    return;
-                }
-                const res = await fetch(`${API_BASE}/guru-kelas/siswa`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await apiFetch(`${API_BASE}/guru-kelas/siswa`);
                 const data = await res.json();
                 if (res.ok && data.success) {
                     setSiswaList(data.data);
@@ -99,14 +89,14 @@ const RaporGuruKelasClient = () => {
                 }
             } catch (err) {
                 console.error('Error fetch siswa:', err);
-                setError('Gagal terhubung ke server');
+                // Jika sesi habis, apiFetch sudah redirect
             } finally {
                 setLoading(false);
             }
         };
         setLoading(true);
         fetchSiswa();
-    }, [jenisPenilaian, tahunAjaranInfo]);
+    }, [jenisPenilaian, tahunAjaranInfo, API_URL]);
 
     // === Helper: dapatkan status penilaian saat ini ===
     const getCurrentStatus = () => {
@@ -118,8 +108,7 @@ const RaporGuruKelasClient = () => {
 
     // === Download rapor ===
     const handleDownloadRapor = async (siswaId: number) => {
-        const token = localStorage.getItem('token');
-        if (!token || !jenisPenilaian || !tahunAjaranInfo) {
+        if (!jenisPenilaian || !tahunAjaranInfo) {
             alert('Data tidak lengkap. Silakan pilih jenis penilaian.');
             return;
         }
@@ -131,12 +120,9 @@ const RaporGuruKelasClient = () => {
         }
 
         try {
-            const res = await fetch(
+            const res = await apiFetch(
                 `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${jenisMurni}/${tahunAjaranInfo.semester}`,
-                {
-                    method: 'GET',
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                { method: 'GET' }
             );
 
             if (!res.ok) {
@@ -151,12 +137,16 @@ const RaporGuruKelasClient = () => {
 
             const contentType = res.headers.get('content-type');
             if (!contentType?.includes('application/vnd.openxmlformats')) {
-                const errorText = await res.text();
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    throw new Error(errorJson.message || 'Data rapor tidak tersedia');
-                } catch {
-                    throw new Error('Respons bukan file rapor yang valid');
+                throw new Error('Respons bukan file rapor yang valid');
+            }
+
+            const contentDisposition = res.headers.get('content-disposition');
+            let fileName = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
+
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?([^";\n]+)"?/i);
+                if (match && match[1]) {
+                    fileName = match[1].replace(/['"]/g, '');
                 }
             }
 
@@ -164,7 +154,7 @@ const RaporGuruKelasClient = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `rapor_${jenisMurni.toLowerCase()}_${tahunAjaranInfo.semester.toLowerCase()}_${siswaId}.docx`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -226,26 +216,25 @@ const RaporGuruKelasClient = () => {
                     <div className="mb-6 p-3 bg-gray-100 rounded-lg">
                         <p className="text-gray-700">
                             Status {jenisPenilaian.includes('PTS') ? 'PTS' : 'PAS'}:
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                                currentStatus === 'aktif'
-                                    ? 'bg-green-100 text-green-800'
-                                    : currentStatus === 'selesai'
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${currentStatus === 'aktif'
+                                ? 'bg-green-100 text-green-800'
+                                : currentStatus === 'selesai'
                                     ? 'bg-gray-200 text-gray-700'
                                     : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                                }`}>
                                 {currentStatus === 'aktif'
                                     ? 'Aktif'
                                     : currentStatus === 'selesai'
-                                    ? 'Terkunci'
-                                    : 'Belum Dibuka'}
+                                        ? 'Terkunci'
+                                        : 'Belum Dibuka'}
                             </span>
                         </p>
                     </div>
                 )}
 
                 {jenisPenilaian === '' ? (
-                    <div className="mt-8 text-center py-10 bg-yellow-50 border border-dashed border-yellow-300 rounded-xl">
-                        <p className="text-gray-700 text-lg font-medium">Silakan pilih jenis penilaian terlebih dahulu.</p>
+                    <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                        <p className="text-orange-800 text-lg font-semibold">Pilih Jenis Penilaian Terlebih Dahulu.</p>
                     </div>
                 ) : loading ? (
                     <div className="mt-8 text-center py-10">
@@ -278,9 +267,8 @@ const RaporGuruKelasClient = () => {
                                     {siswaList.map((siswa, index) => (
                                         <tr
                                             key={siswa.id}
-                                            className={`border-b ${
-                                                index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                            } hover:bg-blue-50 transition-colors`}
+                                            className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                } hover:bg-blue-50 transition-colors`}
                                         >
                                             <td className="px-3 py-3 text-center">{index + 1}</td>
                                             <td className="px-3 py-3 font-medium text-gray-800">{siswa.nama}</td>
@@ -289,11 +277,10 @@ const RaporGuruKelasClient = () => {
                                                 <button
                                                     onClick={() => handleDownloadRapor(siswa.id)}
                                                     disabled={!isDownloadAllowed}
-                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${
-                                                        isDownloadAllowed
-                                                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    }`}
+                                                    className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs sm:text-sm gap-1 min-w-[90px] ${isDownloadAllowed
+                                                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        }`}
                                                 >
                                                     <Download size={14} />
                                                     <span>{isDownloadAllowed ? 'Unduh' : 'Tidak Tersedia'}</span>

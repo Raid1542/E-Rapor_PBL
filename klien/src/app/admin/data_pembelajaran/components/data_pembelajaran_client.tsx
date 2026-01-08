@@ -7,11 +7,10 @@
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
  * Tanggal: 15 September 2025
  */
-
-
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2, Filter } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 // ====== TYPES ======
 interface Pembelajaran {
@@ -23,19 +22,16 @@ interface Pembelajaran {
     id_mapel: number;
     id_kelas: number;
 }
-
 interface TahunAjaran {
     id: number;
     tahun_ajaran: string;
     semester: string;
     is_aktif: boolean;
 }
-
 interface DropdownItem {
     id: number;
     nama: string;
 }
-
 interface FormDataType {
     user_id: string;
     id_mapel: string;
@@ -45,7 +41,6 @@ interface FormDataType {
 
 // ====== MAIN COMPONENT ======
 export default function DataPembelajaranPage() {
-
     const [dataList, setDataList] = useState<Pembelajaran[]>([]);
     const [loading, setLoading] = useState(true);
     const [showTambah, setShowTambah] = useState(false);
@@ -59,11 +54,9 @@ export default function DataPembelajaranPage() {
     const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
     const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
     const [selectedTahunAjaranAktif, setSelectedTahunAjaranAktif] = useState<boolean>(false);
-
     const [guruList, setGuruList] = useState<DropdownItem[]>([]);
     const [mapelList, setMapelList] = useState<DropdownItem[]>([]);
     const [kelasList, setKelasList] = useState<DropdownItem[]>([]);
-
     const [dropdownLoading, setDropdownLoading] = useState(false);
 
     // ====== FILTER STATE ======
@@ -86,24 +79,6 @@ export default function DataPembelajaranPage() {
         confirmData: false
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
-
-    // ====== HELPER: API REQUEST ======
-    const apiFetch = async (url: string, options: RequestInit = {}) => {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Token tidak ditemukan');
-        const res = await fetch(url, {
-            ...options,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                ...(options.headers || {})
-            }
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Operasi gagal');
-        return data;
-    };
 
     // ====== FETCH TAHUN AJARAN ======
     const fetchTahunAjaran = async () => {
@@ -142,15 +117,16 @@ export default function DataPembelajaranPage() {
     const fetchData = async (taId: number) => {
         setLoading(true);
         try {
-            const data = await apiFetch("http://localhost:5000/api/admin/pembelajaran");
+            const res = await apiFetch(`http://localhost:5000/api/admin/pembelajaran?tahun_ajaran_id=${taId}`);
+            const data = await res.json();
             const list = (data.data || []).map((item: any) => ({
                 id: item.id,
                 nama_mapel: item.nama_mapel || 'Mapel Tidak Ditemukan',
                 nama_kelas: item.nama_kelas,
                 nama_guru: item.nama_guru || 'Belum ditetapkan',
                 user_id: item.user_id,
-                id_mapel: item.mata_pelajaran_id, // Perbaiki: gunakan mata_pelajaran_id
-                id_kelas: item.kelas_id // Perbaiki: gunakan kelas_id
+                id_mapel: item.mata_pelajaran_id,
+                id_kelas: item.kelas_id
             }));
             setDataList(list);
         } catch (err) {
@@ -169,7 +145,6 @@ export default function DataPembelajaranPage() {
     useEffect(() => {
         if (selectedTahunAjaranId) {
             fetchData(selectedTahunAjaranId);
-            // Pastikan dropdown juga diambil saat tahun ajaran dipilih
             if (selectedTahunAjaranAktif) {
                 fetchAllDropdowns();
             }
@@ -180,7 +155,7 @@ export default function DataPembelajaranPage() {
     const closeFilterModal = () => {
         setFilterClosing(true);
         setTimeout(() => {
-            setFilterValues(openedFilterValues); // Reset ke nilai sebelum modal dibuka
+            setFilterValues(openedFilterValues);
             setShowFilter(false);
             setFilterClosing(false);
         }, 200);
@@ -212,32 +187,19 @@ export default function DataPembelajaranPage() {
             alert(`Belum lengkap! Mohon isi: ${missing.join(', ')}`);
             return;
         }
-
         const payload = {
             user_id: Number(formData.user_id),
             mata_pelajaran_id: Number(formData.id_mapel),
             kelas_id: Number(formData.id_kelas)
         };
-
         try {
             const url = isEdit
                 ? `http://localhost:5000/api/admin/pembelajaran/${editId}`
                 : `http://localhost:5000/api/admin/pembelajaran`;
-
-            const res = await fetch(url, {
+            const res = await apiFetch(url, {
                 method: isEdit ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
                 body: JSON.stringify(payload)
             });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || `Error ${res.status}`);
-            }
-
             alert(isEdit ? 'Data pembelajaran berhasil diperbarui' : 'Data pembelajaran berhasil ditambahkan');
             if (selectedTahunAjaranId) {
                 fetchData(selectedTahunAjaranId);
@@ -257,21 +219,10 @@ export default function DataPembelajaranPage() {
             return;
         }
         if (!confirm('Yakin ingin menghapus data pembelajaran ini?')) return;
-
         try {
-            const url = `http://localhost:5000/api/admin/pembelajaran/${id}`;
-            const res = await fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+            await apiFetch(`http://localhost:5000/api/admin/pembelajaran/${id}`, {
+                method: 'DELETE'
             });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || `HTTP ${res.status}`);
-            }
-
             alert('Data pembelajaran berhasil dihapus');
             if (selectedTahunAjaranId) {
                 fetchData(selectedTahunAjaranId);
@@ -289,10 +240,8 @@ export default function DataPembelajaranPage() {
             item.nama_mapel.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.nama_kelas.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.nama_guru.toLowerCase().includes(searchQuery.toLowerCase());
-
         const matchesKelas = !filterValues.kelas || String(item.id_kelas) === filterValues.kelas;
         const matchesMapel = !filterValues.mapel || String(item.id_mapel) === filterValues.mapel;
-
         return matchesSearch && matchesKelas && matchesMapel;
     });
 
@@ -382,7 +331,6 @@ export default function DataPembelajaranPage() {
 
     // ====== RENDER FORM ======
     const isFormValid = formData.user_id && formData.id_mapel && formData.id_kelas && formData.confirmData;
-
     const renderForm = (title: string, isEdit: boolean) => (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="w-full max-w-2xl mx-auto">
@@ -549,10 +497,9 @@ export default function DataPembelajaranPage() {
                             })}
                         </select>
                     </div>
-
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>
@@ -584,7 +531,6 @@ export default function DataPembelajaranPage() {
                                         Filter Pembelajaran
                                     </button>
                                 </div>
-
                                 {/* Pencarian */}
                                 <div className="relative min-w-[200px] sm:min-w-[240px] max-w-[400px]">
                                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -614,7 +560,6 @@ export default function DataPembelajaranPage() {
                                     )}
                                 </div>
                             </div>
-
                             {/* Tabel Data */}
                             <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                                 <table className="w-full min-w-[600px] table-auto text-sm">
@@ -699,7 +644,6 @@ export default function DataPembelajaranPage() {
                                     </tbody>
                                 </table>
                             </div>
-
                             {/* Pagination */}
                             {filteredData.length > 0 && (
                                 <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
@@ -712,7 +656,6 @@ export default function DataPembelajaranPage() {
                             )}
                         </>
                     )}
-
                     {/* MODAL FILTER */}
                     {showFilter && (
                         <div

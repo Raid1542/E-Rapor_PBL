@@ -10,8 +10,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Users, User, Calendar } from 'lucide-react';
+import { ChevronRight, Users, User, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface UserData {
     id: string;
@@ -28,56 +29,38 @@ interface KelasInfo {
 }
 
 export default function GuruKelasDashboard() {
-
     const [user, setUser] = useState<UserData | null>(null);
     const [kelasInfo, setKelasInfo] = useState<KelasInfo | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const router = useRouter();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        // Ambil data user hanya untuk tampilan (proteksi login sudah di Layout.tsx)
         const userData = localStorage.getItem('currentUser');
-
-        if (!token || !userData) {
-            router.push('/login');
-            return;
-        }
-
-        try {
-            const parsedUser: UserData = JSON.parse(userData);
-
-            if (parsedUser.role !== 'guru kelas') {
-                alert('Anda tidak memiliki akses ke halaman ini');
-                router.push('/login');
-                return;
+        if (userData) {
+            try {
+                const parsedUser: UserData = JSON.parse(userData);
+                setUser(parsedUser);
+            } catch (e) {
+                console.warn('Invalid user data in localStorage');
             }
-
-            setUser(parsedUser);
-
-            const fetchKelasInfo = async () => {
-                try {
-                    const res = await fetch('http://localhost:5000/api/guru-kelas/kelas', {
-                        headers: { 'Authorization': `Bearer ${token}` },
-                    });
-
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (Array.isArray(data) && data.length > 0) {
-                            setKelasInfo(data[0]);
-                        }
-                    }
-                } catch (err) {
-                    console.error('Gagal memuat data kelas:', err);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchKelasInfo();
-        } catch (e) {
-            console.error('Error parsing user ', e);
-            router.push('/login');
         }
+
+        const fetchKelasInfo = async () => {
+            try {
+                const res = await apiFetch('http://localhost:5000/api/guru-kelas/kelas');
+                const data = await res.json();
+                if (res.ok && Array.isArray(data) && data.length > 0) {
+                    setKelasInfo(data[0]);
+                }
+            } catch (err) {
+                console.error('Gagal memuat data kelas:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchKelasInfo();
     }, [router]);
 
     if (loading) {
@@ -99,6 +82,11 @@ export default function GuruKelasDashboard() {
         );
     }
 
+    // Fungsi navigasi
+    const handleNavigation = (path: string) => {
+        router.push(path);
+    };
+
     return (
         <>
             {/* Welcome Card */}
@@ -112,42 +100,53 @@ export default function GuruKelasDashboard() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto px-4">
-                {/* 1. Data Siswa */}
-                <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between max-w-[320px] w-full md:w-auto">
-                    <div>
-                        <p className="text-sm text-gray-600 mb-1">Data Siswa</p>
-                        <p className="text-3xl font-bold text-gray-900">{kelasInfo.jumlah_siswa}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Card Data Siswa */}
+                <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Jumlah Siswa</p>
+                            <p className="text-3xl font-bold text-gray-900">{kelasInfo.jumlah_siswa}</p>
+                        </div>
+                        <div className="bg-orange-100 p-3 rounded-lg">
+                            <Users className="w-8 h-8 text-orange-600" />
+                        </div>
                     </div>
-                    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
-                        <Users className="w-6 h-6 text-orange-600" />
+                    <button
+                        onClick={() => handleNavigation('/guru_kelas/data_siswa')}
+                        className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition"
+                    >
+                        <span className="text-sm font-medium">Lihat detail</span>
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Card Kelas Anda */}
+                <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Kelas Anda</p>
+                            <p className="text-3xl font-bold text-gray-900">{kelasInfo.kelas}</p>
+                        </div>
+                        <div className="bg-orange-100 p-3 rounded-lg">
+                            <User className="w-8 h-8 text-orange-600" />
+                        </div>
                     </div>
                 </div>
 
-                {/* 2. Kelas Anda */}
-                <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between max-w-[320px] w-full md:w-auto">
-                    <div>
-                        <p className="text-sm text-gray-600 mb-1">Kelas Anda</p>
-                        <p className="text-3xl font-bold text-gray-900">{kelasInfo.kelas}</p>
-                    </div>
-                    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
-                        <User className="w-6 h-6 text-orange-600" />
-                    </div>
-                </div>
-
-                {/* 3. Tahun Ajaran + Semester (Semester di Bawah) */}
-                <div className="bg-white rounded-xl shadow p-6 flex items-start gap-4 max-w-[350px] w-full md:w-auto">
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-600 mb-1">Tahun Ajaran</p>
-                        <p className="text-3xl font-bold text-gray-900 truncate">
-                            {kelasInfo.tahun_ajaran}
-                        </p>
-                        <span className="mt-2 inline-block text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
-                            {kelasInfo.semester}
-                        </span>
-                    </div>
-                    <div className="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
-                        <Calendar className="w-6 h-6 text-orange-600" />
+                {/* Card Tahun Ajaran & Semester */}
+                <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-sm text-gray-600 mb-1">Tahun Ajaran</p>
+                            <p className="text-3xl font-bold text-gray-900">{kelasInfo.tahun_ajaran}</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">
+                                {kelasInfo.semester}
+                            </span>
+                        </div>
+                        <div className="bg-orange-100 p-3 rounded-lg">
+                            <Calendar className="w-8 h-8 text-orange-600" />
+                        </div>
                     </div>
                 </div>
             </div>

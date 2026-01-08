@@ -9,10 +9,10 @@
 import { Metadata } from 'next';
 import DashboardClient from './components/dashboard_client';
 
-export const meta: Metadata = {
-  title: 'Dashboard',
+export const metadata: Metadata = {
+  title: 'Dashboard', 
 };
 
-export default function AdminDashboardPage() {
+export default function DashboardPage() {
   return <DashboardClient />;
 }

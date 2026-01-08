@@ -1,13 +1,16 @@
-// File: InputNilaiPage.tsx
-// Fungsi: Halaman untuk menginput dan mengelola nilai siswa
-//         oleh guru kelas, termasuk fitur lihat detail dan edit nilai komponen.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: InputNilaiPage.tsx
+ * Fungsi: Halaman untuk menginput dan mengelola nilai siswa
+ *         oleh guru kelas, termasuk fitur lihat detail dan edit nilai komponen.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Pencil, Eye, Search, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 // ====== TYPES ======
 interface Mapel {
@@ -34,6 +37,8 @@ interface Komponen {
 }
 
 const DataInputNilaiPage = () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
     // ====== STATE ======
     const [jenisPenilaianAktif, setJenisPenilaianAktif] = useState<'PTS' | 'PAS' | null>(null);
     const [mapelList, setMapelList] = useState<Mapel[]>([]);
@@ -63,40 +68,30 @@ const DataInputNilaiPage = () => {
         const fetchMapel = async () => {
             setLoadingMapel(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) throw new Error('Token tidak ditemukan');
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/mapel', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (!res.ok) throw new Error('Gagal memuat mata pelajaran');
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/mapel`);
                 const data = await res.json();
-                setMapelList([...data.wajib, ...data.pilihan]);
+                if (res.ok) {
+                    setMapelList([...(data.wajib || []), ...(data.pilihan || [])]);
+                } else {
+                    throw new Error(data.message || 'Gagal memuat mata pelajaran');
+                }
             } catch (err) {
-                console.error(err);
+                console.error('Error fetch mapel:', err);
                 alert('Gagal memuat daftar mata pelajaran');
             } finally {
                 setLoadingMapel(false);
             }
         };
         fetchMapel();
-    }, []);
+    }, [API_URL]);
 
     // ====== FETCH KOMPONEN ======
     useEffect(() => {
         const fetchKomponen = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/komponen', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (!res.ok) throw new Error('Gagal memuat komponen penilaian');
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/atur-penilaian/komponen`);
                 const data = await res.json();
-                if (data.success) {
+                if (res.ok && data.success) {
                     const komponen: Komponen[] = data.data.map((k: any) => ({
                         id: k.id_komponen,
                         nama: k.nama_komponen,
@@ -109,7 +104,7 @@ const DataInputNilaiPage = () => {
             }
         };
         fetchKomponen();
-    }, []);
+    }, [API_URL]);
 
     // ====== FETCH NILAI SAAT MAPEL DIPILIH ======
     useEffect(() => {
@@ -123,34 +118,22 @@ const DataInputNilaiPage = () => {
         const fetchNilai = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) throw new Error('Token tidak ditemukan');
-
-                const taRes = await fetch('http://localhost:5000/api/guru-kelas/tahun-ajaran/aktif', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
+                // Ambil status periode aktif
+                const taRes = await apiFetch(`${API_URL}/api/guru-kelas/tahun-ajaran/aktif`);
                 const taData = await taRes.json();
+                if (!taRes.ok) throw new Error('Gagal ambil tahun ajaran aktif');
                 const { status_pts, status_pas } = taData.data;
                 const jenisAktif = status_pts === 'aktif' ? 'PTS' : status_pas === 'aktif' ? 'PAS' : null;
                 setJenisPenilaianAktif(jenisAktif);
 
-                const res = await fetch(`http://localhost:5000/api/guru-kelas/nilai/${selectedMapelId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Gagal mengambil data nilai');
-                }
-
+                // Ambil data nilai
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/nilai/${selectedMapelId}`);
                 const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || 'Gagal mengambil data nilai');
+                }
                 if (!data.success) {
                     throw new Error(data.message || 'Operasi gagal');
-                }
-
-                if (!Array.isArray(data.siswaList)) {
-                    throw new Error('Data siswa tidak valid');
                 }
 
                 const komponenUntukRender = komponenList.length > 0
@@ -165,7 +148,7 @@ const DataInputNilaiPage = () => {
                         { id: 7, nama: 'PAS', bobot: 0 },
                     ];
 
-                const siswaWithNilai = data.siswaList.map((s: any) => {
+                const siswaWithNilai = (data.siswaList || []).map((s: any) => {
                     const nilaiRecord: Record<number, number | null> = {};
                     komponenUntukRender.forEach(k => {
                         nilaiRecord[k.id] = s.nilai?.[k.id] ?? null;
@@ -198,7 +181,7 @@ const DataInputNilaiPage = () => {
         };
 
         fetchNilai();
-    }, [selectedMapelId, komponenList]);
+    }, [selectedMapelId, komponenList, mapelList, API_URL]);
 
     // ====== FILTER SISWA ======
     useEffect(() => {
@@ -215,10 +198,10 @@ const DataInputNilaiPage = () => {
         }
     }, [searchQuery, siswaList]);
 
-    // 🔒 Validasi: cek apakah sedang di periode PTS
+    //  Validasi: cek apakah sedang di periode PTS
     const isPeriodePTS = jenisPenilaianAktif === 'PTS';
 
-    // 🔒 Validasi: cek apakah ada bobot selain PTS > 0
+    //  Validasi: cek apakah ada bobot selain PTS > 0
     const hasInvalidBobot = () => {
         if (!isPeriodePTS) return false;
         const ptsKomponenIds = komponenList
@@ -251,27 +234,19 @@ const DataInputNilaiPage = () => {
 
         setSaving(true);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('Token tidak ditemukan');
-
-            const res = await fetch(
-                `http://localhost:5000/api/guru-kelas/nilai-komponen/${selectedMapelId}/${editingSiswa.id}`,
+            const res = await apiFetch(
+                `${API_URL}/api/guru-kelas/nilai-komponen/${selectedMapelId}/${editingSiswa.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
                     body: JSON.stringify({ nilai: editingKomponenNilai }),
                 }
             );
 
+            const data = await res.json();
             if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.message || 'Gagal menyimpan nilai komponen');
+                throw new Error(data.message || 'Gagal menyimpan nilai komponen');
             }
 
-            const data = await res.json();
             const updatedSiswa = {
                 ...editingSiswa,
                 nilai: editingKomponenNilai,
@@ -393,7 +368,7 @@ const DataInputNilaiPage = () => {
     return (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai Siswa</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Input Nilai</h1>
 
                 <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
                     {/* Dropdown Mapel */}
@@ -674,9 +649,9 @@ const DataInputNilaiPage = () => {
                                                                 }}
                                                                 disabled={isDisabled}
                                                                 className={`w-full border rounded px-3 py-2 text-sm ${isDisabled
-                                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                                        : 'border-gray-300'
-                                                                    }`}
+                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                    : 'border-gray-300'
+                                                                }`}
                                                                 placeholder="0–100"
                                                             />
                                                         </div>
@@ -706,8 +681,8 @@ const DataInputNilaiPage = () => {
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Mata Pelajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Mapel Terlebih Dahulu.</p>
                         </div>
                     )}
                 </div>

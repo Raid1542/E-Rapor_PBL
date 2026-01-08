@@ -2,8 +2,9 @@
  * Nama File: layout.tsx
  * Fungsi: Layout utama aplikasi E-Rapor.
  *         Menyediakan struktur dasar HTML, metadata, dan wrapper untuk semua halaman.
- * Pembuat: Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 September 2025
+ *         Mengaktifkan pemeriksaan sesi otomatis melalui SessionProvider.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022
+ * Tanggal: 6 Januari 2026
  */
 
 import type { Metadata } from "next";

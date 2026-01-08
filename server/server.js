@@ -12,6 +12,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use(
 // Middleware body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Pastikan folder uploads tersedia
 const uploadsPath = path.join(__dirname, 'public', 'uploads');

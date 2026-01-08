@@ -3,15 +3,15 @@
  * Fungsi: Komponen client-side untuk menampilkan daftar dan detail data siswa
  *         yang diajar oleh guru kelas. Menyediakan fitur pencarian dan modal
  *         detail informasi siswa, termasuk NIS, NISN, tanggal lahir, jenis kelamin, dan fase.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 331240193
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
  * Tanggal: 15 September 2025
  */
-
 
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Search, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface Siswa {
     id: number;
@@ -46,6 +46,7 @@ const formatJenisKelamin = (jk: string): string => {
 };
 
 export default function DataSiswaPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [siswaList, setSiswaList] = useState<Siswa[]>([]);
     const [filteredSiswa, setFilteredSiswa] = useState<Siswa[]>([]);
@@ -67,50 +68,35 @@ export default function DataSiswaPage() {
         }, 200);
     };
 
+    // === FETCH DATA SISWA ===
     useEffect(() => {
         const fetchSiswa = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    alert('Silakan login terlebih dahulu');
-                    return;
-                }
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/siswa', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        const siswa = data.data || [];
-                        setSiswaList(siswa);
-                        setFilteredSiswa(siswa);
-                        if (siswa.length > 0) {
-                            setKelasNama(siswa[0].kelas || 'Kelas Anda');
-                        }
-                    } else {
-                        alert(data.message || 'Gagal memuat data siswa');
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/siswa`);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    const siswa = data.data || [];
+                    setSiswaList(siswa);
+                    setFilteredSiswa(siswa);
+                    if (siswa.length > 0) {
+                        setKelasNama(siswa[0].kelas || 'Kelas Anda');
                     }
                 } else {
-                    const error = await res.json();
-                    alert(error.message || 'Gagal memuat data siswa');
+                    alert(data.message || 'Gagal memuat data siswa');
                 }
             } catch (err) {
-                console.error('Error:', err);
-                alert('Gagal terhubung ke server');
+                console.error('Error fetch data siswa:', err);
+                // Jika sesi habis, apiFetch sudah redirect ke /login
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSiswa();
-    }, []);
+    }, [API_URL]);
 
-    // Filter berdasarkan pencarian
+    // === FILTER BERDASARKAN PENCARIAN ===
     useEffect(() => {
         if (!searchQuery.trim()) {
             setFilteredSiswa(siswaList);
@@ -131,6 +117,7 @@ export default function DataSiswaPage() {
         setShowDetail(true);
     };
 
+    // === PAGINASI ===
     const totalPages = Math.ceil(filteredSiswa.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;

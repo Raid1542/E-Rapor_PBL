@@ -6,11 +6,11 @@
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Syahrul Ramadhan - NIM: 3312301093
  * Tanggal: 15 September 2025
  */
-
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Pencil, Eye, Search, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 // ====== TYPES ======
 interface Mapel {
@@ -71,21 +71,8 @@ export default function InputNilaiClient() {
         const fetchMapel = async () => {
             setLoadingMapel(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('Token tidak ditemukan. Silakan login ulang.');
-                }
-                const res = await fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/mapel', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
-                    throw new Error(`HTTP ${res.status}: ${errorData.message || 'Gagal memuat mata pelajaran'}`);
-                }
+                const res = await apiFetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/mapel');
                 const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Respons backend tidak sukses');
-                }
                 setMapelList(data.data || []);
             } catch (err) {
                 console.error('Error fetch mapel:', err);
@@ -107,19 +94,9 @@ export default function InputNilaiClient() {
 
         const fetchKelas = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                const res = await fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/kelas', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) throw new Error('Gagal memuat daftar kelas');
+                const res = await apiFetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/kelas');
                 const data = await res.json();
-                if (data.success) {
-                    setKelasList(data.data || []);
-                    if (data.data && data.data.length === 1) {
-                        setSelectedKelasId(data.data[0].kelas_id);
-                    }
-                }
+                setKelasList(data.data || []);
             } catch (err) {
                 console.error('Error fetch kelas:', err);
                 setKelasList([]);
@@ -133,21 +110,14 @@ export default function InputNilaiClient() {
     useEffect(() => {
         const fetchKomponen = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                const res = await fetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/komponen', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) throw new Error('Gagal memuat komponen penilaian');
+                const res = await apiFetch('http://localhost:5000/api/guru-bidang-studi/atur-penilaian/komponen');
                 const data = await res.json();
-                if (data.success) {
-                    const komponen: Komponen[] = data.data.map((k: any) => ({
-                        id: k.id_komponen,
-                        nama: k.nama_komponen,
-                        bobot: k.persentase || 0,
-                    }));
-                    setKomponenList(komponen);
-                }
+                const komponen: Komponen[] = data.data.map((k: any) => ({
+                    id: k.id_komponen,
+                    nama: k.nama_komponen,
+                    bobot: k.persentase || 0,
+                }));
+                setKomponenList(komponen);
             } catch (err) {
                 console.error('Error fetch komponen:', err);
             }
@@ -168,23 +138,10 @@ export default function InputNilaiClient() {
         const fetchNilai = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) throw new Error('Token tidak ditemukan');
-
-                const res = await fetch(
-                    `http://localhost:5000/api/guru-bidang-studi/nilai/${selectedMapelId}/${selectedKelasId}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                const res = await apiFetch(
+                    `http://localhost:5000/api/guru-bidang-studi/nilai/${selectedMapelId}/${selectedKelasId}`
                 );
-
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Gagal mengambil data nilai');
-                }
-
                 const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Operasi gagal');
-                }
 
                 const jenisAktif = data.jenis_penilaian_aktif || null;
                 setJenisPenilaianAktif(jenisAktif);
@@ -253,7 +210,7 @@ export default function InputNilaiClient() {
 
     // ====== SIMPAN NILAI KOMPONEN ======
     const simpanNilaiKomponen = async () => {
-        if (!editingSiswa || !selectedMapelId || !selectedKelasId) return;
+        if (!editingSiswa || !selectedMapelId) return;
 
         for (const [idStr, nilai] of Object.entries(editingKomponenNilai)) {
             if (nilai !== null) {
@@ -271,27 +228,14 @@ export default function InputNilaiClient() {
 
         setSaving(true);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('Token tidak ditemukan');
-
             const payload = { nilai: editingKomponenNilai };
-
-            const res = await fetch(
+            const res = await apiFetch(
                 `http://localhost:5000/api/guru-bidang-studi/nilai-komponen/${selectedMapelId}/${editingSiswa.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
                     body: JSON.stringify(payload),
                 }
             );
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.message || 'Gagal menyimpan nilai komponen');
-            }
 
             const data = await res.json();
             const updatedSiswa = {
@@ -353,8 +297,7 @@ export default function InputNilaiClient() {
                     <button
                         key={i}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -365,8 +308,7 @@ export default function InputNilaiClient() {
                 <button
                     key={1}
                     onClick={() => setCurrentPage(1)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     1
                 </button>
@@ -381,8 +323,7 @@ export default function InputNilaiClient() {
                     <button
                         key={i}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -396,8 +337,7 @@ export default function InputNilaiClient() {
                 <button
                     key={totalPages}
                     onClick={() => setCurrentPage(totalPages)}
-                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     {totalPages}
                 </button>
@@ -444,7 +384,7 @@ export default function InputNilaiClient() {
                             >
                                 <option value="">-- Pilih Mata Pelajaran --</option>
                                 {mapelList
-                                    .filter(mapel => mapel.mata_pelajaran_id != null && mapel.jenis === 'pilihan')
+                                    .filter(mapel => mapel.jenis === 'pilihan')
                                     .map(mapel => (
                                         <option key={mapel.mata_pelajaran_id} value={mapel.mata_pelajaran_id}>
                                             {mapel.nama_mapel} ({mapel.jenis})
@@ -598,8 +538,7 @@ export default function InputNilaiClient() {
                             {/* Modal Detail */}
                             {showDetail && detailSiswa && (
                                 <div
-                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'
-                                        } p-4`}
+                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-4`}
                                     onClick={e => e.target === e.currentTarget && setDetailClosing(true)}
                                     onTransitionEnd={() => {
                                         if (detailClosing) {
@@ -610,8 +549,7 @@ export default function InputNilaiClient() {
                                 >
                                     <div className="absolute inset-0 bg-gray-900/70"></div>
                                     <div
-                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                                            }`}
+                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${detailClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                                     >
                                         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
                                             <h2 className="text-xl font-bold text-gray-800">Detail Nilai</h2>
@@ -639,6 +577,7 @@ export default function InputNilaiClient() {
                                                         <span className="ml-2 font-semibold">{detailSiswa.nilai_rapor}</span>
                                                     </div>
                                                 </div>
+
                                                 {/* Deskripsi - Full Width */}
                                                 <div className="mb-6">
                                                     <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
@@ -647,6 +586,7 @@ export default function InputNilaiClient() {
                                                     </p>
                                                 </div>
                                             </div>
+
                                             <h3 className="font-semibold mb-2">Nilai Komponen:</h3>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                                 {komponenList.map(k => (
@@ -658,6 +598,7 @@ export default function InputNilaiClient() {
                                                     </div>
                                                 ))}
                                             </div>
+
                                             <div className="mt-6 flex justify-end gap-3">
                                                 <button
                                                     onClick={() => setDetailClosing(true)}
@@ -683,8 +624,7 @@ export default function InputNilaiClient() {
                             {/* Modal Edit Komponen */}
                             {editingSiswa && (
                                 <div
-                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'
-                                        } p-4`}
+                                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editKomponenClosing ? 'opacity-0' : 'opacity-100'} p-4`}
                                     onClick={e => e.target === e.currentTarget && setEditKomponenClosing(true)}
                                     onTransitionEnd={() => {
                                         if (editKomponenClosing) {
@@ -695,8 +635,7 @@ export default function InputNilaiClient() {
                                 >
                                     <div className="absolute inset-0 bg-gray-900/70"></div>
                                     <div
-                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                                            }`}
+                                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editKomponenClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                                     >
                                         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
                                             <h2 className="text-xl font-bold text-gray-800">Edit Nilai Komponen</h2>
@@ -738,12 +677,12 @@ export default function InputNilaiClient() {
                                                                             [komponen.id]: numValue,
                                                                         }));
                                                                     }
-                                                                }
+                                                                    }
                                                             }}
                                                             disabled={jenisPenilaianAktif === 'PTS' && !/PTS/i.test(komponen.nama)}
                                                             className={`w-full border rounded px-3 py-2 text-sm ${jenisPenilaianAktif === 'PTS' && !/PTS/i.test(komponen.nama)
-                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300'
-                                                                    : 'border-gray-300'
+                                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300'
+                                                                : 'border-gray-300'
                                                                 }`}
                                                             placeholder="0–100"
                                                         />
@@ -760,8 +699,7 @@ export default function InputNilaiClient() {
                                                 <button
                                                     onClick={simpanNilaiKomponen}
                                                     disabled={saving}
-                                                    className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                                        }`}
+                                                    className={`px-4 py-2 rounded ${saving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
                                                 >
                                                     {saving ? 'Menyimpan...' : 'Simpan'}
                                                 </button>
@@ -772,11 +710,11 @@ export default function InputNilaiClient() {
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-12 bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                            <p className="text-gray-700 text-lg font-medium">
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">
                                 {selectedMapelId && !selectedKelasId
-                                    ? 'Silakan pilih Kelas terlebih dahulu.'
-                                    : 'Silakan pilih Mata Pelajaran terlebih dahulu.'}
+                                    ? 'Pilih Kelas Terlebih Dahulu.'
+                                    : 'Pilih Mapel Terlebih Dahulu.'}
                             </p>
                         </div>
                     )}

@@ -12,7 +12,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Camera, X } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface UserProfile {
     id: number;
@@ -31,6 +32,7 @@ interface UserProfile {
 }
 
 const ProfilePage = () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [formData, setFormData] = useState({
         nama: '',
@@ -42,11 +44,10 @@ const ProfilePage = () => {
         alamat: ''
     });
 
-    const [profileImage, setProfileImage] = useState<string | null>(null); // URL foto dari server
-    const [previewImage, setPreviewImage] = useState<string | null>(null); // Preview lokal saat upload
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
-
 
     // State password
     const [passwordData, setPasswordData] = useState({
@@ -57,78 +58,49 @@ const ProfilePage = () => {
 
     const [isConfirmed, setIsConfirmed] = useState(false);
 
+    // === Muat data profil dari localStorage + API jika perlu ===
     useEffect(() => {
-        const fetchProfile = async () => {
-            const token = localStorage.getItem('token');
-            const storedUser = localStorage.getItem('currentUser');
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            window.location.href = '/login';
+            return;
+        }
 
-            if (!token || !storedUser) {
-                window.location.href = '/login';
-                return;
+        try {
+            const userData: UserProfile = JSON.parse(storedUser);
+
+            // Set data formulir
+            setFormData({
+                nama: userData.nama_lengkap || '',
+                nuptk: userData.nuptk || '',
+                niy: userData.niy || '',
+                jenisKelamin: userData.jenis_kelamin || 'Laki-laki',
+                telepon: userData.no_telepon || '',
+                email: userData.email_sekolah || '',
+                alamat: userData.alamat || ''
+            });
+
+            // Set foto profil
+            if (userData.profileImage && userData.profileImage.trim()) {
+                const imgUrl = userData.profileImage.startsWith('/')
+                    ? `${API_URL}${userData.profileImage}`
+                    : `${API_URL}/${userData.profileImage}`;
+                setProfileImage(imgUrl);
+            } else {
+                setProfileImage(null);
             }
+        } catch (e) {
+            console.error('Gagal memuat data profil dari localStorage:', e);
+            window.location.href = '/login';
+        }
+    }, [API_URL]);
 
-            try {
-                const userData: UserProfile = JSON.parse(storedUser);
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
-                // Jika tidak ada profileImage di localStorage, ambil dari API
-                if (!userData.profileImage || !userData.profileImage.trim()) {
-                    const res = await fetch(`http://localhost:5000/api/admin/admin/${userData.id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        const apiResponse = await res.json();
-                        const freshData = apiResponse.data;
-
-                        // Simpan kembali ke localStorage
-                        const updatedUser = {
-                            ...userData,
-                            profileImage: freshData.profileImage || null
-                        };
-                        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-                        // Set state hanya jika ada foto
-                        if (freshData.profileImage && freshData.profileImage.trim()) {
-                            setProfileImage(`${baseUrl}${freshData.profileImage}`);
-                        } else {
-                            setProfileImage(null);
-                        }
-                    }
-                } else {
-                    // Jika ada di localStorage, langsung pakai (tapi pastikan valid)
-                    if (userData.profileImage && userData.profileImage.trim()) {
-                        setProfileImage(`${baseUrl}${userData.profileImage}`);
-                    } else {
-                        setProfileImage(null);
-                    }
-                }
-
-                // Set formData
-                setFormData({
-                    nama: userData.nama_lengkap || '',
-                    nuptk: userData.nuptk || '',
-                    niy: userData.niy || '',
-                    jenisKelamin: userData.jenis_kelamin || 'Laki-laki',
-                    telepon: userData.no_telepon || '',
-                    email: userData.email_sekolah || '',
-                    alamat: userData.alamat || ''
-                });
-            } catch (e) {
-                console.error('Gagal memuat data profil:', e);
-            }
-        };
-
-        fetchProfile();
-    }, []);
-
-    // === Handler Profil ===
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-
-    // === Simpan Profil ke Backend ===
+    // === Simpan Profil ===
     const handleSubmitProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!isConfirmed) {
@@ -136,10 +108,9 @@ const ProfilePage = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('currentUser');
-        if (!token || !storedUser) {
-            alert('Sesi login tidak valid. Silakan login ulang.');
+        if (!storedUser) {
+            alert('Sesi tidak valid. Silakan login ulang.');
             return;
         }
 
@@ -147,12 +118,8 @@ const ProfilePage = () => {
             const userData: UserProfile = JSON.parse(storedUser);
             const userId = userData.id;
 
-            const response = await fetch(`http://localhost:5000/api/admin/admin/${userId}`, {
+            const response = await apiFetch(`${API_URL}/api/admin/admin/${userId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
                     email_sekolah: formData.email,
@@ -166,28 +133,31 @@ const ProfilePage = () => {
             });
 
             if (response.ok) {
-                // Perbarui localStorage
+                const result = await response.json();
+
+                // Normalisasi data dari API
                 const updatedUser: UserProfile = {
                     ...userData,
-                    nama_lengkap: formData.nama,
-                    email_sekolah: formData.email,
-                    niy: formData.niy,
-                    nuptk: formData.nuptk,
-                    jenis_kelamin: formData.jenisKelamin,
-                    no_telepon: formData.telepon,
-                    alamat: formData.alamat
+                    nama_lengkap: result.data.nama_lengkap || formData.nama,
+                    email_sekolah: result.data.email_sekolah || formData.email,
+                    niy: result.data.niy || formData.niy,
+                    nuptk: result.data.nuptk || formData.nuptk,
+                    jenis_kelamin: result.data.jenis_kelamin || formData.jenisKelamin,
+                    no_telepon: result.data.no_telepon || formData.telepon,
+                    alamat: result.data.alamat || formData.alamat,
+                    profileImage: result.data.profileImage || userData.profileImage
                 };
+
                 localStorage.setItem('currentUser', JSON.stringify(updatedUser));
                 alert('Profil berhasil diperbarui!');
                 window.location.reload();
-
             } else {
                 const error = await response.json();
                 alert(error.message || 'Gagal memperbarui profil');
             }
         } catch (err) {
-            console.error(err);
-            alert('Gagal terhubung ke server');
+            console.error('Error update profil:', err);
+            // Jika sesi habis, apiFetch sudah redirect ke /login
         }
     };
 
@@ -214,19 +184,9 @@ const ProfilePage = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid. Silakan login ulang.');
-            return;
-        }
-
         try {
-            const response = await fetch('http://localhost:5000/api/admin/admin/ganti-password', {
+            const response = await apiFetch(`${API_URL}/api/admin/admin/ganti-password`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({ oldPassword, newPassword })
             });
 
@@ -235,73 +195,60 @@ const ProfilePage = () => {
                 alert('Kata sandi berhasil diubah!');
                 setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
-                // ✅ LOGOUT OTOMATIS SETELAH GANTI PASSWORD
+                // Logout otomatis
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
-                window.location.href = '/login'; // Redirect ke halaman login
+                window.location.href = '/login';
             } else {
                 alert(result.message || 'Gagal mengubah kata sandi');
             }
         } catch (err) {
             console.error('Error ganti password:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah handle redirect
         }
     };
 
+    // === Upload Foto Profil ===
     const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validasi file
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
             alert('Hanya file JPG, PNG, atau WebP yang diizinkan');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) { // 5MB
+        if (file.size > 5 * 1024 * 1024) {
             alert('Ukuran file maksimal 5MB');
             return;
         }
 
-        // Preview lokal
         const reader = new FileReader();
         reader.onloadend = () => setPreviewImage(reader.result as string);
         reader.readAsDataURL(file);
 
-        // Upload ke server
         setIsUploading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid.');
-            setIsUploading(false);
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('foto', file);
+        const formDataUpload = new FormData();
+        formDataUpload.append('foto', file);
 
         try {
-            const response = await fetch('http://localhost:5000/api/admin/admin/upload-foto', {
+            const response = await apiFetch(`${API_URL}/api/admin/admin/upload-foto`, {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData
+                body: formDataUpload
             });
 
             const result = await response.json();
             if (response.ok && result.fotoPath) {
-                // ✅ Update localStorage dengan path baru
                 const storedUser = localStorage.getItem('currentUser');
                 if (storedUser) {
                     const userData = JSON.parse(storedUser);
                     userData.profileImage = result.fotoPath;
                     localStorage.setItem('currentUser', JSON.stringify(userData));
                 }
-                window.dispatchEvent(new Event('profileImageUpdated'));
 
-                // Update state dengan URL lengkap
-                setProfileImage(`http://localhost:5000${result.fotoPath}`);
+                window.dispatchEvent(new Event('profileImageUpdated'));
+                setProfileImage(`${API_URL}${result.fotoPath}`);
                 setPreviewImage(null);
                 alert('Foto profil berhasil diupload!');
-
             } else {
                 throw new Error(result.message || 'Upload gagal');
             }
@@ -312,7 +259,6 @@ const ProfilePage = () => {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-
     };
 
     return (
@@ -322,49 +268,44 @@ const ProfilePage = () => {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6">
-                {/* Profile Card */}
+                {/* Foto Profil */}
                 <div className="lg:w-56 flex-shrink-0">
                     <div className="bg-white rounded-lg shadow-sm p-5">
                         <div className="flex flex-col items-center text-center">
-                            <div className="flex flex-col items-center text-center">
-                                {/* Avatar */}
-                                <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
-                                    {previewImage ? (
-                                        <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : profileImage ? (
-                                        <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
-                                            {(formData.nama || '??')
-                                                .split(' ')
-                                                .slice(0, 2)
-                                                .map((word) => word[0]?.toUpperCase() || '')
-                                                .join('') || '??'}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Tombol Ganti Foto */}
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={isUploading}
-                                    className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
-                                >
-                                    <Camera size={14} />
-                                    {isUploading ? 'Mengupload...' : 'Ganti Foto'}
-                                </button>
-
-                                {/* Input File Hidden */}
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleUploadPhoto}
-                                    accept="image/*"
-                                    className="hidden"
-                                    disabled={isUploading}
-                                />
+                            <div className="relative w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-3">
+                                {previewImage ? (
+                                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                                ) : profileImage ? (
+                                    <img src={profileImage} alt="Foto Profil" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-black text-lg font-semibold flex items-center justify-center w-full h-full">
+                                        {(formData.nama || '??')
+                                            .split(' ')
+                                            .slice(0, 2)
+                                            .map((word) => word[0]?.toUpperCase() || '')
+                                            .join('') || '??'}
+                                    </span>
+                                )}
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="mt-1 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-70"
+                            >
+                                <Camera size={14} />
+                                {isUploading ? 'Mengupload...' : 'Ganti Foto'}
+                            </button>
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleUploadPhoto}
+                                accept="image/*"
+                                className="hidden"
+                                disabled={isUploading}
+                            />
                         </div>
                     </div>
                 </div>

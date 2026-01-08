@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { Book, Calendar, School, Users } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface UserData {
     id: string;
@@ -36,66 +37,34 @@ export default function DashboardClient() {
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        // Ambil data user hanya untuk tampilan (proteksi login sudah di Layout.tsx)
         const userData = localStorage.getItem('currentUser');
-
-        if (!token || !userData) {
-            alert("Silakan login terlebih dahulu.");
-            window.location.href = "/login";
-            return;
-        }
-
-        try {
-            const parsedUser: UserData = JSON.parse(userData);
-
-            if (parsedUser.role !== 'guru bidang studi') {
-                alert('Anda tidak memiliki akses ke halaman ini.');
-                window.location.href = "/login";
-                return;
+        if (userData) {
+            try {
+                const parsedUser: UserData = JSON.parse(userData);
+                setUser(parsedUser);
+            } catch (e) {
+                console.warn('Invalid user data in localStorage');
             }
-
-            setUser(parsedUser);
-
-            const fetchDashboard = async () => {
-                try {
-                    const res = await fetch('http://localhost:5000/api/guru-bidang-studi/dashboard', {
-                        headers: { 'Authorization': `Bearer ${token}` },
-                    });
-
-                    if (res.status === 401) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('currentUser');
-                        alert('Sesi Anda telah berakhir. Silakan login kembali.');
-                        window.location.href = "/login";
-                        return;
-                    }
-
-                    if (res.ok) {
-                        const result = await res.json();
-                        if (result.success && result.data) {
-                            setDashboard(result.data);
-                        } else {
-                            console.error('Respons API tidak valid:', result);
-                        }
-                    } else {
-                        console.error('Gagal memuat dashboard. Status:', res.status);
-                    }
-                } catch (err) {
-                    console.error('Error koneksi:', err);
-                    alert('Gagal terhubung ke server.');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchDashboard();
-        } catch (e) {
-            console.error('Error parsing user:', e);
-            alert('Data login tidak valid. Silakan login ulang.');
-            localStorage.removeItem('token');
-            localStorage.removeItem('currentUser');
-            window.location.href = "/login";
         }
+
+        const fetchDashboard = async () => {
+            try {
+                const res = await apiFetch('http://localhost:5000/api/guru-bidang-studi/dashboard');
+                const result = await res.json();
+                if (res.ok && result.success && result.data) {
+                    setDashboard(result.data);
+                } else {
+                    console.error('Respons API tidak valid:', result);
+                }
+            } catch (err) {
+                console.error('Error memuat dashboard:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboard();
     }, []);
 
     if (loading) {

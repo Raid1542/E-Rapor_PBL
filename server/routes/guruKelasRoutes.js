@@ -13,6 +13,7 @@ const router = express.Router();
 const authenticate = require('../middleware/authenticate');
 const cekPenilaianStatus = require('../middleware/cekPenilaianStatus');
 const authorize = require('../middleware/authorize');
+const cekTahunAjaranAktif = require('../middleware/cekTahunAjaranAktif');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -65,11 +66,11 @@ router.put('/ganti-password', authenticate, guruKelasOnly, guruKelasController.g
 router.put('/upload_foto', authenticate, uploadFoto.single('foto'), guruKelasController.uploadFotoProfil);
 
 // --- Absensi ---
-router.get('/absensi', authenticate, guruKelasOnly, guruKelasController.getAbsensiTotal);
+router.get('/absensi', authenticate, guruKelasOnly, cekTahunAjaranAktif, guruKelasController.getAbsensiTotal);
 router.put('/absensi/:siswa_id', authenticate, guruKelasOnly, cekPenilaianStatus, guruKelasController.updateAbsensiTotal);
 
 // --- Catatan Wali Kelas ---
-router.get('/catatan-wali-kelas', authenticate, guruKelasOnly, guruKelasController.getCatatanWaliKelas);
+router.get('/catatan-wali-kelas', authenticate, guruKelasOnly, cekTahunAjaranAktif, guruKelasController.getCatatanWaliKelas);
 router.put('/catatan-wali-kelas/:siswa_id', authenticate, guruKelasOnly, cekPenilaianStatus, guruKelasController.updateCatatanWaliKelas);
 
 // --- Ekstrakurikuler & Kokurikuler ---

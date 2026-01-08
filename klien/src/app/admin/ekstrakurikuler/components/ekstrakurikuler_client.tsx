@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Pencil, Plus, Trash2, Search, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface Ekstrakurikuler {
     id: number;
@@ -28,6 +29,7 @@ interface TahunAjaran {
 }
 
 export default function DataEkstrakurikulerPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [ekskulList, setEkskulList] = useState<Ekstrakurikuler[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,14 +54,7 @@ export default function DataEkstrakurikulerPage() {
     // === Fetch Tahun Ajaran ===
     const fetchTahunAjaran = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch(`${API_URL}/api/admin/tahun-ajaran`);
             const data = await res.json();
             if (res.ok && data.success) {
                 const options = data.data.map((ta: any) => ({
@@ -72,36 +67,29 @@ export default function DataEkstrakurikulerPage() {
             }
         } catch (err) {
             console.error('Gagal ambil tahun ajaran:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect ke /login
         }
     };
 
     // === Fetch Data Ekstrakurikuler ===
     const fetchEkskul = async (tahunAjaranId: number) => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`http://localhost:5000/api/admin/ekstrakurikuler?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch(`${API_URL}/api/admin/ekstrakurikuler?tahun_ajaran_id=${tahunAjaranId}`);
             const data = await res.json();
             if (res.ok) {
                 const camelCasedData = (Array.isArray(data.data) ? data.data : []).map((ekskul: any) => ({
-                    id: ekskul.id_ekskul, // ✅ INI YANG DIPERBAIKI!
+                    id: ekskul.id_ekskul,
                     nama_ekskul: ekskul.nama_ekskul,
                     nama_pembina: ekskul.nama_pembina || '-',
                     jumlah_anggota: ekskul.jumlah_anggota || 0
                 }));
                 setEkskulList(camelCasedData);
             } else {
-                alert('Gagal memuat data ekstrakurikuler: ' + (data.message || 'Tidak terotorisasi'));
+                alert('Gagal memuat data ekstrakurikuler: ' + (data.message || 'Error tidak diketahui'));
             }
         } catch (err) {
             console.error('Error fetch ekstrakurikuler:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah handle redirect
         } finally {
             setLoading(false);
         }
@@ -109,14 +97,17 @@ export default function DataEkstrakurikulerPage() {
 
     useEffect(() => {
         fetchTahunAjaran();
-    }, []);
+    }, [API_URL]);
 
     useEffect(() => {
         if (selectedTahunAjaranId) {
             setLoading(true);
             fetchEkskul(selectedTahunAjaranId);
+        } else {
+            setEkskulList([]);
+            setLoading(false);
         }
-    }, [selectedTahunAjaranId]);
+    }, [selectedTahunAjaranId, API_URL]);
 
     // === Pencarian & Pagination ===
     const filteredEkskul = ekskulList.filter((ekskul) => {
@@ -176,85 +167,76 @@ export default function DataEkstrakurikulerPage() {
 
     const handleSubmitTambah = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
+        if (!selectedTahunAjaranId) {
+            alert('Pilih tahun ajaran terlebih dahulu');
             return;
         }
+
         try {
-            const res = await fetch("http://localhost:5000/api/admin/ekstrakurikuler", {
+            const res = await apiFetch(`${API_URL}/api/admin/ekstrakurikuler`, {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nama_ekskul: formData.nama_ekskul,
                     nama_pembina: formData.nama_pembina || null,
                     tahun_ajaran_id: selectedTahunAjaranId,
                 })
             });
+
             if (res.ok) {
                 alert("Ekstrakurikuler berhasil ditambahkan");
                 setShowTambah(false);
-                if (selectedTahunAjaranId) fetchEkskul(selectedTahunAjaranId);
+                fetchEkskul(selectedTahunAjaranId);
                 handleReset();
             } else {
                 const error = await res.json();
                 alert(error.message || "Gagal menambah ekstrakurikuler");
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            console.error('Error tambah ekstrakurikuler:', err);
+            // Sesi habis → redirect otomatis
         }
     };
 
     const handleSubmitEdit = async () => {
         if (!validate() || editId === null) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
+        if (!selectedTahunAjaranId) {
+            alert('Pilih tahun ajaran terlebih dahulu');
             return;
         }
+
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/ekstrakurikuler/${editId}`, {
+            const res = await apiFetch(`${API_URL}/api/admin/ekstrakurikuler/${editId}`, {
                 method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nama_ekskul: formData.nama_ekskul,
                     nama_pembina: formData.nama_pembina || null,
                     tahun_ajaran_id: selectedTahunAjaranId,
                 })
             });
+
             if (res.ok) {
                 alert("Data ekstrakurikuler berhasil diperbarui");
                 setShowEdit(false);
                 setEditId(null);
-                if (selectedTahunAjaranId) fetchEkskul(selectedTahunAjaranId);
+                fetchEkskul(selectedTahunAjaranId);
                 handleReset();
             } else {
                 const error = await res.json();
                 alert(error.message || "Gagal memperbarui data ekstrakurikuler");
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            console.error('Error edit ekstrakurikuler:', err);
         }
     };
 
     const handleDelete = async (id: number) => {
         if (!confirm('Apakah Anda yakin ingin menghapus ekstrakurikuler ini?')) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis.');
-            return;
-        }
+
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/ekstrakurikuler/${id}`, {
-                method: "DELETE",
-                headers: { 'Authorization': `Bearer ${token}` }
+            const res = await apiFetch(`${API_URL}/api/admin/ekstrakurikuler/${id}`, {
+                method: "DELETE"
             });
+
             if (res.ok) {
                 alert("Ekstrakurikuler berhasil dihapus");
                 if (selectedTahunAjaranId) fetchEkskul(selectedTahunAjaranId);
@@ -263,7 +245,7 @@ export default function DataEkstrakurikulerPage() {
                 alert(err.message || "Gagal menghapus ekstrakurikuler");
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            console.error('Error hapus ekstrakurikuler:', err);
         }
     };
 
@@ -390,7 +372,6 @@ export default function DataEkstrakurikulerPage() {
                                 setSelectedTahunAjaranId(id);
                                 setSelectedTahunAjaranAktif(selectedTa?.is_aktif || false);
                                 setLoading(true);
-                                fetchEkskul(id);
                             }}
                             className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-0"
                         >
@@ -407,8 +388,8 @@ export default function DataEkstrakurikulerPage() {
                     </div>
 
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>

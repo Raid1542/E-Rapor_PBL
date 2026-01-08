@@ -11,6 +11,7 @@
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Kelas {
     id: number;
@@ -66,14 +67,7 @@ export default function DataKelasClient() {
     // === Fetch Tahun Ajaran ===
     const fetchTahunAjaran = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch('http://localhost:5000/api/admin/tahun-ajaran', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch('http://localhost:5000/api/admin/tahun-ajaran');
             const data = await res.json();
             if (res.ok && data.success) {
                 const options = data.data.map((ta: any) => ({
@@ -93,15 +87,8 @@ export default function DataKelasClient() {
     // === Fetch Daftar Guru Kelas untuk Dropdown ===
     const fetchGuruList = async () => {
         setLoadingGuru(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setLoadingGuru(false);
-            return;
-        }
         try {
-            const res = await fetch('http://localhost:5000/api/admin/guru-kelas', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch('http://localhost:5000/api/admin/guru-kelas');
             const data = await res.json();
             if (res.ok && data.success) {
                 const validGuru = data.data
@@ -125,14 +112,7 @@ export default function DataKelasClient() {
     // === Fetch Data Kelas ===
     const fetchKelas = async (tahunAjaranId: number) => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`http://localhost:5000/api/admin/kelas?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`http://localhost:5000/api/admin/kelas?tahun_ajaran_id=${tahunAjaranId}`);
             const data = await res.json();
             if (res.ok && data.success) {
                 const listWithId = data.data.map((k: any) => ({
@@ -172,18 +152,9 @@ export default function DataKelasClient() {
 
     const handleSubmitTambah = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis');
-            return;
-        }
         try {
-            const res = await fetch('http://localhost:5000/api/admin/kelas', {
+            const res = await apiFetch('http://localhost:5000/api/admin/kelas', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     nama_kelas: formData.nama_kelas.trim(),
                     fase: formData.fase.trim(),
@@ -219,16 +190,14 @@ export default function DataKelasClient() {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token || !selectedTahunAjaranId) {
-            alert('Sesi tidak valid');
+        if (!selectedTahunAjaranId) {
+            alert('Pilih tahun ajaran terlebih dahulu');
             return;
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/kelas/${kelasId}`, {
+            const res = await apiFetch(`http://localhost:5000/api/admin/kelas/${kelasId}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.ok) {
@@ -245,20 +214,15 @@ export default function DataKelasClient() {
 
     const handleSubmitEdit = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token || !editId || !selectedTahunAjaranId) {
-            alert('Sesi tidak valid');
+        if (!editId || !selectedTahunAjaranId) {
+            alert('Data tidak valid');
             return;
         }
 
         try {
             // Update data kelas
-            const resKelas = await fetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
+            const resKelas = await apiFetch(`http://localhost:5000/api/admin/kelas/${editId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     nama_kelas: formData.nama_kelas.trim(),
                     fase: formData.fase.trim(),
@@ -278,12 +242,8 @@ export default function DataKelasClient() {
                     return;
                 }
 
-                const resWali = await fetch(`http://localhost:5000/api/admin/kelas/${editId}/guru`, {
+                const resWali = await apiFetch(`http://localhost:5000/api/admin/kelas/${editId}/guru`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
                     body: JSON.stringify({ user_id: userIdNum }),
                 });
 
@@ -565,8 +525,8 @@ export default function DataKelasClient() {
                     </div>
 
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>

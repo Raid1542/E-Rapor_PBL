@@ -6,11 +6,10 @@
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
  * Tanggal: 15 September 2025
  */
-
 'use client';
-
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Guru {
   id: number;
@@ -96,47 +95,40 @@ export default function DataGuruClient() {
   // === Fetch Guru ===
   const fetchGuru = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Silakan login terlebih dahulu');
-        return;
-      }
-      const res = await fetch("http://localhost:5000/api/admin/guru", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch("http://localhost:5000/api/admin/guru");
       const data = await res.json();
       if (res.ok) {
         const validRoles = ['guru kelas', 'guru bidang studi'];
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => {
-              let normalizedStatus = 'aktif';
-              if (typeof g.status === 'string') {
-                normalizedStatus = g.status.trim().toLowerCase();
-                if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
-              }
-              let roles: string[] = [];
-              if (g.roles) {
-                const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
-                roles = rawRoles
-                  .map((r: any) => String(r).toLowerCase().trim())
-                  .filter((r: string) => validRoles.includes(r));
-              }
-              return {
-                id: g.id_user || g.id,
-                nama: g.nama_lengkap || g.nama,
-                email: g.email_sekolah || g.email,
-                niy: g.niy,
-                nuptk: g.nuptk,
-                tempat_lahir: g.tempat_lahir || '',
-                tanggal_lahir: g.tanggal_lahir || '',
-                jenisKelamin: g.jenis_kelamin || '',
-                alamat: g.alamat,
-                no_telepon: g.no_telepon || '',
-                statusGuru: normalizedStatus,
-                roles: roles,
-                profileImage: g.profileImage || null,
-              };
-            })
+            let normalizedStatus = 'aktif';
+            if (typeof g.status === 'string') {
+              normalizedStatus = g.status.trim().toLowerCase();
+              if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
+            }
+            let roles: string[] = [];
+            if (g.roles) {
+              const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
+              roles = rawRoles
+                .map((r: any) => String(r).toLowerCase().trim())
+                .filter((r: string) => validRoles.includes(r));
+            }
+            return {
+              id: g.id_user || g.id,
+              nama: g.nama_lengkap || g.nama,
+              email: g.email_sekolah || g.email,
+              niy: g.niy,
+              nuptk: g.nuptk,
+              tempat_lahir: g.tempat_lahir || '',
+              tanggal_lahir: g.tanggal_lahir || '',
+              jenisKelamin: g.jenis_kelamin || '',
+              alamat: g.alamat,
+              no_telepon: g.no_telepon || '',
+              statusGuru: normalizedStatus,
+              roles: roles,
+              profileImage: g.profileImage || null,
+            };
+          })
           : [];
         setGuruList(list);
       } else {
@@ -169,6 +161,7 @@ export default function DataGuruClient() {
     statusGuru: 'aktif',
     confirmData: false
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleDetail = (guru: Guru) => {
@@ -202,49 +195,39 @@ export default function DataGuruClient() {
 
   const validate = (isEdit: boolean): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.nama?.trim()) newErrors.nama = 'Nama wajib diisi';
-    if (!formData.jenisKelamin) newErrors.jenisKelamin = 'Pilih jenis kelamin';
-    if (!formData.roles || formData.roles.length === 0) newErrors.roles = 'Pilih minimal satu role';
-    if (!formData.tanggalLahir) {
-      newErrors.tanggalLahir = 'Tanggal lahir wajib diisi';
-    } else {
-      const dob = new Date(formData.tanggalLahir);
-      if (isNaN(dob.getTime())) {
-        newErrors.tanggalLahir = 'Tanggal lahir tidak valid';
-      } else {
-        const today = new Date();
-        if (dob > today) {
-          newErrors.tanggalLahir = 'Tanggal lahir tidak boleh di masa depan';
-        } else {
-          let age = today.getFullYear() - dob.getFullYear();
-          const m = today.getMonth() - dob.getMonth();
-          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-          if (age < 18) newErrors.tanggalLahir = 'Usia minimal 18 tahun';
-        }
-      }
+    // === WAJIB: SEMUA MODE ===
+    if (!formData.nama?.trim()) {
+      newErrors.nama = 'Nama wajib diisi';
     }
+    if (!formData.email?.trim()) {
+      newErrors.email = 'Email wajib diisi';
+    }
+    if (!formData.niy?.trim()) {
+      newErrors.niy = 'NIY wajib diisi';
+    }
+    if (!formData.nuptk?.trim()) {
+      newErrors.nuptk = 'NUPTK wajib diisi';
+    }
+    if (!formData.roles || formData.roles.length === 0) {
+      newErrors.roles = 'Pilih minimal satu role';
+    }
+    // === WAJIB: HANYA SAAT EDIT ===
     if (isEdit && (!formData.statusGuru || formData.statusGuru === '')) {
-      newErrors.statusGuru = 'Status wajib dipilih';
+      newErrors.statusGuru = 'Status guru wajib dipilih';
     }
-    if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
+    // Konfirmasi akhir
+    if (!formData.confirmData) {
+      newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmitTambah = async () => {
     if (!validate(false)) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login habis. Silakan login ulang.');
-      return;
-    }
     try {
-      const res = await fetch("http://localhost:5000/api/admin/guru", {
+      const res = await apiFetch("http://localhost:5000/api/admin/guru", {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           nama_lengkap: formData.nama,
           email_sekolah: formData.email,
@@ -256,7 +239,7 @@ export default function DataGuruClient() {
           jenis_kelamin: formData.jenisKelamin,
           alamat: formData.alamat,
           no_telepon: formData.no_telepon,
-        })
+        }),
       });
       if (res.ok) {
         alert("Data guru berhasil ditambahkan");
@@ -288,25 +271,14 @@ export default function DataGuruClient() {
       formData.no_telepon !== (originalData.no_telepon || '') ||
       formData.statusGuru !== (originalData.statusGuru || 'aktif') ||
       JSON.stringify(formData.roles.sort()) !== JSON.stringify((originalData.roles || []).sort());
-
     if (!hasChanged) {
       alert("Tidak ada perubahan data.");
       return;
     }
-
     if (!validate(true)) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login habis.');
-      return;
-    }
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/guru/${editId}`, {
+      const res = await apiFetch(`http://localhost:5000/api/admin/guru/${editId}`, {
         method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           nama_lengkap: formData.nama,
           email_sekolah: formData.email,
@@ -319,7 +291,7 @@ export default function DataGuruClient() {
           alamat: formData.alamat,
           no_telepon: formData.no_telepon,
           status: formData.statusGuru
-        })
+        }),
       });
       if (res.ok) {
         alert("Data guru berhasil diperbarui");
@@ -362,10 +334,8 @@ export default function DataGuruClient() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/guru/import', {
+      const res = await apiFetch('http://localhost:5000/api/admin/guru/import', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
       const result = await res.json();
@@ -483,19 +453,132 @@ export default function DataGuruClient() {
             <button onClick={() => { isEdit ? setShowEdit(false) : setShowTambah(false); handleReset(); }} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama <span className="text-red-500">*</span></label><input type="text" name="nama" value={formData.nama} onChange={handleInputChange} placeholder="Masukkan nama lengkap" className={`w-full border ${errors.nama ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`} /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Email Akun</label><input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="contoh@sekolah.sch.id" className="w-full border border-gray-300 rounded-lg px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">NIY</label><input type="text" name="niy" value={formData.niy} onChange={handleInputChange} placeholder="Nomor Induk Yayasan" className="w-full border border-gray-300 rounded-lg px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">NUPTK</label><input type="text" name="nuptk" value={formData.nuptk} onChange={handleInputChange} placeholder="Nomor Unik Pendidik" className="w-full border border-gray-300 rounded-lg px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tempat Lahir</label><input type="text" name="tempatLahir" value={formData.tempatLahir} onChange={handleInputChange} placeholder="Misal: Jakarta" className="w-full border border-gray-300 rounded-lg px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Lahir <span className="text-red-500">*</span></label><input type="date" name="tanggalLahir" value={formData.tanggalLahir} onChange={handleInputChange} className={`w-full border ${errors.tanggalLahir ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2`} /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Jenis Kelamin <span className="text-red-500">*</span></label><select name="jenisKelamin" value={formData.jenisKelamin} onChange={handleInputChange} className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}><option value="">-- Pilih --</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option></select></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Telepon</label><input type="tel" name="no_telepon" value={formData.no_telepon} onChange={handleInputChange} placeholder="misal: 081234567890" className="w-full border border-gray-300 rounded-lg px-4 py-2.5" /></div>
-            <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1.5">Alamat</label><textarea name="alamat" value={formData.alamat} onChange={handleInputChange} placeholder="Masukkan alamat lengkap" rows={2} className="w-full border border-gray-300 rounded-lg px-4 py-2.5"></textarea></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nama <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nama"
+                value={formData.nama}
+                onChange={handleInputChange}
+                placeholder="Masukkan nama lengkap"
+                className={`w-full border ${errors.nama ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+              />
+              {errors.nama && <p className="text-red-500 text-xs mt-1">{errors.nama}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email Akun <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="contoh@sekolah.sch.id"
+                className={`w-full border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+              />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                NIY <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="niy"
+                value={formData.niy}
+                onChange={handleInputChange}
+                placeholder="Nomor Induk Yayasan"
+                className={`w-full border ${errors.niy ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+              />
+              {errors.niy && <p className="text-red-500 text-xs mt-1">{errors.niy}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                NUPTK <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nuptk"
+                value={formData.nuptk}
+                onChange={handleInputChange}
+                placeholder="Nomor Unik Pendidik"
+                className={`w-full border ${errors.nuptk ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+              />
+              {errors.nuptk && <p className="text-red-500 text-xs mt-1">{errors.nuptk}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Tempat Lahir
+              </label>
+              <input
+                type="text"
+                name="tempatLahir"
+                value={formData.tempatLahir}
+                onChange={handleInputChange}
+                placeholder="Misal: Jakarta"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Tanggal Lahir
+              </label>
+              <input
+                type="date"
+                name="tanggalLahir"
+                value={formData.tanggalLahir}
+                onChange={handleInputChange}
+                className={`w-full border border-gray-300 rounded px-3 py-2`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Jenis Kelamin
+              </label>
+              <select
+                name="jenisKelamin"
+                value={formData.jenisKelamin}
+                onChange={handleInputChange}
+                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5`}
+              >
+                <option value="">-- Pilih --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Telepon
+              </label>
+              <input
+                type="tel"
+                name="no_telepon"
+                value={formData.no_telepon}
+                onChange={handleInputChange}
+                placeholder="misal: 081234567890"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alamat</label>
+              <textarea
+                name="alamat"
+                value={formData.alamat}
+                onChange={handleInputChange}
+                placeholder="Masukkan alamat lengkap"
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5"
+              ></textarea>
+            </div>
             <div className="md:col-span-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Role (Hak Akses) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Role (Hak Akses) <span className="text-red-500">*</span>
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {[
                       { key: 'guru kelas', label: 'Guru Kelas' },
@@ -526,7 +609,9 @@ export default function DataGuruClient() {
                 </div>
                 {isEdit && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Status Guru <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Status Guru <span className="text-red-500">*</span>
+                    </label>
                     <select
                       name="statusGuru"
                       value={formData.statusGuru}
@@ -545,16 +630,37 @@ export default function DataGuruClient() {
           </div>
           <div className="mt-6">
             <label className="flex items-start gap-2 cursor-pointer">
-              <input type="checkbox" name="confirmData" checked={formData.confirmData} onChange={handleInputChange} className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+              <input
+                type="checkbox"
+                name="confirmData"
+                checked={formData.confirmData}
+                onChange={handleInputChange}
+                className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
               <span className="text-sm text-gray-700">Saya yakin data yang diisi sudah benar</span>
             </label>
             {errors.confirmData && <p className="text-red-500 text-xs mt-1">{errors.confirmData}</p>}
           </div>
           <div className="mt-6 sm:mt-8">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <button onClick={() => { isEdit ? setShowEdit(false) : setShowTambah(false); handleReset(); }} className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium">Batal</button>
-              <button onClick={handleReset} className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium">Reset</button>
-              <button onClick={isEdit ? handleSubmitEdit : handleSubmitTambah} className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium">{isEdit ? 'Update' : 'Simpan'}</button>
+              <button
+                onClick={() => { isEdit ? setShowEdit(false) : setShowTambah(false); handleReset(); }}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleReset}
+                className="border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                Reset
+              </button>
+              <button
+                onClick={isEdit ? handleSubmitEdit : handleSubmitTambah}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded text-xs sm:text-sm font-medium"
+              >
+                {isEdit ? 'Update' : 'Simpan'}
+              </button>
             </div>
           </div>
         </div>
@@ -572,7 +678,10 @@ export default function DataGuruClient() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           {/* Tombol Aksi */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <button onClick={() => setShowTambah(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <button
+              onClick={() => setShowTambah(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            >
               <Plus size={20} /> Tambah Guru
             </button>
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -722,8 +831,7 @@ export default function DataGuruClient() {
           </div>
         </div>
       </div>
-
-      {/* ✅ MODAL DETAIL DENGAN FOTO/INISIAL */}
+      {/*  MODAL DETAIL DENGAN FOTO/INISIAL */}
       {showDetail && selectedGuru && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
@@ -757,7 +865,7 @@ export default function DataGuruClient() {
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              {/* ✅ AVATAR FOTO/INISIAL */}
+              {/*  AVATAR FOTO/INISIAL */}
               <div className="flex flex-col items-center mb-6">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 overflow-hidden mb-3 flex-shrink-0 flex items-center justify-center">
                   {selectedGuru.profileImage ? (
@@ -896,7 +1004,6 @@ export default function DataGuruClient() {
           </div>
         </div>
       )}
-
       {/* Modal Import */}
       {showImport && (
         <div
@@ -990,7 +1097,6 @@ export default function DataGuruClient() {
           </div>
         </div>
       )}
-
       {/* Modal Filter */}
       {showFilter && (
         <div

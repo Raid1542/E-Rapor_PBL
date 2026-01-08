@@ -1,14 +1,16 @@
-// ============================================================
-// File: profil_client.tsx
-// Fungsi: Komponen utama untuk mengelola profil dan kata sandi
-//         pengguna (guru kelas), termasuk upload foto profil.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: profil_client.tsx
+ * Fungsi: Komponen utama untuk mengelola profil dan kata sandi
+ *         pengguna (guru kelas), termasuk upload foto profil.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface UserProfile {
     id: number;
@@ -119,20 +121,13 @@ const ProfilClient = () => {
         reader.readAsDataURL(file);
 
         setIsUploading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid.');
-            setIsUploading(false);
-            return;
-        }
 
         const formDataUpload = new FormData();
         formDataUpload.append('foto', file);
 
         try {
-            const response = await fetch(`${API_URL}/api/guru-kelas/upload_foto`, {
+            const response = await apiFetch(`${API_URL}/api/guru-kelas/upload_foto`, {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}` },
                 body: formDataUpload
             });
 
@@ -196,19 +191,9 @@ const ProfilClient = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid. Silakan login ulang.');
-            return;
-        }
-
         try {
-            const res = await fetch(`${API_URL}/api/guru-kelas/profil`, {
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/profil`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
                     email_sekolah: formData.email,
@@ -273,19 +258,9 @@ const ProfilClient = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid');
-            return;
-        }
-
         try {
-            const res = await fetch(`${API_URL}/api/guru-kelas/ganti-password`, {
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/ganti-password`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({ oldPassword, newPassword })
             });
 

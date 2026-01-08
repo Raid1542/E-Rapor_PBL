@@ -1904,43 +1904,37 @@ const aturStatusPenilaian = async (req, res) => {
 
     // Validasi input
     if (!['PTS', 'PAS'].includes(jenis)) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Jenis harus PTS atau PAS' });
+      return res.status(400).json({ success: false, message: 'Jenis harus PTS atau PAS' });
     }
     if (!['aktif', 'nonaktif', 'selesai'].includes(status)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: 'Status harus aktif, nonaktif, atau selesai',
-        });
+      return res.status(400).json({ success: false, message: 'Status harus aktif, nonaktif, atau selesai' });
     }
     if (!tahun_ajaran_id || tahun_ajaran_id <= 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Tahun ajaran ID wajib diisi' });
+      return res.status(400).json({ success: false, message: 'Tahun ajaran ID wajib diisi' });
     }
 
-    // Tentukan nama kolom berdasarkan jenis
-    let statusField;
-    if (jenis === 'PTS') {
-      statusField = 'status_pts';
-    } else if (jenis === 'PAS') {
-      statusField = 'status_pas';
-    } else {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Jenis penilaian tidak valid' });
+    // Ambil status saat ini
+    const [currentRows] = await db.execute(
+      `SELECT status_pts, status_pas FROM tahun_ajaran WHERE id_tahun_ajaran = ?`,
+      [tahun_ajaran_id]
+    );
+    if (currentRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Tahun ajaran tidak ditemukan' });
     }
 
-    // ❗ JANGAN PAKAI ?? — gunakan string literal yang sudah divalidasi
-    const query = `
-            UPDATE tahun_ajaran
-            SET ${statusField} = ?
-            WHERE id_tahun_ajaran = ?
-        `;
+    const currentStatus = jenis === 'PTS' ? currentRows[0].status_pts : currentRows[0].status_pas;
 
+    // Jika status saat ini 'selesai', tidak bisa diubah datanya
+    if (currentStatus === 'selesai') {
+      return res.status(400).json({
+        success: false,
+        message: 'Penilaian sudah dikunci permanen. Tidak bisa diubah.'
+      });
+    }
+
+    // Lanjutkan update
+    const statusField = jenis === 'PTS' ? 'status_pts' : 'status_pas';
+    const query = `UPDATE tahun_ajaran SET ${statusField} = ? WHERE id_tahun_ajaran = ?`;
     await db.execute(query, [status, tahun_ajaran_id]);
 
     res.json({

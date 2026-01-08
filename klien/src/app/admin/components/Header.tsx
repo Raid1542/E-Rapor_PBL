@@ -16,8 +16,8 @@ import { useState, useEffect, useRef } from 'react';
 
 interface UserData {
   id: number;
-  nama_lengkap: string;
-  email_sekolah: string;
+  name: string;
+  email: string;
   role: string;
   profileImage?: string;
 }
@@ -34,7 +34,7 @@ export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null); // ✅ referensi ke dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null); 
 
   useEffect(() => {
     const loadUserData = () => {
@@ -83,7 +83,7 @@ export default function Header() {
     };
   }, []);
 
-  // ✅ Tutup dropdown
+  //  Tutup dropdown
   const closeDropdown = () => {
     const dropdown = document.getElementById('profile-dropdown');
     if (dropdown) dropdown.classList.add('hidden');
@@ -109,7 +109,7 @@ export default function Header() {
     router.push('/admin/profil');
   };
 
-  // ✅ ✨ TUTUP DROPDOWN SAAT KLIK DI LUAR
+  // TUTUP DROPDOWN SAAT KLIK DI LUAR
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -147,7 +147,7 @@ export default function Header() {
             <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
           </div>
 
-          <div className="relative" ref={dropdownRef}> {/* ✅ pasang ref di sini */}
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={toggleDropdown}
               className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
@@ -162,21 +162,21 @@ export default function Header() {
                   />
                 ) : (
                   <span className="text-black text-xs font-semibold">
-                    {getInitials(user.nama_lengkap)}
+                    {getInitials(user.name)}
                   </span>
                 )}
               </div>
               <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
 
-            {/* Profile Dropdown — tetap pakai id untuk kompatibilitas */}
+            {/* Profile Dropdown */}
             <div
               id="profile-dropdown"
               className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
             >
               <div className="p-4 border-b border-gray-200">
-                <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
-                <p className="text-sm text-gray-500">{user.email_sekolah}</p>
+                <p className="font-semibold text-gray-900">{user.name}</p>
+                <p className="text-sm text-gray-500">{user.email}</p>
                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                   {user.role.toUpperCase()}
                 </span>

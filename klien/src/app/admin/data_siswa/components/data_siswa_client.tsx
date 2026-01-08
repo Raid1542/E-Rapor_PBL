@@ -4,13 +4,13 @@
  *         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
  *         kelas, jenis kelamin, dan status, serta import data siswa via Excel.
  *         Hanya tahun ajaran aktif yang memungkinkan aksi edit, hapus, tambah, dan import.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401022 
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
  * Tanggal: 15 September 2025
  */
-
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Siswa {
     id: number;
@@ -54,7 +54,6 @@ interface FormDataType {
 }
 
 export default function DataSiswaPage() {
-
     const [siswaList, setSiswaList] = useState<Siswa[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDetail, setShowDetail] = useState(false);
@@ -100,11 +99,13 @@ export default function DataSiswaPage() {
         jenisKelamin: '',
         status: ''
     });
+
     const resetFilter = () => {
         setFilterValues({ kelas: '', jenisKelamin: '', status: '' });
         setSearchQuery('');
         setCurrentPage(1);
     };
+
     const closeFilterModal = () => {
         setFilterClosing(true);
         setTimeout(() => {
@@ -117,14 +118,7 @@ export default function DataSiswaPage() {
     // === Fetch Tahun Ajaran ===
     const fetchTahunAjaran = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
             const data = await res.json();
             if (res.ok && data.success) {
                 const options = data.data.map((ta: any) => ({
@@ -143,16 +137,9 @@ export default function DataSiswaPage() {
 
     // ✅ BARU: Fetch daftar kelas dari API
     const fetchKelasDropdown = async () => {
-        setKelasLoading(true); // ✅ Mulai loading
+        setKelasLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setKelasLoading(false);
-                return;
-            }
-            const res = await fetch("http://localhost:5000/api/admin/dropdown", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch("http://localhost:5000/api/admin/dropdown");
             const data = await res.json();
             if (res.ok && data.success) {
                 setKelasList(data.data);
@@ -160,27 +147,19 @@ export default function DataSiswaPage() {
         } catch (err) {
             console.error('Error fetch kelas dropdown:', err);
         } finally {
-            setKelasLoading(false); // ✅ Selesai loading
+            setKelasLoading(false);
         }
     };
 
-    // Panggil di useEffect
     useEffect(() => {
         fetchTahunAjaran();
-        fetchKelasDropdown(); // ✅ Tambahkan ini
+        fetchKelasDropdown();
     }, []);
 
     // === Fetch Data Siswa ===
     const fetchSiswa = async (tahunAjaranId: number) => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`http://localhost:5000/api/admin/siswa?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch(`http://localhost:5000/api/admin/siswa?tahun_ajaran_id=${tahunAjaranId}`);
             const data = await res.json();
             if (res.ok) {
                 const camelCasedData = (Array.isArray(data.data) ? data.data : []).map((siswa: any) => ({
@@ -231,7 +210,6 @@ export default function DataSiswaPage() {
 
     const handleEdit = (siswa: Siswa) => {
         setEditId(siswa.id);
-        // ✅ Cari kelas_id berdasarkan nama_kelas
         const kelasItem = kelasList.find(k => k.nama === siswa.kelas);
         setFormData({
             nama: siswa.nama,
@@ -253,7 +231,6 @@ export default function DataSiswaPage() {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         if (name === 'kelas') {
-            // ✅ Ambil fase dari kelasList berdasarkan ID
             const selectedKelas = kelasList.find(k => k.id === Number(value));
             setFormData(prev => ({ ...prev, fase: selectedKelas?.fase || '' }));
         }
@@ -268,7 +245,6 @@ export default function DataSiswaPage() {
         }
         if (!formData.nis) newErrors.nis = 'NIS wajib diisi';
         if (!formData.nisn) newErrors.nisn = 'NISN wajib diisi';
-        if (!formData.jenisKelamin) newErrors.jenisKelamin = 'Pilih jenis kelamin';
         if (!formData.confirmData) newErrors.confirmData = 'Harap konfirmasi data';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -276,18 +252,9 @@ export default function DataSiswaPage() {
 
     const handleSubmitTambah = async () => {
         if (!validate(false)) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
-            return;
-        }
         try {
-            const res = await fetch("http://localhost:5000/api/admin/siswa", {
+            const res = await apiFetch("http://localhost:5000/api/admin/siswa", {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nis: formData.nis,
                     nisn: formData.nisn,
@@ -332,22 +299,13 @@ export default function DataSiswaPage() {
             return;
         }
         if (!validate(true)) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login telah habis. Silakan login ulang.');
-            return;
-        }
         if (selectedTahunAjaranId === null) {
             alert('Terjadi kesalahan: Tahun ajaran tidak dipilih.');
             return;
         }
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/siswa/${editId}`, {
+            const res = await apiFetch(`http://localhost:5000/api/admin/siswa/${editId}`, {
                 method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     nis: formData.nis,
                     nisn: formData.nisn,
@@ -401,10 +359,8 @@ export default function DataSiswaPage() {
         const formDataExcel = new FormData();
         formDataExcel.append('file', importFile);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/admin/siswa/import', {
+            const res = await apiFetch('http://localhost:5000/api/admin/siswa/import', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
                 body: formDataExcel
             });
             const result = await res.json();
@@ -572,19 +528,18 @@ export default function DataSiswaPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Jenis Kelamin <span className="text-red-500">*</span>
+                                Jenis Kelamin
                             </label>
                             <select
                                 name="jenisKelamin"
                                 value={formData.jenisKelamin}
                                 onChange={handleInputChange}
-                                className={`w-full border ${errors.jenisKelamin ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5`}
                             >
                                 <option value="">-- Pilih --</option>
                                 <option value="LAKI-LAKI">Laki-laki</option>
                                 <option value="PEREMPUAN">Perempuan</option>
                             </select>
-                            {errors.jenisKelamin && <p className="text-red-500 text-xs mt-1">{errors.jenisKelamin}</p>}
                         </div>
                         {isEdit && (
                             <div>
@@ -709,8 +664,8 @@ export default function DataSiswaPage() {
                         </select>
                     </div>
                     {selectedTahunAjaranId === null ? (
-                        <div className="mt-8 text-center py-8 bg-yellow-50 border border-dashed border-yellow-300 rounded-lg">
-                            <p className="text-gray-700 text-lg font-medium">Silakan pilih Tahun Ajaran terlebih dahulu.</p>
+                        <div className="mt-8 text-center py-8 bg-orange-50 border border-dashed border-orange-300 rounded-lg">
+                            <p className="text-orange-800 text-lg font-semibold">Pilih Tahun Ajaran Terlebih Dahulu.</p>
                         </div>
                     ) : (
                         <>
@@ -880,7 +835,6 @@ export default function DataSiswaPage() {
                     )}
                 </div>
             </div>
-
             {/* Modal Detail */}
             {showDetail && selectedSiswa && (
                 <div
@@ -965,7 +919,7 @@ export default function DataSiswaPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Jenis Kelamin</span>
                                     <span className="text-xs sm:text-sm">:</span>
-                                    <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.jenisKelamin}</span>
+                                    <span className="text-xs sm:text-sm col-span-2">{selectedSiswa.jenisKelamin || '-'}</span>
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
                                     <span className="font-semibold text-xs sm:text-sm">Alamat</span>
@@ -1011,7 +965,6 @@ export default function DataSiswaPage() {
                     </div>
                 </div>
             )}
-
             {/* Modal Import */}
             {showImport && (
                 <div
@@ -1105,7 +1058,6 @@ export default function DataSiswaPage() {
                     </div>
                 </div>
             )}
-
             {/* Modal Filter */}
             {showFilter && (
                 <div

@@ -14,8 +14,8 @@ import { useState, useEffect, useRef } from 'react';
 
 interface UserData {
     id: number;
-    nama_lengkap: string;
-    email_sekolah: string;
+    name: string;
+    email: string;
     role: string;
     profileImage?: string;
 }
@@ -159,7 +159,7 @@ export default function Header() {
                                     />
                                 ) : (
                                     <span className="text-black text-xs font-semibold">
-                                        {getInitials(user.nama_lengkap)}
+                                        {getInitials(user.name)}
                                     </span>
                                 )}
                             </div>
@@ -171,8 +171,8 @@ export default function Header() {
                             className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
                         >
                             <div className="p-4 border-b border-gray-200">
-                                <p className="font-semibold text-gray-900">{user.nama_lengkap}</p>
-                                <p className="text-sm text-gray-500">{user.email_sekolah}</p>
+                                <p className="font-semibold text-gray-900">{user.name}</p>
+                                <p className="text-sm text-gray-500">{user.email}</p>
                                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                                     {user.role.toUpperCase()}
                                 </span>
