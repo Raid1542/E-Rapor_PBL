@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { Pencil, Plus, X } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface TahunAjaran {
     id_tahun_ajaran: number;
@@ -44,6 +45,7 @@ const formatTanggalIndonesia = (dateStr: string | null | undefined): string => {
 };
 
 export default function DataTahunAjaranPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,14 +67,7 @@ export default function DataTahunAjaranPage() {
 
     const fetchTahunAjaran = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await apiFetch(`${API_URL}/api/admin/tahun-ajaran`);
             const data = await res.json();
             if (res.ok && data.success) {
                 setTahunAjaranList(data.data);
@@ -80,8 +75,8 @@ export default function DataTahunAjaranPage() {
                 alert('Gagal memuat data tahun ajaran: ' + (data.message || 'Error tidak diketahui'));
             }
         } catch (err) {
-            console.error('Error fetch:', err);
-            alert('Gagal terhubung ke server');
+            console.error('Error fetch tahun ajaran:', err);
+            // Jika status 401 → apiFetch sudah redirect ke /login
         } finally {
             setLoading(false);
         }
@@ -89,7 +84,7 @@ export default function DataTahunAjaranPage() {
 
     useEffect(() => {
         fetchTahunAjaran();
-    }, []);
+    }, [API_URL]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -110,19 +105,10 @@ export default function DataTahunAjaranPage() {
 
     const handleSubmitTambah = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis. Silakan login ulang.');
-            return;
-        }
 
         try {
-            const res = await fetch("http://localhost:5000/api/admin/tahun-ajaran", {
+            const res = await apiFetch(`${API_URL}/api/admin/tahun-ajaran`, {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     tahun1: formData.tahun1,
                     tahun2: formData.tahun2,
@@ -148,7 +134,8 @@ export default function DataTahunAjaranPage() {
                 alert(err.message || "Gagal menambah tahun ajaran");
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            console.error('Error tambah tahun ajaran:', err);
+            // Jika sesi habis, apiFetch sudah redirect
         }
     };
 
@@ -167,19 +154,11 @@ export default function DataTahunAjaranPage() {
 
     const handleSubmitEdit = async () => {
         if (!validate()) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis. Silakan login ulang.');
-            return;
-        }
+        if (editId === null) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/tahun-ajaran/${editId}`, {
+            const res = await apiFetch(`${API_URL}/api/admin/tahun-ajaran/${editId}`, {
                 method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     tahun1: formData.tahun1,
                     tahun2: formData.tahun2,
@@ -199,7 +178,7 @@ export default function DataTahunAjaranPage() {
                 alert(err.message || "Gagal memperbarui data");
             }
         } catch (err) {
-            alert("Gagal terhubung ke server");
+            console.error('Error edit tahun ajaran:', err);
         }
     };
 

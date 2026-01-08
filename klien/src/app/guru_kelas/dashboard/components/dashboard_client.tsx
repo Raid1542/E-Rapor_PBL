@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight, Users, User, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface UserData {
     id: string;
@@ -34,49 +35,32 @@ export default function GuruKelasDashboard() {
     const router = useRouter();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        // Ambil data user hanya untuk tampilan (proteksi login sudah di Layout.tsx)
         const userData = localStorage.getItem('currentUser');
-
-        if (!token || !userData) {
-            router.push('/login');
-            return;
-        }
-
-        try {
-            const parsedUser: UserData = JSON.parse(userData);
-
-            if (parsedUser.role !== 'guru kelas') {
-                alert('Anda tidak memiliki akses ke halaman ini');
-                router.push('/login');
-                return;
+        if (userData) {
+            try {
+                const parsedUser: UserData = JSON.parse(userData);
+                setUser(parsedUser);
+            } catch (e) {
+                console.warn('Invalid user data in localStorage');
             }
-
-            setUser(parsedUser);
-
-            const fetchKelasInfo = async () => {
-                try {
-                    const res = await fetch('http://localhost:5000/api/guru-kelas/kelas', {
-                        headers: { 'Authorization': `Bearer ${token}` },
-                    });
-
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (Array.isArray(data) && data.length > 0) {
-                            setKelasInfo(data[0]);
-                        }
-                    }
-                } catch (err) {
-                    console.error('Gagal memuat data kelas:', err);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchKelasInfo();
-        } catch (e) {
-            console.error('Error parsing user ', e);
-            router.push('/login');
         }
+
+        const fetchKelasInfo = async () => {
+            try {
+                const res = await apiFetch('http://localhost:5000/api/guru-kelas/kelas');
+                const data = await res.json();
+                if (res.ok && Array.isArray(data) && data.length > 0) {
+                    setKelasInfo(data[0]);
+                }
+            } catch (err) {
+                console.error('Gagal memuat data kelas:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchKelasInfo();
     }, [router]);
 
     if (loading) {
@@ -98,7 +82,7 @@ export default function GuruKelasDashboard() {
         );
     }
 
-    // Fungsi navigasi (opsional, jika butuh link)
+    // Fungsi navigasi
     const handleNavigation = (path: string) => {
         router.push(path);
     };
@@ -115,7 +99,7 @@ export default function GuruKelasDashboard() {
                 </p>
             </div>
 
-            {/* Stats Cards — Disesuaikan dengan Admin */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Card Data Siswa */}
                 <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 cursor-pointer">

@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight, Users, UserCircle, Award, School, Book } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/apiFetch';
 
 // Definisikan tipe stats
 interface DashboardStats {
@@ -23,7 +24,7 @@ interface DashboardStats {
     mata_pelajaran: number;
 }
 
-// Definisikan tipe user secara inline (karena tidak pakai lib/types.ts)
+// Definisikan tipe user secara inline
 interface UserData {
     id: number;
     name: string;
@@ -53,33 +54,20 @@ export default function DashboardClient() {
     const router = useRouter();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        // Ambil data user hanya untuk tampilan nama (proteksi login sudah di Layout.tsx)
         const userData = localStorage.getItem('currentUser');
-
-        if (!token || !userData) {
-            router.push('/login');
-            return;
-        }
-
-        try {
-            const parsedUser = JSON.parse(userData) as UserData;
-            if (parsedUser.role !== 'admin') {
-                alert('Anda tidak memiliki akses ke halaman ini');
-                router.push('/login');
-                return;
+        if (userData) {
+            try {
+                const parsedUser = JSON.parse(userData) as UserData;
+                setUser(parsedUser);
+            } catch (e) {
+                console.warn('Invalid user data in localStorage');
             }
-            setUser(parsedUser);
-        } catch (e) {
-            console.error('Invalid user data', e);
-            router.push('/login');
-            return;
         }
 
         const fetchStats = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/admin/dashboard/stats', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await apiFetch('http://localhost:5000/api/admin/dashboard/stats');
                 const result = await res.json();
                 if (res.ok && result.success) {
                     setStats(result.data);
@@ -109,16 +97,12 @@ export default function DashboardClient() {
         );
     }
 
-    if (!user) {
-        return null;
-    }
-
     return (
         <>
             {/* Welcome Card */}
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
                 <h2 className="text-2xl font-bold mb-2">
-                    Selamat Datang, {user.name || 'Admin'}! 👋
+                    Selamat Datang, {user?.name || 'Admin'}! 👋
                 </h2>
                 <p className="text-orange-100">
                     Anda login sebagai Administrator. Kelola sistem E-Rapor dengan mudah.

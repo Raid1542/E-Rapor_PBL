@@ -2,7 +2,7 @@
  * Nama File: profil_client.tsx
  * Fungsi: Komponen klien untuk mengelola profil guru bidang studi,
  *         mencakup edit data pribadi, upload foto profil, dan ganti kata sandi.
- * Pembuat: Raid Aqil Athallah - NIM: 312401022 & Syahrul Ramadhan - NIM: 3312301093
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Syahrul Ramadhan - NIM: 3312301093
  * Tanggal: 15 September 2025
  */
 
@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface UserProfile {
     id: number;
@@ -119,28 +120,16 @@ export default function ProfilClient() {
         reader.readAsDataURL(file);
 
         setIsUploading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid.');
-            setIsUploading(false);
-            return;
-        }
-
         const formDataUpload = new FormData();
         formDataUpload.append('foto', file);
 
         try {
-            const response = await fetch(`${API_URL}/api/guru-bidang-studi/upload_foto`, {
+            const response = await apiFetch(`${API_URL}/api/guru-bidang-studi/upload_foto`, {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}` },
                 body: formDataUpload,
             });
 
             const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Upload gagal');
-            }
 
             let updatedUser;
             if (result.user) {
@@ -194,19 +183,9 @@ export default function ProfilClient() {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid. Silakan login ulang.');
-            return;
-        }
-
         try {
-            const res = await fetch(`${API_URL}/api/guru-bidang-studi/profil`, {
+            const res = await apiFetch(`${API_URL}/api/guru-bidang-studi/profil`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
                     email_sekolah: formData.email,
@@ -271,19 +250,9 @@ export default function ProfilClient() {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login tidak valid');
-            return;
-        }
-
         try {
-            const res = await fetch(`${API_URL}/api/guru-bidang-studi/ganti-password`, {
+            const res = await apiFetch(`${API_URL}/api/guru-bidang-studi/ganti-password`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({ oldPassword, newPassword }),
             });
 

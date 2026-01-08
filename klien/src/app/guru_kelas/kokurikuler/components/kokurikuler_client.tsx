@@ -1,13 +1,16 @@
-// File: kokurikuler_client.tsx
-// Fungsi: Komponen utama untuk mengelola input dan tampilan nilai kokurikuler
-//         siswa oleh guru kelas, termasuk detail, edit, dan simpan nilai.
-// Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
-// Tanggal: 15 September 2025
+/**
+ * Nama File: kokurikuler_client.tsx
+ * Fungsi: Komponen utama untuk mengelola input dan tampilan nilai kokurikuler
+ *         siswa oleh guru kelas, termasuk detail, edit, dan simpan nilai.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Muhammad Auriel Almayda - NIM: 3312401093
+ * Tanggal: 15 September 2025
+ */
 
 'use client';
 
 import { useState, useEffect, ReactNode, useMemo } from 'react';
 import { Pencil, X, Search, Award } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface KokurikulerData {
     mutabaah_nilai: number | null;
@@ -45,6 +48,8 @@ const ASPEK_ID = {
 };
 
 export default function KokurikulerClient() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
     const [siswaList, setSiswaList] = useState<SiswaKokurikuler[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDetail, setShowDetail] = useState(false);
@@ -64,35 +69,20 @@ export default function KokurikulerClient() {
     const fetchKokurikuler = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                window.location.href = '/login';
-                return;
-            }
-
-            const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    setSiswaList(data.data || []);
-                    setKelasNama(data.kelas || 'Kelas Anda');
-                    setSemester(data.semester || '');
-                    setKelasId(data.kelasId || null);
-                    setTahunAjaranId(data.tahunAjaranId || null);
-                } else {
-                    alert(data.message || 'Gagal memuat data kokurikuler');
-                }
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/kokurikuler`);
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setSiswaList(data.data || []);
+                setKelasNama(data.kelas || 'Kelas Anda');
+                setSemester(data.semester || '');
+                setKelasId(data.kelasId || null);
+                setTahunAjaranId(data.tahunAjaranId || null);
             } else {
-                const error = await res.json();
-                alert(error.message || 'Gagal memuat data kokurikuler');
+                alert(data.message || 'Gagal memuat data kokurikuler');
             }
         } catch (err) {
             console.error('Error fetch kokurikuler:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect ke /login
         } finally {
             setLoading(false);
         }
@@ -101,15 +91,10 @@ export default function KokurikulerClient() {
     // Fetch konfigurasi grade dari "Atur Penilaian"
     const fetchGradeConfig = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/guru-kelas/atur-penilaian/kategori-kokurikuler', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    setGradeConfig(data.data);
-                }
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/atur-penilaian/kategori-kokurikuler`);
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setGradeConfig(data.data);
             }
         } catch (err) {
             console.error('Gagal ambil konfigurasi grade:', err);
@@ -132,7 +117,7 @@ export default function KokurikulerClient() {
     useEffect(() => {
         fetchKokurikuler();
         fetchGradeConfig();
-    }, []);
+    }, [API_URL]);
 
     const handleDetail = (siswa: SiswaKokurikuler) => {
         setDetailId(siswa.id);
@@ -169,18 +154,8 @@ export default function KokurikulerClient() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Sesi login habis.');
-                return;
-            }
-
-            const res = await fetch(`http://localhost:5000/api/guru-kelas/kokurikuler/${siswaId}`, {
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/kokurikuler/${siswaId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     mutabaah_nilai: detailData.mutabaah_nilai,
                     bpi_nilai: detailData.bpi_nilai,
@@ -203,7 +178,7 @@ export default function KokurikulerClient() {
             }
         } catch (err) {
             console.error('Save error:', err);
-            alert('Gagal terhubung ke server');
+            // Jika sesi habis, apiFetch sudah redirect
         }
     };
 

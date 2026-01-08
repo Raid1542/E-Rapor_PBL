@@ -6,11 +6,10 @@
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
  * Tanggal: 15 September 2025
  */
-
 "use client";
-
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, X, Plus, Search } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Admin {
     id: number;
@@ -108,14 +107,7 @@ export default function DataAdminClient() {
     // === Fetch Admin ===
     const fetchAdmin = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch('http://localhost:5000/api/admin/admin', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch('http://localhost:5000/api/admin/admin');
             const data = await res.json();
             if (res.ok) {
                 const list = Array.isArray(data.data)
@@ -196,50 +188,34 @@ export default function DataAdminClient() {
     };
 
     const validate = (isEdit: boolean): boolean => {
-  const newErrors: Record<string, string> = {};
-
-  // Nama dan email tetap wajib
-  if (!formData.nama?.trim()) {
-    newErrors.nama = 'Nama wajib diisi';
-  }
-  if (!formData.email?.trim()) {
-    newErrors.email = 'Email wajib diisi';
-  }
-  if (!formData.niy?.trim()) {
-    newErrors.niy = 'NIY wajib diisi';
-  }
-  if (!formData.nuptk?.trim()) {
-    newErrors.nuptk = 'NUPTK wajib diisi';
-  }
-
-  // Status hanya wajib saat edit
-  if (isEdit && (!formData.statusAdmin || formData.statusAdmin === '')) {
-    newErrors.statusAdmin = 'Status admin wajib dipilih';
-  }
-
-  // Konfirmasi akhir tetap wajib
-  if (!formData.confirmData) {
-    newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
-  }
-
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
+        const newErrors: Record<string, string> = {};
+        if (!formData.nama?.trim()) {
+            newErrors.nama = 'Nama wajib diisi';
+        }
+        if (!formData.email?.trim()) {
+            newErrors.email = 'Email wajib diisi';
+        }
+        if (!formData.niy?.trim()) {
+            newErrors.niy = 'NIY wajib diisi';
+        }
+        if (!formData.nuptk?.trim()) {
+            newErrors.nuptk = 'NUPTK wajib diisi';
+        }
+        if (isEdit && (!formData.statusAdmin || formData.statusAdmin === '')) {
+            newErrors.statusAdmin = 'Status admin wajib dipilih';
+        }
+        if (!formData.confirmData) {
+            newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleSubmitTambah = async () => {
         if (!validate(false)) return;
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis. Silakan login ulang.');
-            return;
-        }
         try {
-            const res = await fetch('http://localhost:5000/api/admin/admin', {
+            const res = await apiFetch('http://localhost:5000/api/admin/admin', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
                     email_sekolah: formData.email,
@@ -269,22 +245,10 @@ export default function DataAdminClient() {
     const handleSubmitEdit = async () => {
         const originalData = adminList.find((a) => a.id === editId);
         if (!originalData) return;
-
         if (!validate(true)) return;
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Sesi login habis.');
-            return;
-        }
-
         try {
-            const res = await fetch(`http://localhost:5000/api/admin/admin/${editId}`, {
+            const res = await apiFetch(`http://localhost:5000/api/admin/admin/${editId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     nama_lengkap: formData.nama,
                     email_sekolah: formData.email,
@@ -298,7 +262,6 @@ export default function DataAdminClient() {
                     no_telepon: formData.no_telepon,
                 }),
             });
-
             if (res.ok) {
                 alert('Data admin berhasil diperbarui');
                 setShowEdit(false);
@@ -568,7 +531,6 @@ export default function DataAdminClient() {
                                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5"
                             ></textarea>
                         </div>
-
                         {isEdit && (
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -692,10 +654,8 @@ export default function DataAdminClient() {
                                     </button>
                                 )}
                             </div>
-                            {/* ❌ Tidak ada tombol Filter dan Import */}
                         </div>
                     </div>
-
                     {/* Tabel Data */}
                     <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
                         <table className="w-full min-w-[600px] table-auto text-sm">
@@ -764,7 +724,6 @@ export default function DataAdminClient() {
                             </tbody>
                         </table>
                     </div>
-
                     {/* Pagination */}
                     <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
                         <div className="text-sm text-gray-600">
@@ -774,7 +733,6 @@ export default function DataAdminClient() {
                     </div>
                 </div>
             </div>
-
             {/* Modal Detail */}
             {showDetail && selectedAdmin && (
                 <div
@@ -836,7 +794,6 @@ export default function DataAdminClient() {
                                     {selectedAdmin.nama}
                                 </h3>
                             </div>
-
                             {/* Info Detail */}
                             <div className="space-y-2 sm:space-y-3">
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-b pb-2">
@@ -910,7 +867,6 @@ export default function DataAdminClient() {
                                     </span>
                                 </div>
                             </div>
-
                             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
                                 <button
                                     onClick={() => {

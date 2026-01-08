@@ -10,6 +10,7 @@
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Pencil, X, Search } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface SiswaAbsensi {
     id: number;
@@ -23,6 +24,7 @@ interface SiswaAbsensi {
 }
 
 export default function DataAbsensiPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [siswaList, setSiswaList] = useState<SiswaAbsensi[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,43 +46,29 @@ export default function DataAbsensiPage() {
     const [showModal, setShowModal] = useState(false);
     const [isModalClosing, setIsModalClosing] = useState(false);
 
-    // Fetch data
+    // Fetch data absensi
     useEffect(() => {
         const fetchAbsensi = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    alert('Silakan login terlebih dahulu');
-                    return;
-                }
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/absensi', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        setSiswaList(data.data || []);
-                        setKelasNama(data.kelas || 'Kelas Anda');
-                    } else {
-                        alert(data.message || 'Gagal memuat data absensi');
-                    }
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/absensi`);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    setSiswaList(data.data || []);
+                    setKelasNama(data.kelas || 'Kelas Anda');
                 } else {
-                    const error = await res.json();
-                    alert(error.message || 'Gagal memuat data absensi');
+                    alert(data.message || 'Gagal memuat data absensi');
                 }
             } catch (err) {
                 console.error('Error fetch absensi:', err);
-                alert('Gagal terhubung ke server');
+                // Jika sesi habis, apiFetch sudah redirect ke /login
             } finally {
                 setLoading(false);
             }
         };
 
         fetchAbsensi();
-    }, []);
+    }, [API_URL]);
 
     // Handle edit click
     const handleEdit = (siswa: SiswaAbsensi) => {
@@ -116,24 +104,14 @@ export default function DataAbsensiPage() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Sesi login habis.');
-                return;
-            }
-
             const payload = {
                 jumlah_sakit: editData.jumlah_sakit === '' ? 0 : Number(editData.jumlah_sakit),
                 jumlah_izin: editData.jumlah_izin === '' ? 0 : Number(editData.jumlah_izin),
                 jumlah_alpha: editData.jumlah_alpha === '' ? 0 : Number(editData.jumlah_alpha)
             };
 
-            const res = await fetch(`http://localhost:5000/api/guru-kelas/absensi/${editingId}`, {
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/absensi/${editingId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 body: JSON.stringify(payload)
             });
 
@@ -151,13 +129,14 @@ export default function DataAbsensiPage() {
                 alert(err.message || 'Gagal menyimpan data absensi');
             }
         } catch (err) {
-            alert('Gagal terhubung ke server');
+            console.error('Error menyimpan absensi:', err);
+            // Jika sesi habis, apiFetch sudah redirect
         } finally {
             handleCloseModal();
         }
     };
 
-    // Handle input change
+    // Handle input change (hanya angka)
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (value === '' || /^\d*$/.test(value)) {
@@ -316,7 +295,7 @@ export default function DataAbsensiPage() {
                                                     onClick={() => handleEdit(siswa)}
                                                     className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm font-medium ${
                                                         siswa.sudah_diinput
-                                                            ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-800 text-xs sm:text-sm'
+                                                            ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-800'
                                                             : 'bg-green-500 hover:bg-green-600 text-white'
                                                     }`}
                                                 >

@@ -1,7 +1,17 @@
+/**
+ * Nama File: catatan_wali_kelas_client.tsx
+ * Fungsi: Komponen client-side untuk mengelola catatan wali kelas oleh guru kelas.
+ *         Memungkinkan pengisian catatan pribadi siswa dan keputusan naik tingkat
+ *         (hanya di semester Genap). Data disinkronkan dengan API backend.
+ * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+ * Tanggal: 15 September 2025
+ */
+
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, X, Search } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 interface SiswaCatatan {
     id: number;
@@ -14,6 +24,8 @@ interface SiswaCatatan {
 }
 
 export default function DataCatatanWaliKelasPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
     const [siswaList, setSiswaList] = useState<SiswaCatatan[]>([]);
     const [filteredSiswa, setFilteredSiswa] = useState<SiswaCatatan[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,46 +59,34 @@ export default function DataCatatanWaliKelasPage() {
         }, 200);
     };
 
+    // === FETCH CATATAN WALI KELAS ===
     useEffect(() => {
         const fetchCatatan = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    alert('Silakan login terlebih dahulu');
-                    return;
-                }
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/catatan-wali-kelas', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        const siswa = data.data || [];
-                        setSiswaList(siswa);
-                        setFilteredSiswa(siswa);
-                        setKelasNama(data.kelas || 'Kelas Anda');
-                        setSemester(data.semester || 'Ganjil');
-                    } else {
-                        alert(data.message || 'Gagal memuat data catatan wali kelas');
-                    }
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/catatan-wali-kelas`);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    const siswa = data.data || [];
+                    setSiswaList(siswa);
+                    setFilteredSiswa(siswa);
+                    setKelasNama(data.kelas || 'Kelas Anda');
+                    setSemester((data.semester || 'Ganjil') as 'Ganjil' | 'Genap');
                 } else {
-                    const error = await res.json();
-                    alert(error.message || 'Gagal memuat data catatan wali kelas');
+                    alert(data.message || 'Gagal memuat data catatan wali kelas');
                 }
             } catch (err) {
-                console.error('Error:', err);
-                alert('Gagal terhubung ke server');
+                console.error('Error fetch catatan wali kelas:', err);
+                // Jika sesi habis, apiFetch sudah redirect ke /login
             } finally {
                 setLoading(false);
             }
         };
 
         fetchCatatan();
-    }, []);
+    }, [API_URL]);
 
+    // === FILTER BERDASARKAN PENCARIAN ===
     useEffect(() => {
         if (!searchQuery.trim()) {
             setFilteredSiswa(siswaList);
@@ -103,6 +103,7 @@ export default function DataCatatanWaliKelasPage() {
         setCurrentPage(1);
     }, [searchQuery, siswaList]);
 
+    // === BUKA MODAL EDIT ===
     const handleEdit = (siswa: SiswaCatatan) => {
         const data = {
             catatan_wali_kelas: siswa.catatan_wali_kelas || '',
@@ -114,6 +115,7 @@ export default function DataCatatanWaliKelasPage() {
         setShowEdit(true);
     };
 
+    // === SIMPAN PERUBAHAN ===
     const handleSave = async () => {
         if (!editId || !originalData) return;
 
@@ -121,7 +123,7 @@ export default function DataCatatanWaliKelasPage() {
             semester === 'Ganjil'
                 ? editData.catatan_wali_kelas !== originalData.catatan_wali_kelas
                 : editData.catatan_wali_kelas !== originalData.catatan_wali_kelas ||
-                editData.naik_tingkat !== originalData.naik_tingkat;
+                  editData.naik_tingkat !== originalData.naik_tingkat;
 
         if (!hasChanges) {
             alert('Tidak ada perubahan yang dilakukan.');
@@ -130,34 +132,25 @@ export default function DataCatatanWaliKelasPage() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Sesi login habis.');
-                return;
-            }
-
             const payload: any = {
                 catatan_wali_kelas: editData.catatan_wali_kelas,
             };
 
-            if (semester === 'Ganjil') {
-                payload.naik_tingkat = editData.naik_tingkat;
-            } else if (semester === 'Genap') {
+            if (semester === 'Genap') {
                 if (editData.naik_tingkat !== 'ya' && editData.naik_tingkat !== 'tidak') {
                     alert('Di semester Genap, keputusan naik tingkat wajib diisi.');
                     return;
                 }
                 payload.naik_tingkat = editData.naik_tingkat;
+            } else {
+                // Di semester Ganjil, simpan null untuk naik_tingkat
+                payload.naik_tingkat = null;
             }
 
-            const res = await fetch(
-                `http://localhost:5000/api/guru-kelas/catatan-wali-kelas/${editId}`,
+            const res = await apiFetch(
+                `${API_URL}/api/guru-kelas/catatan-wali-kelas/${editId}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
                     body: JSON.stringify(payload),
                 }
             );
@@ -174,10 +167,12 @@ export default function DataCatatanWaliKelasPage() {
                 alert(err.message || 'Gagal menyimpan catatan wali kelas');
             }
         } catch (err) {
-            alert('Gagal terhubung ke server');
+            console.error('Error simpan catatan:', err);
+            // Jika sesi habis, apiFetch sudah handle redirect
         }
     };
 
+    // === HANDLE PERUBAHAN INPUT ===
     const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setEditData(prev => ({
@@ -186,6 +181,7 @@ export default function DataCatatanWaliKelasPage() {
         }));
     };
 
+    // === PAGINASI ===
     const totalPages = Math.ceil(filteredSiswa.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -457,18 +453,17 @@ export default function DataCatatanWaliKelasPage() {
                 </div>
             </div>
 
+            {/* Modal Edit */}
             {showEdit && editId !== null && (
                 <div
-                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editClosing ? 'opacity-0' : 'opacity-100'
-                        } p-3 sm:p-4`}
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${editClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
                     onClick={e => {
                         if (e.target === e.currentTarget) closeEdit();
                     }}
                 >
                     <div className="absolute inset-0 bg-gray-900/70"></div>
                     <div
-                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                            }`}
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${editClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                     >
                         <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">

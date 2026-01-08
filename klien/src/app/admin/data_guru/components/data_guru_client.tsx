@@ -6,11 +6,10 @@
  * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
  * Tanggal: 15 September 2025
  */
-
 'use client';
-
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Guru {
   id: number;
@@ -96,14 +95,7 @@ export default function DataGuruClient() {
   // === Fetch Guru ===
   const fetchGuru = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Silakan login terlebih dahulu');
-        return;
-      }
-      const res = await fetch("http://localhost:5000/api/admin/guru", {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch("http://localhost:5000/api/admin/guru");
       const data = await res.json();
       if (res.ok) {
         const validRoles = ['guru kelas', 'guru bidang studi'];
@@ -203,7 +195,6 @@ export default function DataGuruClient() {
 
   const validate = (isEdit: boolean): boolean => {
     const newErrors: Record<string, string> = {};
-
     // === WAJIB: SEMUA MODE ===
     if (!formData.nama?.trim()) {
       newErrors.nama = 'Nama wajib diisi';
@@ -220,35 +211,23 @@ export default function DataGuruClient() {
     if (!formData.roles || formData.roles.length === 0) {
       newErrors.roles = 'Pilih minimal satu role';
     }
-
     // === WAJIB: HANYA SAAT EDIT ===
     if (isEdit && (!formData.statusGuru || formData.statusGuru === '')) {
       newErrors.statusGuru = 'Status guru wajib dipilih';
     }
-
     // Konfirmasi akhir
     if (!formData.confirmData) {
       newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmitTambah = async () => {
     if (!validate(false)) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login habis. Silakan login ulang.');
-      return;
-    }
     try {
-      const res = await fetch("http://localhost:5000/api/admin/guru", {
+      const res = await apiFetch("http://localhost:5000/api/admin/guru", {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           nama_lengkap: formData.nama,
           email_sekolah: formData.email,
@@ -260,7 +239,7 @@ export default function DataGuruClient() {
           jenis_kelamin: formData.jenisKelamin,
           alamat: formData.alamat,
           no_telepon: formData.no_telepon,
-        })
+        }),
       });
       if (res.ok) {
         alert("Data guru berhasil ditambahkan");
@@ -297,18 +276,9 @@ export default function DataGuruClient() {
       return;
     }
     if (!validate(true)) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Sesi login habis.');
-      return;
-    }
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/guru/${editId}`, {
+      const res = await apiFetch(`http://localhost:5000/api/admin/guru/${editId}`, {
         method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           nama_lengkap: formData.nama,
           email_sekolah: formData.email,
@@ -321,7 +291,7 @@ export default function DataGuruClient() {
           alamat: formData.alamat,
           no_telepon: formData.no_telepon,
           status: formData.statusGuru
-        })
+        }),
       });
       if (res.ok) {
         alert("Data guru berhasil diperbarui");
@@ -364,10 +334,8 @@ export default function DataGuruClient() {
     const formData = new FormData();
     formData.append('file', importFile);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/guru/import', {
+      const res = await apiFetch('http://localhost:5000/api/admin/guru/import', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
       const result = await res.json();

@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from 'react';
 import { FileText, Download, AlertCircle, Play, Pause, Lock } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface TahunAjaran {
     id: number;
@@ -52,14 +53,7 @@ export default function ArsipRaporClient() {
         setLoadingTA(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Silakan login terlebih dahulu');
-                return;
-            }
-            const res = await fetch(`${API_BASE}/admin/arsip-rapor/tahun-ajaran`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`${API_BASE}/admin/arsip-rapor/tahun-ajaran`);
             const data = await res.json();
             if (res.ok && data.success) {
                 setTahunAjaranList(
@@ -88,10 +82,7 @@ export default function ArsipRaporClient() {
         setLoadingKelas(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/admin/arsip-rapor/kelas?tahun_ajaran_id=${tahunAjaranId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`${API_BASE}/admin/arsip-rapor/kelas?tahun_ajaran_id=${tahunAjaranId}`);
             const data = await res.json();
             if (res.ok && data.success) {
                 setKelasList(data.data);
@@ -118,10 +109,8 @@ export default function ArsipRaporClient() {
         setLoadingSiswa(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(
-                `${API_BASE}/admin/arsip-rapor/daftar-siswa/${selectedTahunAjaran}/${selectedKelas}`,
-                { headers: { Authorization: `Bearer ${token}` } }
+            const res = await apiFetch(
+                `${API_BASE}/admin/arsip-rapor/daftar-siswa/${selectedTahunAjaran}/${selectedKelas}`
             );
             const data = await res.json();
             if (res.ok && data.success) {
@@ -140,8 +129,7 @@ export default function ArsipRaporClient() {
 
     // === Handle Download Rapor ===
     const handleDownloadRapor = async (siswaId: number) => {
-        const token = localStorage.getItem('token');
-        if (!token || !selectedJenisPenilaian || !selectedTahunAjaran) {
+        if (!selectedJenisPenilaian || !selectedTahunAjaran) {
             alert('Data tidak lengkap');
             return;
         }
@@ -153,9 +141,18 @@ export default function ArsipRaporClient() {
             const res = await fetch(
                 `${API_BASE}/guru-kelas/generate-rapor/${siswaId}/${selectedJenisPenilaian}/${ta.semester}/${selectedTahunAjaran}`,
                 {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 }
             );
+
+            // 🔥 Tangani sesi berakhir untuk unduh file
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                alert('⚠️ Sesi Anda telah berakhir. Silakan login kembali.');
+                window.location.href = '/login';
+                return;
+            }
 
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -166,7 +163,7 @@ export default function ArsipRaporClient() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `rapor_${selectedJenisPenilaian.toLowerCase()}_${ta.semester.toLowerCase()}_${siswaId}.docx`;
+            a.download = `rapor_${selectedJenisPenilaian.toLowerCase()}_${ta.semester.toLowerCase()}.docx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -181,20 +178,10 @@ export default function ArsipRaporClient() {
     const handleUbahStatus = async (statusBaru: 'aktif' | 'nonaktif' | 'selesai') => {
         if (!selectedTahunAjaran || !selectedJenisPenilaian) return;
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Silakan login terlebih dahulu');
-            return;
-        }
-
         setLoadingAction(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/atur-status-penilaian`, {
+            const res = await apiFetch(`${API_BASE}/admin/atur-status-penilaian`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     jenis: selectedJenisPenilaian,
                     status: statusBaru,
@@ -232,20 +219,10 @@ export default function ArsipRaporClient() {
             return;
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('Silakan login terlebih dahulu');
-            return;
-        }
-
         setLoadingAction(true);
         try {
-            const res = await fetch(`${API_BASE}/admin/arsipkan-rapor`, {
+            const res = await apiFetch(`${API_BASE}/admin/arsipkan-rapor`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     jenis: selectedJenisPenilaian,
                     semester: tahunAjaranList.find((t) => t.id === selectedTahunAjaran)?.semester || 'Ganjil',

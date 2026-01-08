@@ -7,11 +7,11 @@
  * Tanggal: 15 September 2025
  */
 
-
 'use client';
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Eye, Pencil, X, Search } from 'lucide-react';
+import { apiFetch } from '@/lib/apiFetch'; 
 
 // Tipe data
 interface EkskulItem {
@@ -36,6 +36,7 @@ interface EkskulOption {
 }
 
 export default function DataEkstrakurikulerPage() {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const [siswaList, setSiswaList] = useState<SiswaEkskul[]>([]);
     const [filteredSiswa, setFilteredSiswa] = useState<SiswaEkskul[]>([]);
@@ -80,40 +81,26 @@ export default function DataEkstrakurikulerPage() {
         const fetchEkskul = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    alert('Silakan login terlebih dahulu');
-                    return;
-                }
-
-                const res = await fetch('http://localhost:5000/api/guru-kelas/ekskul', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        setSiswaList(data.data || []);
-                        setFilteredSiswa(data.data || []);
-                        setDaftarEkskul(data.daftar_ekskul || []);
-                        setKelasNama(data.kelas || 'Kelas Anda');
-                    } else {
-                        alert(data.message || 'Gagal memuat data ekstrakurikuler');
-                    }
+                const res = await apiFetch(`${API_URL}/api/guru-kelas/ekskul`);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    setSiswaList(data.data || []);
+                    setFilteredSiswa(data.data || []);
+                    setDaftarEkskul(data.daftar_ekskul || []);
+                    setKelasNama(data.kelas || 'Kelas Anda');
                 } else {
-                    const error = await res.json();
-                    alert(error.message || 'Gagal memuat data ekstrakurikuler');
+                    alert(data.message || 'Gagal memuat data ekstrakurikuler');
                 }
             } catch (err) {
-                console.error('Error:', err);
-                alert('Gagal terhubung ke server');
+                console.error('Error fetch ekstrakurikuler:', err);
+                // Jika sesi habis, apiFetch sudah redirect ke /login
             } finally {
                 setLoading(false);
             }
         };
 
         fetchEkskul();
-    }, []);
+    }, [API_URL]);
 
     // Filter pencarian
     useEffect(() => {
@@ -163,18 +150,8 @@ export default function DataEkstrakurikulerPage() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('Sesi login habis.');
-                return;
-            }
-
-            const res = await fetch(`http://localhost:5000/api/guru-kelas/ekskul/${editId}`, {
+            const res = await apiFetch(`${API_URL}/api/guru-kelas/ekskul/${editId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({ ekskulList: validEkskul })
             });
 
@@ -184,7 +161,8 @@ export default function DataEkstrakurikulerPage() {
                 const updatedSiswa = siswaList.map(s =>
                     s.id === editId
                         ? {
-                            ...s, ekskul: validEkskul.map(e => ({
+                            ...s,
+                            ekskul: validEkskul.map(e => ({
                                 id: e.ekskul_id,
                                 nama: daftarEkskul.find(d => d.id_ekskul === e.ekskul_id)?.nama_ekskul || '—',
                                 deskripsi: e.deskripsi
@@ -198,7 +176,8 @@ export default function DataEkstrakurikulerPage() {
                 alert(err.message || 'Gagal menyimpan data ekstrakurikuler');
             }
         } catch (err) {
-            alert('Gagal terhubung ke server');
+            console.error('Error simpan ekstrakurikuler:', err);
+            // Jika sesi habis, apiFetch sudah redirect
         }
     };
 
@@ -395,76 +374,76 @@ export default function DataEkstrakurikulerPage() {
             </div>
 
             {/* Modal View (Lihat Deskripsi) */}
-{showView && viewSiswa && (
-  <div
-    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${viewClosing ? 'opacity-0' : 'opacity-100'} p-4`}
-    onClick={(e) => e.target === e.currentTarget && setViewClosing(true)}
-    onTransitionEnd={() => {
-      if (viewClosing) {
-        setShowView(false);
-        setViewClosing(false);
-      }
-    }}
-  >
-    <div className="absolute inset-0 bg-gray-900/70"></div>
-    <div
-      className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${viewClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-    >
-      <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-800">Detail Ekstrakurikuler</h2>
-        <button onClick={() => setViewClosing(true)} className="text-gray-500 hover:text-gray-700">
-          <X size={24} />
-        </button>
-      </div>
-      <div className="p-6">
-        {/* Info Siswa */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          <div>
-            <span className="font-medium text-gray-700">Nama:</span>
-            <span className="ml-2">{viewSiswa.nama}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">NIS:</span>
-            <span className="ml-2">{viewSiswa.nis}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">NISN:</span>
-            <span className="ml-2">{viewSiswa.nisn}</span>
-          </div>
-        </div>
+            {showView && viewSiswa && (
+                <div
+                    className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${viewClosing ? 'opacity-0' : 'opacity-100'} p-4`}
+                    onClick={(e) => e.target === e.currentTarget && setViewClosing(true)}
+                    onTransitionEnd={() => {
+                        if (viewClosing) {
+                            setShowView(false);
+                            setViewClosing(false);
+                        }
+                    }}
+                >
+                    <div className="absolute inset-0 bg-gray-900/70"></div>
+                    <div
+                        className={`relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${viewClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                    >
+                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-gray-800">Detail Ekstrakurikuler</h2>
+                            <button onClick={() => setViewClosing(true)} className="text-gray-500 hover:text-gray-700">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {/* Info Siswa */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                <div>
+                                    <span className="font-medium text-gray-700">Nama:</span>
+                                    <span className="ml-2">{viewSiswa.nama}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-gray-700">NIS:</span>
+                                    <span className="ml-2">{viewSiswa.nis}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-gray-700">NISN:</span>
+                                    <span className="ml-2">{viewSiswa.nisn}</span>
+                                </div>
+                            </div>
 
-        {/* Daftar Ekstrakurikuler */}
-        <div>
-          <h3 className="font-semibold text-gray-800 mb-3">Eksrakurikuler yang Diikuti:</h3>
-          {viewSiswa.ekskul.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">Belum mengikuti ekstrakurikuler</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {viewSiswa.ekskul.map((e, i) => (
-                <div key={i} className="bg-green-50 p-4 rounded border">
-                  <div className="font-medium text-green-800">{e.nama}</div>
-                  <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap break-words">
-                    {e.deskripsi || 'Tidak ada deskripsi'}
-                  </p>
+                            {/* Daftar Ekstrakurikuler */}
+                            <div>
+                                <h3 className="font-semibold text-gray-800 mb-3">Ekstrakurikuler yang Diikuti:</h3>
+                                {viewSiswa.ekskul.length === 0 ? (
+                                    <p className="text-gray-500 text-center py-4">Belum mengikuti ekstrakurikuler</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {viewSiswa.ekskul.map((e, i) => (
+                                            <div key={i} className="bg-green-50 p-4 rounded border">
+                                                <div className="font-medium text-green-800">{e.nama}</div>
+                                                <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap break-words">
+                                                    {e.deskripsi || 'Tidak ada deskripsi'}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Tombol Tutup */}
+                            <div className="mt-8 flex justify-end">
+                                <button
+                                    onClick={() => setViewClosing(true)}
+                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Tombol Tutup */}
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={() => setViewClosing(true)}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-          >
-            Tutup
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+            )}
 
             {/* Modal Edit */}
             {showEdit && editId !== null && (
