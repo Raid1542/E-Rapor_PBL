@@ -32,14 +32,6 @@ Oleh karena itu, dikembangkan aplikasi **E-Rapor berbasis web** sebagai solusi d
 
 ---
 
-## 📌 Ruang Lingkup & Batasan
-
-* Digunakan khusus di lingkungan SDIT Ulil Albab Batam
-* Tidak mencakup sistem keuangan atau pembayaran
-* Fokus pada pengelolaan nilai, absensi, dan rapor siswa
-
----
-
 ## 👥 Tim Pengembang
 
 | Nama                    | NIM        | Peran                                                                             |
@@ -92,6 +84,16 @@ Oleh karena itu, dikembangkan aplikasi **E-Rapor berbasis web** sebagai solusi d
 
 ---
 
+## 🎥 Video Proyek
+
+* 📽️ **Video Presentasi PBL**  
+  [[https://youtu.be/zI-ufltX3b0](https://youtu.be/zI-ufltX3b0?si=-CGc23mbe06dEBbZ)]([https://youtu.be/zI-ufltX3b0](https://youtu.be/zI-ufltX3b0?si=-CGc23mbe06dEBbZ))
+
+* 📽️ **Video Demo Aplikasi**  
+  [[https://youtu.be/e1M7l55fqhA](https://youtu.be/e1M7l55fqhA?si=aD2EwokZ_zlJJjY7)]([https://youtu.be/e1M7l55fqhA](https://youtu.be/e1M7l55fqhA?si=aD2EwokZ_zlJJjY7))
+
+---
+
 ## 📂 Dokumen Pendukung PBL
 
 * 📄 **Laporan Akhir PBL (PDF)**  
@@ -102,9 +104,6 @@ Oleh karena itu, dikembangkan aplikasi **E-Rapor berbasis web** sebagai solusi d
 
 * 🖼️ **Poster Proyek (PDF)**  
   `docs/poster/Poster_E-Rapor.pdf`
-
-* 📽️ **Video Presentasi & Demo**  
-  Tersedia pada folder `docs/file_presentasi/`
 
 ---
 
@@ -186,4 +185,4 @@ Politeknik Negeri Batam – Tahun 2025
 
 Proyek ini digunakan khusus untuk keperluan pembelajaran dan akademik.
 
-© 2025 – Tim PBL E-Rapor SDIT Ulil Albab Batam
+© 2025 – Tim PBL IFPagi3A-1
