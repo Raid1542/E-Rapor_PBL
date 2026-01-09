@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { Pencil, Plus, X } from 'lucide-react';
-import { apiFetch } from '@/lib/apiFetch'; 
+import { apiFetch } from '@/lib/apiFetch';
 
 interface TahunAjaran {
     id_tahun_ajaran: number;
@@ -265,7 +265,7 @@ export default function DataTahunAjaranPage() {
                                     name="tahun1"
                                     value={formData.tahun1}
                                     onChange={handleInputChange}
-                                    className="w-24 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-24 border border-gray-300 rounded px-3 py-2 "
                                     placeholder="2024"
                                 />
                                 <span className="text-xl font-bold">/</span>
@@ -274,7 +274,7 @@ export default function DataTahunAjaranPage() {
                                     name="tahun2"
                                     value={formData.tahun2}
                                     onChange={handleInputChange}
-                                    className="w-24 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-24 border border-gray-300 rounded px-3 py-2 "
                                     placeholder="2025"
                                 />
                             </div>
@@ -288,7 +288,7 @@ export default function DataTahunAjaranPage() {
                                 name="semester"
                                 value={formData.semester}
                                 onChange={handleInputChange}
-                                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 "
                             >
                                 <option value="Ganjil">Ganjil</option>
                                 <option value="Genap">Genap</option>
@@ -304,7 +304,7 @@ export default function DataTahunAjaranPage() {
                                 name="tanggal_pembagian_pts"
                                 value={formData.tanggal_pembagian_pts}
                                 onChange={handleInputChange}
-                                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded px-3 py-2 "
                             />
                         </div>
                         <div>
@@ -316,7 +316,7 @@ export default function DataTahunAjaranPage() {
                                 name="tanggal_pembagian_pas"
                                 value={formData.tanggal_pembagian_pas}
                                 onChange={handleInputChange}
-                                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded px-3 py-2 "
                             />
                         </div>
                     </div>

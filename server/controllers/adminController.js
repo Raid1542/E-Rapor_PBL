@@ -691,14 +691,20 @@ const importSiswa = async (req, res) => {
   }
 };
 
+// Helper
+const cleanDateInput = (value) => {
+  return value === '' ? null : value;
+};
+
 // ============== TAHUN AJARAN ==============
+
 const getTahunAjaran = async (req, res) => {
   try {
     const data = await tahunAjaranModel.getAllTahunAjaran();
-    res.json({ success: true, data });
-  } catch (err) {
-    console.error('Error get tahun ajaran:', err);
-    res.status(500).json({ message: 'Gagal mengambil data tahun ajaran' });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching tahun ajaran:', error);
+    return res.status(500).json({ message: 'Gagal mengambil data tahun ajaran' });
   }
 };
 
@@ -711,26 +717,38 @@ const tambahTahunAjaran = async (req, res) => {
       tanggal_pembagian_pts,
       tanggal_pembagian_pas,
     } = req.body;
+
     if (!tahun1 || !tahun2 || !semester) {
-      return res
-        .status(400)
-        .json({ message: 'Tahun dan semester wajib diisi' });
+      return res.status(400).json({
+        message: 'Tahun awal, tahun akhir, dan semester wajib diisi',
+      });
     }
+
     const tahun_ajaran = `${tahun1}/${tahun2}`;
-    const success = await tahunAjaranModel.createTahunAjaran({
+
+    const payload = {
       tahun_ajaran,
       semester,
-      tanggal_pembagian_pts,
-      tanggal_pembagian_pas,
+      tanggal_pembagian_pts: cleanDateInput(tanggal_pembagian_pts),
+      tanggal_pembagian_pas: cleanDateInput(tanggal_pembagian_pas),
+    };
+
+    const success = await tahunAjaranModel.createTahunAjaran(payload);
+
+    if (!success) {
+      return res.status(500).json({
+        message: 'Gagal membuat tahun ajaran baru',
+      });
+    }
+
+    return res.status(201).json({
+      message: 'Tahun ajaran berhasil ditambahkan',
     });
-    if (!success)
-      return res
-        .status(500)
-        .json({ message: 'Gagal membuat tahun ajaran baru' });
-    res.status(201).json({ message: 'Tahun ajaran berhasil ditambahkan' });
-  } catch (err) {
-    console.error('Error tambah tahun ajaran:', err);
-    res.status(500).json({ message: 'Gagal menambah tahun ajaran' });
+  } catch (error) {
+    console.error('Error creating tahun ajaran:', error);
+    return res.status(500).json({
+      message: 'Terjadi kesalahan saat menambahkan tahun ajaran',
+    });
   }
 };
 
@@ -744,24 +762,38 @@ const updateTahunAjaran = async (req, res) => {
       tanggal_pembagian_pts,
       tanggal_pembagian_pas,
     } = req.body;
+
     if (!tahun1 || !tahun2 || !semester) {
-      return res
-        .status(400)
-        .json({ message: 'Tahun dan semester wajib diisi' });
+      return res.status(400).json({
+        message: 'Tahun awal, tahun akhir, dan semester wajib diisi',
+      });
     }
+
     const tahun_ajaran = `${tahun1}/${tahun2}`;
-    const success = await tahunAjaranModel.updateTahunAjaranById(id, {
+
+    const payload = {
       tahun_ajaran,
       semester,
-      tanggal_pembagian_pts,
-      tanggal_pembagian_pas,
+      tanggal_pembagian_pts: cleanDateInput(tanggal_pembagian_pts),
+      tanggal_pembagian_pas: cleanDateInput(tanggal_pembagian_pas),
+    };
+
+    const success = await tahunAjaranModel.updateTahunAjaranById(id, payload);
+
+    if (!success) {
+      return res.status(404).json({
+        message: 'Tahun ajaran tidak ditemukan atau gagal diperbarui',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Data tahun ajaran berhasil diperbarui',
     });
-    if (!success)
-      return res.status(404).json({ message: 'Tahun ajaran tidak ditemukan' });
-    res.json({ message: 'Data tahun ajaran berhasil diperbarui' });
-  } catch (err) {
-    console.error('Error update tahun ajaran:', err);
-    res.status(500).json({ message: 'Gagal memperbarui data tahun ajaran' });
+  } catch (error) {
+    console.error('Error updating tahun ajaran:', error);
+    return res.status(500).json({
+      message: 'Terjadi kesalahan saat memperbarui tahun ajaran',
+    });
   }
 };
 
@@ -881,7 +913,7 @@ const editKelas = async (req, res) => {
     if (!existingKelas)
       return res.status(404).json({ message: 'Kelas tidak ditemukan' });
 
-    // ✅ Cek duplikat HANYA di tahun ajaran aktif, kecuali diri sendiri
+    // Cek duplikat HANYA di tahun ajaran aktif, kecuali diri sendiri
     const allKelas = await kelasModel.getByTahunAjaran(tahun_ajaran_id);
     const isDuplicate = allKelas.some(
       k => k.nama_kelas === nama_kelas && k.id_kelas !== Number(id)
@@ -894,7 +926,7 @@ const editKelas = async (req, res) => {
         });
     }
 
-    // ✅ Update dengan tahun_ajaran_id (meski tidak berubah, tetap kirim)
+    // Update dengan tahun_ajaran_id (meski tidak berubah, tetap kirim)
     const success = await kelasModel.update(id, {
       nama_kelas,
       fase,
