@@ -2,7 +2,7 @@
 
 > **Aplikasi E-Rapor Berbasis Web untuk Sekolah Dasar**
 
-Aplikasi ini dikembangkan sebagai bagian dari **Project Based Learning (PBL)** dengan tujuan mendigitalisasi proses pengolahan nilai dan rapor siswa di SDIT Ulil Albab Batam.
+Aplikasi ini dikembangkan sebagai bagian dari **Project Based Learning (PBL)** dengan tujuan mendigitalisasi proses pengolahan nilai dan rapor siswa di **SDIT Ulil Albab Batam** agar lebih efektif, terstruktur, dan terpusat.
 
 ---
 
@@ -12,6 +12,31 @@ Aplikasi ini dikembangkan sebagai bagian dari **Project Based Learning (PBL)** d
 * **Jenis** : Sistem Informasi Akademik Berbasis Web
 * **Target Pengguna** : Admin Sekolah, Guru Kelas, Guru Bidang Studi
 * **Metode Pengembangan** : Project Based Learning (PBL)
+
+---
+
+## 🎯 Latar Belakang
+
+Proses pengolahan nilai dan rapor siswa di SDIT Ulil Albab Batam sebelumnya masih dilakukan secara manual menggunakan file Excel dan dokumen cetak. Proses tersebut berpotensi menimbulkan kesalahan input data, duplikasi data, serta kesulitan dalam pengarsipan rapor siswa.
+
+Oleh karena itu, dikembangkan aplikasi **E-Rapor berbasis web** sebagai solusi digital untuk membantu pihak sekolah dalam mengelola data akademik secara terintegrasi.
+
+---
+
+## 🎯 Tujuan Proyek
+
+1. Mengembangkan sistem E-Rapor berbasis web untuk sekolah dasar
+2. Mempermudah guru dalam mengelola nilai dan absensi siswa
+3. Menyediakan sistem pencetakan dan arsip rapor digital
+4. Menerapkan konsep Project Based Learning (PBL)
+
+---
+
+## 📌 Ruang Lingkup & Batasan
+
+* Digunakan khusus di lingkungan SDIT Ulil Albab Batam
+* Tidak mencakup sistem keuangan atau pembayaran
+* Fokus pada pengelolaan nilai, absensi, dan rapor siswa
 
 ---
 
@@ -26,46 +51,19 @@ Aplikasi ini dikembangkan sebagai bagian dari **Project Based Learning (PBL)** d
 
 ---
 
-## 📂 Dokumen Proyek
-
-* 📄 **Laporan Akhir PBL (PDF)**
-  [https://github.com/Raid1542/E-Rapor_PBL/raw/main/Laporan%20AAS_Kelompok%201_IF3A_Pagi.pdf](https://github.com/Raid1542/E-Rapor_PBL/raw/main/Laporan%20AAS_Kelompok%201_IF3A_Pagi.pdf)
-
-* 📽️ **Video Presentasi**
-  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/zI-ufltX3b0?si=A-9pNrADs7YPd9ou)
-
-* 📽️ **Video Demo**
-  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/e1M7l55fqhA?si=Y-35XDqk8gPNBEzs)
-
-* 📖 **Manual Book**
-  [https://github.com/Raid1542/E-Rapor_PBL/blob/main/ManualBook.md](https://github.com/Raid1542/E-Rapor_PBL/blob/main/ManualBook.md)
-
-* 🖼️ **Poster Proyek**
-  [https://github.com/Raid1542/E-Rapor_PBL/blob/main/Poster.pdf](https://github.com/Raid1542/E-Rapor_PBL/blob/main/Poster.pdf)
-
----
-
-## 📝 Deskripsi Proyek
-
-**E-Rapor SDIT Ulil Albab Batam** adalah aplikasi berbasis web yang dirancang untuk membantu sekolah dasar dalam mengelola nilai, absensi, dan rapor siswa secara **digital, terstruktur, dan efisien**.
-
-Aplikasi ini menggantikan proses manual (Excel dan kertas) menjadi sistem terpusat dengan hak akses berbeda sesuai peran pengguna.
-
----
-
 ## ✨ Fitur Utama
 
 ### 🔑 Hak Akses Multi-Role
 
 * **Admin**
 
-  * Kelola data siswa, guru, kelas, mata pelajaran, ekstrakurikuler, dan arsip rapor
+  * Mengelola data siswa, guru, kelas, mata pelajaran, ekstrakurikuler, dan arsip rapor
 * **Guru Bidang Studi**
 
-  * Input nilai harian, PTS, dan PAS
+  * Menginput nilai harian, PTS, dan PAS
 * **Guru Kelas**
 
-  * Input absensi, catatan siswa, nilai ekstrakurikuler,  Input nilai harian, PTS, dan PAS, dan cetak rapor
+  * Mengelola absensi, catatan siswa, nilai ekstrakurikuler, serta mencetak rapor
 
 ### 📊 Manajemen Nilai & Rapor
 
@@ -81,7 +79,7 @@ Aplikasi ini menggantikan proses manual (Excel dan kertas) menjadi sistem terpus
 
 * Next.js
 * React
-* Typescipt
+* TypeScript
 
 ### Backend
 
@@ -94,9 +92,25 @@ Aplikasi ini menggantikan proses manual (Excel dan kertas) menjadi sistem terpus
 
 ---
 
+## 📂 Dokumen Pendukung PBL
+
+* 📄 **Laporan Akhir PBL (PDF)**  
+  `docs/laporan/Laporan_PBL_E-Rapor.pdf`
+
+* 📖 **Manual Book (PDF)**  
+  `docs/file_presentasi/Manual_Book_E-Rapor.pdf`
+
+* 🖼️ **Poster Proyek (PDF)**  
+  `docs/poster/Poster_E-Rapor.pdf`
+
+* 📽️ **Video Presentasi & Demo**  
+  Tersedia pada folder `docs/file_presentasi/`
+
+---
+
 ## ⚙️ Prasyarat
 
-Pastikan perangkat sudah terpasang:
+Pastikan perangkat telah terpasang:
 
 * Node.js (v18 atau lebih baru)
 * NPM
@@ -150,7 +164,7 @@ Pastikan perangkat sudah terpasang:
 
 ---
 
-## 🔐 Akun Demo 
+## 🔐 Akun Demo
 
 ```
 Admin
@@ -160,15 +174,16 @@ Password: admin12345
 
 ---
 
-## 📌 Catatan
+## 🎓 Konteks Akademik
 
-* Proyek ini dikembangkan untuk keperluan akademik (PBL)
-* Masih dapat dikembangkan lebih lanjut (security, deployment, audit log, dll)
+Proyek ini dikembangkan sebagai bagian dari mata kuliah **Project Based Learning (PBL)**
+Program Studi Teknik Informatika
+Politeknik Negeri Batam – Tahun 2025
 
 ---
 
 ## 📄 Lisensi
 
-Proyek ini digunakan untuk keperluan pembelajaran dan akademik.
+Proyek ini digunakan khusus untuk keperluan pembelajaran dan akademik.
 
-© 2025 – Tim PBL E-Rapor SDIT Ulil Albil Batam
+© 2025 – Tim PBL E-Rapor SDIT Ulil Albab Batam
