@@ -242,7 +242,7 @@ export default function LoginClient() {
                                         onChange={handleChange}
                                         className="w-full px-4 py-3.5 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all text-gray-800 bg-gray-50 cursor-pointer"
                                         required>
-                                        <option value="">Pilih Role</option>
+                                        <option value="">-- Pilih Role --</option>
                                         <option value="admin">Admin</option>
                                         <option value="guru kelas">Guru Kelas</option>
                                         <option value="guru bidang studi">Guru Bidang Studi</option>
