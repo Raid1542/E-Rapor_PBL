@@ -32,10 +32,10 @@ Aplikasi ini dikembangkan sebagai bagian dari **Project Based Learning (PBL)** d
   [https://github.com/Raid1542/E-Rapor_PBL/raw/main/Laporan%20AAS_Kelompok%201_IF3A_Pagi.pdf](https://github.com/Raid1542/E-Rapor_PBL/raw/main/Laporan%20AAS_Kelompok%201_IF3A_Pagi.pdf)
 
 * 📽️ **Video Presentasi**
-  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa)
+  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/zI-ufltX3b0?si=A-9pNrADs7YPd9ou)
 
-* 📽️ **Video Demo / Teaser**
-  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa)
+* 📽️ **Video Demo**
+  [https://youtu.be/zI-ufltX3b0?si=wR8u0OVNTN8QqXoa](https://youtu.be/e1M7l55fqhA?si=Y-35XDqk8gPNBEzs)
 
 * 📖 **Manual Book**
   [https://github.com/Raid1542/E-Rapor_PBL/blob/main/ManualBook.md](https://github.com/Raid1542/E-Rapor_PBL/blob/main/ManualBook.md)
@@ -59,7 +59,7 @@ Aplikasi ini menggantikan proses manual (Excel dan kertas) menjadi sistem terpus
 
 * **Admin**
 
-  * Kelola data siswa, guru, kelas, mata pelajaran, dan arsip rapor 
+  * Kelola data siswa, guru, kelas, mata pelajaran, ekstrakurikuler, dan arsip rapor
 * **Guru Bidang Studi**
 
   * Input nilai harian, PTS, dan PAS
