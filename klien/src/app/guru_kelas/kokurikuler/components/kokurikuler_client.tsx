@@ -10,7 +10,7 @@
 
 import { useState, useEffect, ReactNode, useMemo } from 'react';
 import { Pencil, X, Search, Award } from 'lucide-react';
-import { apiFetch } from '@/lib/apiFetch'; 
+import { apiFetch } from '@/lib/apiFetch';
 
 interface KokurikulerData {
     mutabaah_nilai: number | null;
@@ -437,14 +437,16 @@ export default function KokurikulerClient() {
                                                 <span className="text-gray-400">–</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-2 sm:px-4 sm:py-3 text-center align-middle whitespace-nowrap">
-                                            <button
-                                                onClick={() => handleDetail(siswa)}
-                                                className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1 rounded flex items-center justify-center gap-1 transition text-xs"
-                                            >
-                                                <Pencil size={14} />
-                                                <span className="hidden sm:inline">Detail</span>
-                                            </button>
+                                        <td className="px-3 py-2 sm:px-4 sm:py-3 text-center whitespace-nowrap">
+                                            <div className="flex justify-center items-center h-full">
+                                                <button
+                                                    onClick={() => handleDetail(siswa)}
+                                                    className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1 rounded flex items-center justify-center gap-1 transition text-xs"
+                                                >
+                                                    <Pencil size={14} />
+                                                    <span className="hidden sm:inline font-medium">Edit</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

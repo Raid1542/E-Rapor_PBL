@@ -8,12 +8,12 @@
  */
 
 import { Metadata } from 'next';
-import ArsipRaporClient from './components/arsip_rapor_client';
+import ArispRaporClient from './components/arsip_rapor_client';
 
-export const meta: Metadata = {
+export const metadata: Metadata = {
     title: 'Arsip Rapor',
 };
 
 export default function ArsipRaporPage() {
-    return <ArsipRaporClient />;
+    return <ArispRaporClient />;
 }

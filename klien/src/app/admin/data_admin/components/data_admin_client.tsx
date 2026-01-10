@@ -195,11 +195,21 @@ export default function DataAdminClient() {
         if (!formData.email?.trim()) {
             newErrors.email = 'Email wajib diisi';
         }
-        if (!formData.niy?.trim()) {
+        const niy = formData.niy?.trim() || '';
+        if (!niy) {
             newErrors.niy = 'NIY wajib diisi';
+        } else if (!/^\d+$/.test(niy)) {
+            newErrors.niy = 'NIY hanya boleh berisi angka';
+        } else if (niy.length > 20) {
+            newErrors.niy = 'NIY maksimal 20 digit';
         }
-        if (!formData.nuptk?.trim()) {
-            newErrors.nuptk = 'NUPTK wajib diisi';
+        const nuptk = formData.nuptk?.trim() || '';
+        if (nuptk !== '') {
+            if (!/^\d+$/.test(nuptk)) {
+                newErrors.nuptk = 'NUPTK hanya boleh berisi angka';
+            } else if (nuptk.length > 20) {
+                newErrors.nuptk = 'NUPTK maksimal 20 digit';
+            }
         }
         if (isEdit && (!formData.statusAdmin || formData.statusAdmin === '')) {
             newErrors.statusAdmin = 'Status admin wajib dipilih';
@@ -455,7 +465,7 @@ export default function DataAdminClient() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                NUPTK <span className="text-red-500">*</span>
+                                NUPTK
                             </label>
                             <input
                                 type="text"
@@ -463,9 +473,8 @@ export default function DataAdminClient() {
                                 value={formData.nuptk}
                                 onChange={handleInputChange}
                                 placeholder="Nomor Unik Pendidik"
-                                className={`w-full border ${errors.nuptk ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5`}
+                                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5`}
                             />
-                            {errors.nuptk && <p className="text-red-500 text-xs mt-1">{errors.nuptk}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">

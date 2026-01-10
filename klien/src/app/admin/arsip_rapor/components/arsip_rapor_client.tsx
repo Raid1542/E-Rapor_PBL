@@ -449,7 +449,11 @@ export default function ArsipRaporClient() {
 
                             {statusSaatIni === 'aktif' && (
                                 <button
-                                    onClick={() => handleUbahStatus('selesai')}
+                                    onClick={() => {
+                                        if (window.confirm('⚠️ Apakah Anda yakin ingin menyelesaikan penilaian ini?\n\nSetelah diselesaikan, status bisa diubah kembali ke "Aktif" jika diperlukan.')) {
+                                            handleUbahStatus('selesai');
+                                        }
+                                    }}
                                     disabled={loadingAction}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-700 text-white text-sm rounded-md disabled:opacity-50"
                                 >

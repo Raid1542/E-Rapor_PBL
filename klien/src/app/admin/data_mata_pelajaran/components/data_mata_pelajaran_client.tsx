@@ -1,14 +1,5 @@
-/**
- * Nama File: data_mata_pelajaran_client.tsx
- * Fungsi: Komponen utama halaman Data Mata Pelajaran untuk admin.
- *         Menyediakan fitur CRUD (Create, Read, Update, Delete) mata pelajaran
- *         berdasarkan tahun ajaran aktif atau non-aktif, termasuk pencarian,
- *         paginasi, dan input urutan rapor hanya saat edit.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 September 2025
- */
-
 'use client';
+
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, Plus, Search, X, Trash2 } from 'lucide-react';
 import { apiFetch } from '@/lib/apiFetch';
@@ -64,7 +55,7 @@ export default function DataMataPelajaranPage() {
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // === Fetch Tahun Ajaran ===
+    // Fetch Tahun Ajaran
     const fetchTahunAjaran = async () => {
         try {
             const res = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
@@ -84,7 +75,7 @@ export default function DataMataPelajaranPage() {
         }
     };
 
-    // === Fetch Data Mata Pelajaran (berdasarkan tahun ajaran) ===
+    // Fetch Data Mata Pelajaran berdasarkan tahun ajaran
     const fetchMataPelajaran = async (tahunAjaranId: number) => {
         try {
             const res = await apiFetch(`http://localhost:5000/api/admin/mata-pelajaran?tahun_ajaran_id=${tahunAjaranId}`);
@@ -117,60 +108,48 @@ export default function DataMataPelajaranPage() {
         fetchTahunAjaran();
     }, []);
 
-    // === Handle Form ===
+    // Handle perubahan input
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
 
-        // ✅ Auto-lowercase untuk field jenis
         if (name === 'jenis') {
-            setFormData(prev => ({ ...prev, [name]: value.toLowerCase().trim() }));
-        }
-        // Handle checkbox
-        else if (type === 'checkbox') {
+            setFormData(prev => ({ ...prev, [name]: value.toLowerCase() }));
+        } else if (type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
             setFormData(prev => ({ ...prev, [name]: checked }));
-        }
-        // Handle input lain
-        else {
-            setFormData(prev => ({ ...prev, [name]: value.trim() }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
 
+    // Validasi form
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
 
-        // Trim semua string
-        const kodeMapel = formData.kode_mapel?.trim() || '';
-        const namaMapel = formData.nama_mapel?.trim() || '';
-        const kurikulum = formData.kurikulum?.trim() || '';
-        const jenis = formData.jenis?.toLowerCase()?.trim() || '';
+        const kodeMapel = formData.kode_mapel.trim();
+        const namaMapel = formData.nama_mapel.trim();
+        const kurikulum = formData.kurikulum.trim();
+        const jenis = formData.jenis.trim().toLowerCase();
 
         if (!kodeMapel) newErrors.kode_mapel = 'Kode mapel wajib diisi';
         if (!namaMapel) newErrors.nama_mapel = 'Nama mapel wajib diisi';
         if (!kurikulum) newErrors.kurikulum = 'Kurikulum wajib diisi';
 
-        // ✅ Validasi jenis dengan pesan jelas
         if (!jenis) {
             newErrors.jenis = 'Jenis mapel wajib dipilih';
         } else if (!['wajib', 'pilihan'].includes(jenis)) {
             newErrors.jenis = `Jenis tidak valid: "${jenis}". Harus "wajib" atau "pilihan"`;
         }
 
-        // Validasi checkbox
         if (!formData.confirmData) {
             newErrors.confirmData = 'Harap konfirmasi data terlebih dahulu';
         }
 
         setErrors(newErrors);
-
-        // ✅ Tampilkan error di console untuk debug
-        if (Object.keys(newErrors).length > 0) {
-            console.log('❌ Validasi gagal:', newErrors);
-        }
-
         return Object.keys(newErrors).length === 0;
     };
 
+    // Simpan data baru
     const handleSubmitTambah = async () => {
         if (!validate()) return;
         if (!selectedTahunAjaranId) {
@@ -183,7 +162,7 @@ export default function DataMataPelajaranPage() {
                 body: JSON.stringify({
                     kode_mapel: formData.kode_mapel.trim().toUpperCase(),
                     nama_mapel: formData.nama_mapel.trim(),
-                    jenis: formData.jenis,
+                    jenis: formData.jenis.trim().toLowerCase(),
                     kurikulum: formData.kurikulum.trim(),
                     tahun_ajaran_id: selectedTahunAjaranId
                 })
@@ -202,12 +181,13 @@ export default function DataMataPelajaranPage() {
         }
     };
 
+    // Siapkan form edit
     const handleEdit = (mapel: MataPelajaran) => {
         setEditId(mapel.id);
         setFormData({
             kode_mapel: mapel.kode_mapel,
             nama_mapel: mapel.nama_mapel,
-            jenis: mapel.jenis.toLowerCase().trim(), // ✅ Pastikan lowercase & trim
+            jenis: mapel.jenis.toLowerCase(),
             kurikulum: mapel.kurikulum,
             urutan_rapor: mapel.urutan_rapor !== null ? String(mapel.urutan_rapor) : '',
             confirmData: false
@@ -215,13 +195,13 @@ export default function DataMataPelajaranPage() {
         setShowEdit(true);
     };
 
+    // Update data
     const handleSubmitEdit = async () => {
         if (!validate()) return;
         if (!editId) return;
 
         try {
-            // Pastikan nama variabel konsisten
-            const urutanRaporInput = formData.urutan_rapor?.trim() || '';
+            const urutanRaporInput = formData.urutan_rapor.trim();
             const urutan_rapor = urutanRaporInput ? Number(urutanRaporInput) : null;
 
             const res = await apiFetch(`http://localhost:5000/api/admin/mata-pelajaran/${editId}`, {
@@ -229,7 +209,7 @@ export default function DataMataPelajaranPage() {
                 body: JSON.stringify({
                     kode_mapel: formData.kode_mapel.trim().toUpperCase(),
                     nama_mapel: formData.nama_mapel.trim(),
-                    jenis: formData.jenis,
+                    jenis: formData.jenis.trim().toLowerCase(),
                     kurikulum: formData.kurikulum.trim(),
                     urutan_rapor
                 })
@@ -243,7 +223,6 @@ export default function DataMataPelajaranPage() {
                 handleReset();
             } else {
                 const error = await res.json();
-                console.error('Error dari backend:', error);
                 alert('Error: ' + (error.message || 'Gagal memperbarui'));
             }
         } catch (err) {
@@ -252,6 +231,7 @@ export default function DataMataPelajaranPage() {
         }
     };
 
+    // Hapus data
     const handleDelete = async (id: number) => {
         if (!confirm('Yakin ingin menghapus mata pelajaran ini?')) return;
 
@@ -271,6 +251,7 @@ export default function DataMataPelajaranPage() {
         }
     };
 
+    // Reset form
     const handleReset = () => {
         setFormData({
             kode_mapel: '',
@@ -283,7 +264,7 @@ export default function DataMataPelajaranPage() {
         setErrors({});
     };
 
-    // === Filtering & Pagination ===
+    // Filtering & Pagination
     const filteredMapel = mapelList.filter((mp) => {
         const query = searchQuery.toLowerCase().trim();
         return !query ||
@@ -325,7 +306,7 @@ export default function DataMataPelajaranPage() {
         return pages;
     };
 
-    // === Render Form Tambah/Edit ===
+    // Render form tambah/edit
     const renderForm = (isEdit: boolean) => (
         <div className="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="w-full max-w-2xl mx-auto">
@@ -405,7 +386,6 @@ export default function DataMataPelajaranPage() {
                             {errors.kurikulum && <p className="text-red-500 text-xs mt-1">{errors.kurikulum}</p>}
                         </div>
 
-                        {/* 🔹 Input Urutan Rapor (HANYA di form EDIT) */}
                         {isEdit && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -476,7 +456,6 @@ export default function DataMataPelajaranPage() {
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Data Mata Pelajaran</h1>
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                    {/* Dropdown Tahun Ajaran */}
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Tahun Ajaran

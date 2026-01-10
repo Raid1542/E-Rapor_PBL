@@ -1561,7 +1561,7 @@ exports.getNilaiByMapel = async (req, res) => {
         if (totalBobot > 0) {
           nilaiRapor = (rataUH * totalBobotUH + nilaiPTS * bobotPTS + nilaiPAS * bobotPAS) / totalBobot;
         }
-        nilaiRaporFinal = Math.floor(nilaiRapor);
+        nilaiRaporFinal = Math.round(nilaiRapor);
         deskripsiFinal = raporTersimpan['PAS']?.deskripsi ?? getDeskripsiFromKategori(nilaiRaporFinal, kategoriRows);
       }
 
@@ -1865,11 +1865,11 @@ exports.updateNilaiKomponen = async (req, res) => {
       const totalBobot = totalBobotUH + bobotPTS + bobotPAS;
       if (totalBobot > 0) nilaiRapor /= totalBobot;
       nilaiRapor = nilaiRapor || 0;
-      const nilaiRaporBulat = Math.floor(nilaiRapor);
+      const nilaiRaporBulat = Math.round(nilaiRapor);
       deskripsi = await konfigurasiNilaiRaporModel.getDeskripsiByNilai(nilaiRaporBulat, mapelId);
     }
 
-    const nilaiRaporBulat = Math.floor(nilaiRapor);
+    const nilaiRaporBulat = Math.round(nilaiRapor);
 
     await db.execute(
       `INSERT INTO nilai_rapor (siswa_id, mapel_id, kelas_id, tahun_ajaran_id, semester, nilai_rapor, deskripsi, jenis_penilaian, created_by_user_id, updated_at)
