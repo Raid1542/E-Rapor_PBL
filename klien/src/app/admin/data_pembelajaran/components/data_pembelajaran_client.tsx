@@ -83,8 +83,16 @@ export default function DataPembelajaranPage() {
     // ====== FETCH TAHUN AJARAN ======
     const fetchTahunAjaran = async () => {
         try {
-            const data = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
-            const options = data.data.map((ta: any) => ({
+            const res = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
+            const result = await res.json();
+
+            if (!Array.isArray(result.data)) {
+                console.warn("Respons tidak mengandung array data:", result);
+                setTahunAjaranList([]);
+                return;
+            }
+
+            const options = result.data.map((ta: any) => ({
                 id: ta.id_tahun_ajaran,
                 tahun_ajaran: ta.tahun_ajaran,
                 semester: (ta.semester || 'ganjil').toLowerCase(),
@@ -92,26 +100,39 @@ export default function DataPembelajaranPage() {
             }));
             setTahunAjaranList(options);
         } catch (err) {
-            console.error('Gagal ambil tahun ajaran:', err);
-            alert('Gagal memuat data tahun ajaran');
+            console.error("Gagal fetch tahun ajaran:", err);
+            setTahunAjaranList([]);
         }
     };
 
     // ====== FETCH DROPDOWN ======
     const fetchAllDropdowns = async () => {
-        setDropdownLoading(true);
-        try {
-            const data = await apiFetch("http://localhost:5000/api/admin/pembelajaran/dropdown");
-            setGuruList(data.data.guru || []);
-            setKelasList(data.data.kelas || []);
-            setMapelList(data.data.mata_pelajaran || []);
-        } catch (err) {
-            console.error('Gagal muat dropdown:', err);
-            alert('Gagal memuat data dropdown');
-        } finally {
-            setDropdownLoading(false);
-        }
-    };
+  setDropdownLoading(true);
+  try {
+    const res = await apiFetch("http://localhost:5000/api/admin/pembelajaran/dropdown");
+    const result = await res.json(); // ← Tambahkan ini!
+
+    if (!result?.data || typeof result.data !== 'object') {
+      console.warn('Respons dropdown tidak valid:', result);
+      setGuruList([]);
+      setKelasList([]);
+      setMapelList([]);
+      return;
+    }
+
+    setGuruList(result.data.guru || []);
+    setKelasList(result.data.kelas || []);
+    setMapelList(result.data.mata_pelajaran || []);
+  } catch (err) {
+    console.error('Gagal muat dropdown:', err);
+    alert('Gagal memuat data dropdown');
+    setGuruList([]);
+    setKelasList([]);
+    setMapelList([]);
+  } finally {
+    setDropdownLoading(false);
+  }
+};
 
     // ====== FETCH DATA PEMBELAJARAN ======
     const fetchData = async (taId: number) => {
