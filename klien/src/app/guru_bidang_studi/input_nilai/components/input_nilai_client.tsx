@@ -60,7 +60,7 @@ export default function InputNilaiClient() {
     const [detailSiswa, setDetailSiswa] = useState<NilaiSiswa | null>(null);
     const [detailClosing, setDetailClosing] = useState(false);
 
-    // Modal Edit Komponen (BUKAN Nilai Rapor)
+    // Modal Edit Komponen
     const [editingSiswa, setEditingSiswa] = useState<NilaiSiswa | null>(null);
     const [editingKomponenNilai, setEditingKomponenNilai] = useState<Record<number, number | null>>({});
     const [editKomponenClosing, setEditKomponenClosing] = useState(false);
@@ -167,9 +167,10 @@ export default function InputNilaiClient() {
                     komponenUntukRender.forEach(k => {
                         nilaiRecord[k.id] = s.nilai?.[k.id] ?? null;
                     });
-                    const nilaiRapor = typeof s.nilai_rapor === 'number' ? Math.floor(s.nilai_rapor) : 0;
+                    // Backend sudah kirim nilai_rapor bulat, jadi langsung pakai
+                    const nilaiRapor = typeof s.nilai_rapor === 'number' ? s.nilai_rapor : 0;
                     return {
-                        id: s.id,
+                        id: Number(s.id), 
                         nama: s.nama,
                         nis: s.nis,
                         nisn: s.nisn,
@@ -212,6 +213,16 @@ export default function InputNilaiClient() {
     const simpanNilaiKomponen = async () => {
         if (!editingSiswa || !selectedMapelId) return;
 
+        const isUnchanged = Object.keys(editingKomponenNilai).every(
+            key => editingKomponenNilai[Number(key)] === editingSiswa.nilai[Number(key)]
+        );
+
+        if (isUnchanged) {
+            alert('Tidak ada perubahan data.');
+            setEditingSiswa(null);
+            return;
+        }
+
         for (const [idStr, nilai] of Object.entries(editingKomponenNilai)) {
             if (nilai !== null) {
                 if (typeof nilai !== 'number' || isNaN(nilai) || nilai < 0 || nilai > 100) {
@@ -245,8 +256,13 @@ export default function InputNilaiClient() {
                 deskripsi: data.deskripsi,
             };
 
-            setSiswaList(prev => prev.map(s => (s.id === editingSiswa.id ? updatedSiswa : s)));
-            setFilteredSiswa(prev => prev.map(s => (s.id === editingSiswa.id ? updatedSiswa : s)));
+            setSiswaList(prev =>
+                prev.map(s => (s.id === updatedSiswa.id ? updatedSiswa : s))
+            );
+            setFilteredSiswa(prev =>
+                prev.map(s => (s.id === updatedSiswa.id ? updatedSiswa : s))
+            );
+
             setEditingSiswa(null);
             alert('Nilai komponen berhasil disimpan');
         } catch (err) {
@@ -578,7 +594,6 @@ export default function InputNilaiClient() {
                                                     </div>
                                                 </div>
 
-                                                {/* Deskripsi - Full Width */}
                                                 <div className="mb-6">
                                                     <h3 className="font-semibold text-gray-800 mb-2">Deskripsi:</h3>
                                                     <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
@@ -677,7 +692,7 @@ export default function InputNilaiClient() {
                                                                             [komponen.id]: numValue,
                                                                         }));
                                                                     }
-                                                                    }
+                                                                }
                                                             }}
                                                             disabled={jenisPenilaianAktif === 'PTS' && !/PTS/i.test(komponen.nama)}
                                                             className={`w-full border rounded px-3 py-2 text-sm ${jenisPenilaianAktif === 'PTS' && !/PTS/i.test(komponen.nama)

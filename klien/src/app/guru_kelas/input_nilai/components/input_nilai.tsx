@@ -10,7 +10,7 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Pencil, Eye, Search, X } from 'lucide-react';
-import { apiFetch } from '@/lib/apiFetch'; 
+import { apiFetch } from '@/lib/apiFetch';
 
 // ====== TYPES ======
 interface Mapel {
@@ -213,9 +213,26 @@ const DataInputNilaiPage = () => {
         });
     };
 
+    // ====== FUNGSI PEMBANTU ======
+    const hasChanges = () => {
+        if (!editingSiswa) return false;
+        for (const [idStr, newValue] of Object.entries(editingKomponenNilai)) {
+            const id = Number(idStr);
+            const originalValue = editingSiswa.nilai[id];
+            if (newValue !== originalValue) return true;
+        }
+        return false;
+    };
+
     // ====== SIMPAN NILAI KOMPONEN ======
     const simpanNilaiKomponen = async () => {
         if (!editingSiswa || !selectedMapelId) return;
+
+        // 🔍 Cek apakah ada perubahan data
+        if (!hasChanges()) {
+            alert('Tidak ada perubahan data.');
+            return; // Hentikan proses simpan
+        }
 
         // Validasi: Pastikan semua nilai yang diisi adalah angka antara 0-100
         for (const [idStr, nilai] of Object.entries(editingKomponenNilai)) {
@@ -651,7 +668,7 @@ const DataInputNilaiPage = () => {
                                                                 className={`w-full border rounded px-3 py-2 text-sm ${isDisabled
                                                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                                     : 'border-gray-300'
-                                                                }`}
+                                                                    }`}
                                                                 placeholder="0–100"
                                                             />
                                                         </div>

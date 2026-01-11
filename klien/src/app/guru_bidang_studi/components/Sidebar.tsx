@@ -89,14 +89,14 @@ export default function Sidebar({ user }: SidebarProps) {
             icon: Home,
         },
         {
-            name: 'Input Nilai',
-            url: '/guru_bidang_studi/input_nilai',
-            icon: Edit,
-        },
-        {
             name: 'Atur Penilaian',
             url: '/guru_bidang_studi/atur_penilaian',
             icon: Settings,
+        },
+        {
+            name: 'Input nilai',
+            url: '/guru_bidang_studi/input_nilai',
+            icon: Edit,
         },
     ];
 

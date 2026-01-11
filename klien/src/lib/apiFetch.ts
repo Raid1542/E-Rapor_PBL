@@ -7,44 +7,43 @@
  */
 
 export async function apiFetch(url: string, options: RequestInit = {}) {
-    // Ambil token dari localStorage
     const token = localStorage.getItem('token');
 
-    // Tambahkan header Authorization jika ada token
+    // Jangan set Content-Type jika body adalah FormData
+    const isFormData = options.body instanceof FormData;
+    const defaultHeaders: HeadersInit = {};
+
+    if (!isFormData) {
+        defaultHeaders['Content-Type'] = 'application/json';
+    }
+
+    if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...defaultHeaders,
         ...options.headers,
     };
 
-    // Jalankan fetch
     const res = await fetch(url, { ...options, headers });
 
-    // Jika respons status 401 (Unauthorized)
     if (res.status === 401) {
         try {
             const data = await res.json();
-            // Cek apakah pesan dari backend = "Token telah kadaluarsa"
             if (data.message === 'Token telah kadaluarsa') {
-                // Tampilkan alert sesi berakhir
                 alert('⚠️ Sesi Anda telah berakhir. Silakan login kembali.');
             } else {
-                // Error umum (token tidak valid, dll)
                 alert('Akses ditolak. Silakan login.');
             }
         } catch (e) {
-            // Jika tidak bisa parse JSON, tetap tampilkan alert umum
             alert('Sesi berakhir. Silakan login ulang.');
         }
 
-        // Hapus data login
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
-
-        // Redirect ke login
         window.location.href = '/login';
 
-        // Hentikan eksekusi
         throw new Error('Unauthorized');
     }
 

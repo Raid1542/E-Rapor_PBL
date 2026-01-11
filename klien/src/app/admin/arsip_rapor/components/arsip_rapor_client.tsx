@@ -10,7 +10,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Download, AlertCircle, Play, Pause, Lock } from 'lucide-react';
+import {
+    FileText,
+    Download,
+    AlertCircle,
+    Play,
+    Pause,
+    Lock,
+    X,
+} from 'lucide-react';
 import { apiFetch } from '@/lib/apiFetch';
 
 interface TahunAjaran {
@@ -54,21 +62,23 @@ export default function ArsipRaporClient() {
         setError(null);
         try {
             const res = await apiFetch(`${API_BASE}/admin/arsip-rapor/tahun-ajaran`);
+            if (!res.ok) throw new Error('Gagal mengambil data tahun ajaran');
             const data = await res.json();
-            if (res.ok && data.success) {
-                setTahunAjaranList(
-                    data.data.map((ta: any) => ({
-                        id: ta.id_tahun_ajaran,
-                        tahun_ajaran: ta.tahun_ajaran,
-                        semester: ta.semester as 'Ganjil' | 'Genap',
-                        is_aktif: ta.status === 'aktif',
-                        status_pts: ta.status_pts,
-                        status_pas: ta.status_pas,
-                    }))
-                );
-            } else {
-                throw new Error(data.message || 'Gagal memuat tahun ajaran');
+            if (!data?.success || !Array.isArray(data.data)) {
+                console.warn('Respons tahun ajaran tidak valid:', data);
+                setTahunAjaranList([]);
+                return;
             }
+            setTahunAjaranList(
+                data.data.map((ta: any) => ({
+                    id: ta.id_tahun_ajaran,
+                    tahun_ajaran: ta.tahun_ajaran,
+                    semester: ta.semester as 'Ganjil' | 'Genap',
+                    is_aktif: ta.status === 'aktif',
+                    status_pts: ta.status_pts,
+                    status_pas: ta.status_pas,
+                }))
+            );
         } catch (err: any) {
             console.error('Error fetch tahun ajaran:', err);
             setError(err.message || 'Terjadi kesalahan saat memuat tahun ajaran');
@@ -83,12 +93,13 @@ export default function ArsipRaporClient() {
         setError(null);
         try {
             const res = await apiFetch(`${API_BASE}/admin/arsip-rapor/kelas?tahun_ajaran_id=${tahunAjaranId}`);
+            if (!res.ok) throw new Error('Gagal memuat kelas');
             const data = await res.json();
-            if (res.ok && data.success) {
-                setKelasList(data.data);
-            } else {
-                throw new Error(data.message || 'Gagal memuat kelas');
+            if (!data?.success || !Array.isArray(data.data)) {
+                setKelasList([]);
+                throw new Error('Respons kelas tidak valid');
             }
+            setKelasList(data.data);
         } catch (err: any) {
             console.error('Error fetch kelas:', err);
             setError(err.message || 'Terjadi kesalahan saat memuat kelas');
@@ -112,12 +123,13 @@ export default function ArsipRaporClient() {
             const res = await apiFetch(
                 `${API_BASE}/admin/arsip-rapor/daftar-siswa/${selectedTahunAjaran}/${selectedKelas}`
             );
+            if (!res.ok) throw new Error('Gagal memuat data siswa');
             const data = await res.json();
-            if (res.ok && data.success) {
-                setSiswaList(data.data);
-            } else {
-                throw new Error(data.message || 'Gagal memuat data siswa');
+            if (!data?.success || !Array.isArray(data.data)) {
+                setSiswaList([]);
+                throw new Error('Respons siswa tidak valid');
             }
+            setSiswaList(data.data);
         } catch (err: any) {
             console.error('Error fetch daftar siswa:', err);
             setError(err.message || 'Terjadi kesalahan saat memuat data siswa');
@@ -145,7 +157,6 @@ export default function ArsipRaporClient() {
                 }
             );
 
-            // 🔥 Tangani sesi berakhir untuk unduh file
             if (res.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
@@ -189,12 +200,17 @@ export default function ArsipRaporClient() {
                 }),
             });
 
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal mengubah status');
+            }
+
             const data = await res.json();
-            if (res.ok && data.success) {
+            if (data.success) {
                 alert(`Status berhasil diubah menjadi "${statusBaru}"`);
                 fetchTahunAjaran();
             } else {
-                throw new Error(data.message || 'Gagal mengubah status');
+                throw new Error(data.message || 'Operasi gagal');
             }
         } catch (err: any) {
             console.error('Error ubah status:', err);
@@ -211,6 +227,9 @@ export default function ArsipRaporClient() {
             return;
         }
 
+        const ta = tahunAjaranList.find((t) => t.id === selectedTahunAjaran);
+        if (!ta) return;
+
         if (
             !window.confirm(
                 `⚠️ PERHATIAN!\n\nAnda yakin ingin mengarsipkan dan mengunci ${selectedJenisPenilaian}?\n\n🔒 Setelah dikunci:\n- Guru TIDAK BISA mengedit nilai lagi\n- Status tidak bisa diubah kembali\n- Data akan permanen terkunci\n\nLanjutkan?`
@@ -225,17 +244,22 @@ export default function ArsipRaporClient() {
                 method: 'POST',
                 body: JSON.stringify({
                     jenis: selectedJenisPenilaian,
-                    semester: tahunAjaranList.find((t) => t.id === selectedTahunAjaran)?.semester || 'Ganjil',
+                    semester: ta.semester,
                     tahun_ajaran_id: selectedTahunAjaran,
                 }),
             });
 
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal mengarsipkan rapor');
+            }
+
             const data = await res.json();
-            if (res.ok && data.success) {
+            if (data.success) {
                 alert('Rapor berhasil diarsipkan dan dikunci!');
                 fetchTahunAjaran();
             } else {
-                throw new Error(data.message || 'Gagal mengarsipkan rapor');
+                throw new Error(data.message || 'Operasi arsip gagal');
             }
         } catch (err: any) {
             console.error('Error arsipkan rapor:', err);
@@ -306,7 +330,9 @@ export default function ArsipRaporClient() {
                             <div className="relative">
                                 <select
                                     value={selectedTahunAjaran ?? ''}
-                                    onChange={(e) => setSelectedTahunAjaran(e.target.value ? Number(e.target.value) : null)}
+                                    onChange={(e) =>
+                                        setSelectedTahunAjaran(e.target.value ? Number(e.target.value) : null)
+                                    }
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"
                                     disabled={loadingTA}
                                 >
@@ -329,7 +355,7 @@ export default function ArsipRaporClient() {
                             )}
                         </div>
 
-                        {/* Jenis Penilaian — Hanya tampil jika Tahun Ajaran sudah dipilih */}
+                        {/* Jenis Penilaian */}
                         {selectedTahunAjaran && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -349,7 +375,7 @@ export default function ArsipRaporClient() {
                             </div>
                         )}
 
-                        {/* Kelas — Hanya tampil jika Jenis Penilaian sudah dipilih */}
+                        {/* Kelas */}
                         {selectedJenisPenilaian && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -358,7 +384,9 @@ export default function ArsipRaporClient() {
                                 <div className="relative">
                                     <select
                                         value={selectedKelas ?? ''}
-                                        onChange={(e) => setSelectedKelas(e.target.value ? Number(e.target.value) : null)}
+                                        onChange={(e) =>
+                                            setSelectedKelas(e.target.value ? Number(e.target.value) : null)
+                                        }
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"
                                         disabled={loadingKelas}
                                     >
@@ -380,6 +408,77 @@ export default function ArsipRaporClient() {
                         )}
                     </div>
                 </div>
+
+                {/* === PANEL KONTROL STATUS === */}
+                {selectedTahunAjaran && selectedJenisPenilaian && ta && (
+                    <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-blue-100">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                            Kontrol Status {selectedJenisPenilaian}
+                        </h3>
+
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-1">Status Saat Ini:</p>
+                            <span
+                                className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${getStatusDisplay(statusSaatIni || 'nonaktif').color
+                                    }`}
+                            >
+                                {getStatusDisplay(statusSaatIni || 'nonaktif').text}
+                            </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-3 mb-4">
+                            {statusSaatIni !== 'aktif' && statusSaatIni !== 'selesai' && (
+                                <button
+                                    onClick={() => handleUbahStatus('aktif')}
+                                    disabled={loadingAction}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md disabled:opacity-50"
+                                >
+                                    <Play size={14} /> Aktifkan {selectedJenisPenilaian}
+                                </button>
+                            )}
+
+                            {statusSaatIni === 'aktif' && (
+                                <button
+                                    onClick={() => handleUbahStatus('nonaktif')}
+                                    disabled={loadingAction}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-md disabled:opacity-50"
+                                >
+                                    <Pause size={14} /> Nonaktifkan
+                                </button>
+                            )}
+
+                            {statusSaatIni === 'aktif' && (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('⚠️ Apakah Anda yakin ingin menyelesaikan penilaian ini?\n\nSetelah diselesaikan, status bisa diubah kembali ke "Aktif" jika diperlukan.')) {
+                                            handleUbahStatus('selesai');
+                                        }
+                                    }}
+                                    disabled={loadingAction}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-700 text-white text-sm rounded-md disabled:opacity-50"
+                                >
+                                    <AlertCircle size={14} /> Selesaikan
+                                </button>
+                            )}
+                        </div>
+
+                        {statusSaatIni === 'selesai' && (
+                            <div className="pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={handleArsipkanRapor}
+                                    disabled={loadingAction}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md disabled:opacity-50"
+                                >
+                                    <Lock size={16} />
+                                    Arsipkan & Kunci Permanen
+                                </button>
+                                <p className="mt-2 text-xs text-gray-600">
+                                    Setelah dikunci, nilai tidak bisa diubah lagi oleh guru.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
