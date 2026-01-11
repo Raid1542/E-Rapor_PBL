@@ -92,7 +92,7 @@ export default function AturPenilaianClient() {
 
                 setKomponenList(komponenData.data || []);
                 // Hanya ambil mapel pilihan
-                setMapelList((mapelData.wajib || []).concat(mapelData.pilihan || []).filter(m => m.jenis === 'pilihan'));
+                setMapelList((mapelData.data || []).filter(m => m.jenis === 'pilihan'));
             } catch (err: any) {
                 console.error('Error fetch data pendukung:', err);
                 setError(err.message || 'Gagal memuat data');
