@@ -1394,6 +1394,7 @@ exports.getNilaiByMapel = async (req, res) => {
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Tidak terautentikasi' });
     }
+
     const jenis_penilaian = req.jenis_penilaian;
     if (!jenis_penilaian) {
       return res.status(400).json({
@@ -1401,6 +1402,7 @@ exports.getNilaiByMapel = async (req, res) => {
         message: 'Periode penilaian tidak aktif',
       });
     }
+
     const [taRows] = await db.execute(`
       SELECT id_tahun_ajaran, semester, status_pts, status_pas
       FROM tahun_ajaran
@@ -1410,18 +1412,21 @@ exports.getNilaiByMapel = async (req, res) => {
     if (taRows.length === 0) {
       return res.status(400).json({ success: false, message: 'Tahun ajaran aktif belum diatur' });
     }
+
     const {
       id_tahun_ajaran: tahun_ajaran_id,
       semester,
       status_pts,
       status_pas,
     } = taRows[0];
+
     let periodeAktif = 'PAS';
     if (status_pts === 'aktif') {
       periodeAktif = 'PTS';
     } else if (status_pas === 'aktif') {
       periodeAktif = 'PAS';
     }
+
     const [kelasRow] = await db.execute(
       `SELECT kelas_id FROM guru_kelas WHERE user_id = ? AND tahun_ajaran_id = ?`,
       [userId, tahun_ajaran_id]
@@ -1433,6 +1438,7 @@ exports.getNilaiByMapel = async (req, res) => {
       });
     }
     const kelas_id = kelasRow[0].kelas_id;
+
     const [mapelDiKelas] = await db.execute(
       `SELECT id FROM pembelajaran WHERE kelas_id = ? AND mata_pelajaran_id = ? AND tahun_ajaran_id = ?`,
       [kelas_id, mapelId, tahun_ajaran_id]
@@ -1443,14 +1449,17 @@ exports.getNilaiByMapel = async (req, res) => {
         message: 'Akses ditolak: Mata pelajaran ini tidak diajarkan di kelas Anda',
       });
     }
+
     const [mapelDetail] = await db.execute(
       `SELECT jenis FROM mata_pelajaran WHERE id_mata_pelajaran = ?`,
       [mapelId]
     );
     const jenisMapel = mapelDetail[0]?.jenis || 'wajib';
     const bisa_input = jenisMapel === 'wajib';
+
     const [namaKelasRow] = await db.execute(`SELECT nama_kelas FROM kelas WHERE id_kelas = ?`, [kelas_id]);
     const kelasNama = namaKelasRow[0]?.nama_kelas || 'Kelas Tidak Diketahui';
+
     const [siswaRows] = await db.execute(
       `SELECT id_siswa, nis, nisn, nama_lengkap
        FROM siswa
@@ -1460,6 +1469,7 @@ exports.getNilaiByMapel = async (req, res) => {
        ORDER BY nama_lengkap`,
       [kelas_id, tahun_ajaran_id]
     );
+
     if (siswaRows.length === 0) {
       return res.json({
         success: true,
@@ -1470,7 +1480,7 @@ exports.getNilaiByMapel = async (req, res) => {
       });
     }
 
-    // Ambil nilai langsung dari tabel nilai_rapor
+    // Ambil nilai rapor langsung dari tabel nilai_rapor
     const [nilaiRaporRows] = await db.execute(
       `SELECT siswa_id, nilai_rapor, deskripsi, jenis_penilaian
        FROM nilai_rapor
@@ -1501,11 +1511,28 @@ exports.getNilaiByMapel = async (req, res) => {
       nilaiMap[n.siswa_id][n.komponen_id] = n.nilai;
     });
 
+    // Ambil konfigurasi kategori untuk deskripsi
+    const [kategoriRows] = await db.execute(`
+      SELECT min_nilai, max_nilai, deskripsi
+      FROM konfigurasi_nilai_rapor
+      WHERE (mapel_id = ? OR mapel_id IS NULL)
+        AND is_active = 1
+        AND tahun_ajaran_id = ?
+      ORDER BY min_nilai DESC
+    `, [mapelId, tahun_ajaran_id]);
+
+    // Ambil bobot penilaian
+    const bobotList = await bobotPenilaianModel.getBobotByMapel(mapelId);
+    const bobotMap = new Map();
+    bobotList.forEach(b => {
+      bobotMap.set(b.komponen_id, parseFloat(b.bobot) || 0);
+    });
+
     const siswaList = siswaRows.map(s => {
       const nilai = nilaiMap[s.id_siswa] || {};
       const nilaiDetail = { ...nilai };
 
-      // Gunakan nilai rapor dari nilai_rapor
+      // Gunakan nilai rapor jika tersedia
       const raporData = nilaiRaporMap.get(s.id_siswa);
       let nilaiRaporFinal, deskripsiFinal;
 
@@ -1513,31 +1540,46 @@ exports.getNilaiByMapel = async (req, res) => {
         nilaiRaporFinal = raporData.nilai_rapor;
         deskripsiFinal = raporData.deskripsi;
       } else {
-        // Jika tidak ada, hitung ulang (fallback)
+        // Fallback: hitung ulang hanya jika diperlukan
         const uhKomponenIds = komponenRows
           .filter(k => /^UH\s+\d+$/i.test(k.nama_komponen))
           .map(k => k.id_komponen);
         const ptsKomponen = komponenRows.find(k => /PTS/i.test(k.nama_komponen));
         const pasKomponen = komponenRows.find(k => /PAS/i.test(k.nama_komponen));
 
-        const nilaiUH = uhKomponenIds
-          .map(id => nilai[id])
-          .filter(v => v != null);
-        const rataUH =
-          nilaiUH.length > 0
+        let totalBobotUH = 0;
+        let bobotPTS = 0;
+        let bobotPAS = 0;
+        let nilaiRapor = 0;
+
+        if (jenis_penilaian === 'PTS') {
+          // Hanya ambil nilai PTS
+          const nilaiPTS = ptsKomponen ? nilai[ptsKomponen.id_komponen] || 0 : 0;
+          nilaiRapor = nilaiPTS;
+        } else if (jenis_penilaian === 'PAS') {
+          // Hitung lengkap untuk PAS
+          const nilaiUH = uhKomponenIds
+            .map(id => nilai[id])
+            .filter(v => v != null);
+          const rataUH = nilaiUH.length > 0
             ? nilaiUH.reduce((a, b) => a + b, 0) / nilaiUH.length
             : 0;
-        const totalBobotUH = uhKomponenIds.reduce(
-          (sum, id) => sum + (bobotMap.get(id) || 0),
-          0
-        );
-        const nilaiPTS = ptsKomponen ? nilai[ptsKomponen.id_komponen] || 0 : 0;
-        const nilaiPAS = pasKomponen ? nilai[pasKomponen.id_komponen] || 0 : 0;
-        const totalBobot = totalBobotUH + bobotPTS + bobotPAS;
-        let nilaiRapor = 0;
-        if (totalBobot > 0) {
-          nilaiRapor = (rataUH * totalBobotUH + nilaiPTS * bobotPTS + nilaiPAS * bobotPAS) / totalBobot;
+
+          totalBobotUH = uhKomponenIds.reduce(
+            (sum, id) => sum + (bobotMap.get(id) || 0),
+            0
+          );
+          bobotPTS = ptsKomponen ? bobotMap.get(ptsKomponen.id_komponen) || 0 : 0;
+          bobotPAS = pasKomponen ? bobotMap.get(pasKomponen.id_komponen) || 0 : 0;
+
+          const totalBobot = totalBobotUH + bobotPTS + bobotPAS;
+          if (totalBobot > 0) {
+            const nilaiPTS = ptsKomponen ? nilai[ptsKomponen.id_komponen] || 0 : 0;
+            const nilaiPAS = pasKomponen ? nilai[pasKomponen.id_komponen] || 0 : 0;
+            nilaiRapor = (rataUH * totalBobotUH + nilaiPTS * bobotPTS + nilaiPAS * bobotPAS) / totalBobot;
+          }
         }
+
         nilaiRaporFinal = Math.round(nilaiRapor);
         deskripsiFinal = getDeskripsiFromKategori(nilaiRaporFinal, kategoriRows);
       }
@@ -1912,7 +1954,7 @@ exports.updateNilaiKomponen = async (req, res) => {
   }
 };
 
-// Mendapatkan rekapan nilai seluruh siswa di kelas
+// Mendapatkan rekapan nilai seluruh siswa di kelas (versi diperbaiki)
 exports.getRekapanNilai = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1927,6 +1969,7 @@ exports.getRekapanNilai = async (req, res) => {
     }
     const { id_tahun_ajaran: tahunAjaranId, semester } = tahunAjaranRows[0];
 
+    // Ambil ID kelas yang diampu guru kelas
     const [kelasRows] = await db.execute(
       `SELECT k.id_kelas FROM kelas k INNER JOIN guru_kelas gk ON k.id_kelas = gk.kelas_id WHERE gk.user_id = ? AND gk.tahun_ajaran_id = ?`,
       [userId, tahunAjaranId]
@@ -1939,33 +1982,56 @@ exports.getRekapanNilai = async (req, res) => {
     }
     const kelasId = kelasRows[0].id_kelas;
 
+    // Ambil SEMUA siswa di kelas
     const [siswaRows] = await db.execute(
-      `SELECT s.id_siswa, s.nama_lengkap AS nama, s.nis FROM siswa s INNER JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id WHERE sk.kelas_id = ? AND sk.tahun_ajaran_id = ? ORDER BY s.nama_lengkap`,
+      `SELECT s.id_siswa, s.nama_lengkap AS nama, s.nis 
+       FROM siswa s 
+       INNER JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id 
+       WHERE sk.kelas_id = ? AND sk.tahun_ajaran_id = ? 
+       ORDER BY s.nama_lengkap`,
       [kelasId, tahunAjaranId]
     );
     if (siswaRows.length === 0) {
-      return res.json({
-        success: true,
-        siswa: [],
-        mapel_list: [],
-      });
+      return res.json({ success: true, siswa: [], mapel_list: [] });
     }
 
+    // Muncul semua mapel yang diajarkan
+    const [mapelRows] = await db.execute(
+      `SELECT DISTINCT mp.id_mata_pelajaran, mp.kode_mapel
+       FROM pembelajaran p
+       JOIN mata_pelajaran mp ON p.mata_pelajaran_id = mp.id_mata_pelajaran
+       WHERE p.kelas_id = ? AND p.tahun_ajaran_id = ?
+       ORDER BY mp.urutan_rapor IS NULL, mp.urutan_rapor ASC, mp.id_mata_pelajaran ASC`,
+      [kelasId, tahunAjaranId]
+    );
+
+    const mapelList = mapelRows.map(row => row.kode_mapel);
+    const mapelIdToKode = new Map(mapelRows.map(row => [row.id_mata_pelajaran, row.kode_mapel]));
+
+    // Ambil nilai rapor yang sudah ada
     const [nilaiRows] = await db.execute(
-      `SELECT nr.siswa_id, mp.kode_mapel, nr.nilai_rapor AS nilai FROM nilai_rapor nr INNER JOIN mata_pelajaran mp ON nr.mapel_id = mp.id_mata_pelajaran WHERE nr.kelas_id = ? AND nr.tahun_ajaran_id = ? AND nr.semester = ?`,
+      `SELECT nr.siswa_id, nr.mapel_id, nr.nilai_rapor 
+       FROM nilai_rapor nr 
+       WHERE nr.kelas_id = ? AND nr.tahun_ajaran_id = ? AND nr.semester = ?`,
       [kelasId, tahunAjaranId, semester]
     );
 
-    const mapelList = [...new Set(nilaiRows.map(row => row.kode_mapel))];
-
+    // Buat mapping nilai per siswa per mapel
     const nilaiMap = {};
     nilaiRows.forEach(row => {
       if (!nilaiMap[row.siswa_id]) nilaiMap[row.siswa_id] = {};
-      nilaiMap[row.siswa_id][row.kode_mapel] = row.nilai;
+      const kodeMapel = mapelIdToKode.get(row.mapel_id);
+      if (kodeMapel) {
+        nilaiMap[row.siswa_id][kodeMapel] = row.nilai_rapor;
+      }
     });
 
+    // Ambil konfigurasi rata-rata untuk deskripsi
     const [configRataRata] = await db.execute(
-      `SELECT min_nilai, max_nilai, deskripsi FROM konfigurasi_nilai_rapor WHERE mapel_id IS NULL AND is_active = 1 AND tahun_ajaran_id = ? ORDER BY min_nilai DESC`,
+      `SELECT min_nilai, max_nilai, deskripsi 
+       FROM konfigurasi_nilai_rapor 
+       WHERE mapel_id IS NULL AND is_active = 1 AND tahun_ajaran_id = ? 
+       ORDER BY min_nilai DESC`,
       [tahunAjaranId]
     );
 
@@ -1979,15 +2045,23 @@ exports.getRekapanNilai = async (req, res) => {
       return 'Belum ada deskripsi';
     };
 
+    // Bangun data siswa dengan semua mapel
     const siswa = siswaRows.map(s => {
       const nilaiMapel = {};
+      // Isi semua mapel dengan nilai (atau null jika belum diinput)
       mapelList.forEach(kode => {
         nilaiMapel[kode] = nilaiMap[s.id_siswa]?.[kode] || null;
       });
+
       const nilaiValid = Object.values(nilaiMapel).filter(v => v !== null);
-      const rataRata = nilaiValid.length > 0 ? Math.round((nilaiValid.reduce((a, b) => a + b, 0) / nilaiValid.length) * 100) / 100 : null;
+      const rataRata = nilaiValid.length > 0 
+        ? parseFloat((nilaiValid.reduce((a, b) => a + b, 0) / nilaiValid.length).toFixed(2))
+        : null;
+      
       const rataRataBulat = rataRata !== null ? Math.round(rataRata) : null;
-      const deskripsiRataRata = rataRataBulat !== null ? getDeskripsiRataRata(rataRataBulat, configRataRata) : 'Belum ada deskripsi';
+      const deskripsiRataRata = rataRataBulat !== null 
+        ? getDeskripsiRataRata(rataRataBulat, configRataRata) 
+        : 'Belum ada deskripsi';
 
       return {
         id_siswa: s.id_siswa,
@@ -2000,12 +2074,15 @@ exports.getRekapanNilai = async (req, res) => {
       };
     });
 
+    // Hitung ranking hanya untuk siswa yang punya rata-rata
     siswa
       .filter(s => s.rata_rata !== null)
       .sort((a, b) => b.rata_rata - a.rata_rata)
       .forEach((s, idx) => {
         s.ranking = idx + 1;
       });
+
+    // Siswa tanpa rata-rata → ranking null
     siswa.forEach(s => {
       if (s.rata_rata === null) s.ranking = null;
     });
