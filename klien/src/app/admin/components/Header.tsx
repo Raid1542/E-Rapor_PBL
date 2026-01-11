@@ -34,7 +34,7 @@ export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null); 
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadUserData = () => {
@@ -172,7 +172,7 @@ export default function Header() {
             {/* Profile Dropdown */}
             <div
               id="profile-dropdown"
-              className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
+              className="absolute right-0 mt-2 min-w-[200px] max-w-[90vw] bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden overflow-hidden"
             >
               <div className="p-4 border-b border-gray-200">
                 <p className="font-semibold text-gray-900">{user.name}</p>

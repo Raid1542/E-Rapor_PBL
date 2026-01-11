@@ -2524,21 +2524,21 @@ exports.generateRaporPDF = async (req, res) => {
 
     // === Nama file output ===
     const cleanNama = (nama_lengkap || 'siswa')
-      .replace(/[^a-zA-Z0-9\s]/g, '') 
-      .trim()                           
-      .replace(/\s+/g, '_')            
-      .substring(0, 30);              
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .substring(0, 30);
 
     const cleanNis = (nis || 'NIS')
       .toString()
-      .replace(/[^0-9]/g, '')           
+      .replace(/[^0-9]/g, '')
       .substring(0, 10);
 
     const tahunClean = tahun_ajaran.replace(/\//g, '-');
 
     const fileName = `rapor_${jenisNorm.toLowerCase()}_${semesterNorm.toLowerCase()}.docx`;
 
-    console.log('📄 Nama file:', fileName); 
+    console.log('📄 Nama file:', fileName);
 
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
