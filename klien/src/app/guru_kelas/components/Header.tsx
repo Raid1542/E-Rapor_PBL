@@ -148,11 +148,13 @@ export default function Header({ user }: HeaderProps) {
                         {/* Dropdown */}
                         <div
                             ref={dropdownRef}
-                            className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
+                            className="absolute right-0 mt-2 min-w-[200px] max-w-[90vw] bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden"
                         >
                             <div className="p-4 border-b border-gray-200">
                                 <p className="font-semibold text-gray-900">{user.name}</p>
-                                <p className="text-sm text-gray-500">{user.email}</p>
+                                <p className="text-sm text-gray-500 break-all truncate max-w-full" title={user.email}>
+                                    {user.email}
+                                </p>
                                 <span className="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
                                     {user.role.toUpperCase()} {user.class && `– Kelas ${user.class}`}
                                 </span>
