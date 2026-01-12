@@ -1049,66 +1049,48 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
   try {
     const { mapelId, siswaId } = req.params;
     const { nilai } = req.body;
-
     const mapelIdNum = parseInt(mapelId, 10);
     const siswaIdNum = parseInt(siswaId, 10);
+
     if (isNaN(mapelIdNum) || isNaN(siswaIdNum)) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'ID tidak valid' });
+      return res.status(400).json({ success: false, message: 'ID tidak valid' });
     }
 
     const userId = req.user.id;
 
+    // Ambil tahun ajaran aktif
     const [taRows] = await db.execute(`
-      SELECT id_tahun_ajaran FROM tahun_ajaran WHERE status = 'aktif' LIMIT 1
+      SELECT id_tahun_ajaran, semester, status_pts, status_pas
+      FROM tahun_ajaran
+      WHERE status = 'aktif'
+      LIMIT 1
     `);
     if (taRows.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: 'Tahun ajaran aktif tidak ditemukan',
-        });
+      return res.status(400).json({ success: false, message: 'Tahun ajaran aktif tidak ditemukan' });
     }
-    const tahun_ajaran_id = taRows[0].id_tahun_ajaran;
+    const { id_tahun_ajaran: tahun_ajaran_id, semester, status_pts, status_pas } = taRows[0];
+    const isPeriodePTS = status_pts === 'aktif';
+    const jenis_penilaian = isPeriodePTS ? 'PTS' : 'PAS';
 
-    // Simpan semua nilai ke database
+    // Simpan semua nilai ke nilai_detail
     for (const [komponenIdStr, nilaiSiswa] of Object.entries(nilai)) {
       const komponenId = parseInt(komponenIdStr, 10);
       let nilaiBulat = null;
       if (nilaiSiswa != null && !isNaN(nilaiSiswa)) {
-        nilaiBulat = Math.round(parseFloat(nilaiSiswa)); 
+        nilaiBulat = Math.round(parseFloat(nilaiSiswa));
         if (nilaiBulat < 0) nilaiBulat = 0;
         if (nilaiBulat > 100) nilaiBulat = 100;
       }
-
       await db.execute(
-        `
-        INSERT INTO nilai_detail (siswa_id, mapel_id, komponen_id, nilai, tahun_ajaran_id, created_by_user_id)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          nilai = VALUES(nilai),
-          updated_at = NOW()
-      `,
-        [
-          siswaIdNum,
-          mapelIdNum,
-          komponenId,
-          nilaiBulat,
-          tahun_ajaran_id,
-          userId,
-        ]
+        `INSERT INTO nilai_detail (siswa_id, mapel_id, komponen_id, nilai, tahun_ajaran_id, created_by_user_id)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         nilai = VALUES(nilai), updated_at = NOW()`,
+        [siswaIdNum, mapelIdNum, komponenId, nilaiBulat, tahun_ajaran_id, userId]
       );
     }
 
-    // Ambil data untuk perhitungan
-    const [statusRows] = await db.execute(
-      `SELECT status_pts, status_pas FROM tahun_ajaran WHERE id_tahun_ajaran = ?`,
-      [tahun_ajaran_id]
-    );
-    const isPeriodePTS = statusRows[0]?.status_pts === 'aktif';
-
+    // Ambil data komponen & bobot
     const [komponenRows] = await db.execute(`
       SELECT id_komponen, nama_komponen FROM komponen_penilaian ORDER BY urutan
     `);
@@ -1116,11 +1098,8 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
       `SELECT komponen_id, bobot FROM konfigurasi_mapel_komponen WHERE mapel_id = ?`,
       [mapelIdNum]
     );
-
     const bobotMap = new Map();
-    bobotRows.forEach(row =>
-      bobotMap.set(row.komponen_id, parseFloat(row.bobot) || 0)
-    );
+    bobotRows.forEach(row => bobotMap.set(row.komponen_id, parseFloat(row.bobot) || 0));
 
     const uhKomponenIds = komponenRows
       .filter(k => /^UH\s*\d+$/i.test(k.nama_komponen))
@@ -1128,29 +1107,24 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
     const ptsKomponen = komponenRows.find(k => /PTS/i.test(k.nama_komponen));
     const pasKomponen = komponenRows.find(k => /PAS/i.test(k.nama_komponen));
 
-    // Ambil nilai terbaru dari DB (pastikan konsisten)
+    // Ambil nilai terbaru dari DB
     const [nilaiRows] = await db.execute(
-      `SELECT komponen_id, nilai FROM nilai_detail WHERE siswa_id = ? AND mapel_id = ? AND tahun_ajaran_id = ?`,
+      `SELECT komponen_id, nilai FROM nilai_detail
+       WHERE siswa_id = ? AND mapel_id = ? AND tahun_ajaran_id = ?`,
       [siswaIdNum, mapelIdNum, tahun_ajaran_id]
     );
     const nilaiMap = new Map();
     nilaiRows.forEach(row => nilaiMap.set(row.komponen_id, row.nilai));
 
-    // 🔍 DEBUG LOG
-    console.log('🔍 DEBUG simpanNilaiKomponenBanyak:');
-    console.log('   - Input nilai:', nilai);
-    console.log('   - Nilai dari DB:', Object.fromEntries(nilaiMap));
-    console.log('   - Bobot:', Object.fromEntries(bobotMap));
-    console.log('   - Periode aktif:', isPeriodePTS ? 'PTS' : 'PAS');
-
+    // Hitung nilai rapor
     let nilaiRaporBulat = 0;
     let deskripsi = 'Belum ada deskripsi';
 
     if (isPeriodePTS) {
       const nilaiPTS = ptsKomponen ? nilaiMap.get(ptsKomponen.id_komponen) || 0 : 0;
-      nilaiRaporBulat = Math.round(nilaiPTS); 
-      console.log('   - Perhitungan PTS: nilai =', nilaiPTS, '→ bulat =', nilaiRaporBulat);
+      nilaiRaporBulat = Math.round(nilaiPTS);
     } else {
+      // Perhitungan PAS
       let totalKontribusiUH = 0;
       let totalBobotUH = 0;
       for (const id of uhKomponenIds) {
@@ -1159,72 +1133,50 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
         totalKontribusiUH += n * b;
         totalBobotUH += b;
       }
-
       const nilaiPTS = ptsKomponen ? nilaiMap.get(ptsKomponen.id_komponen) || 0 : 0;
       const bobotPTS = ptsKomponen ? bobotMap.get(ptsKomponen.id_komponen) || 0 : 0;
       const nilaiPAS = pasKomponen ? nilaiMap.get(pasKomponen.id_komponen) || 0 : 0;
       const bobotPAS = pasKomponen ? bobotMap.get(pasKomponen.id_komponen) || 0 : 0;
-
       const totalBobot = totalBobotUH + bobotPTS + bobotPAS;
       let nilaiRapor = 0;
       if (totalBobot > 0) {
         nilaiRapor = (totalKontribusiUH + nilaiPTS * bobotPTS + nilaiPAS * bobotPAS) / totalBobot;
       }
-
-      nilaiRaporBulat = Math.round(nilaiRapor); 
-
-      console.log('   - Perhitungan PAS:');
-      console.log('     Total Kontribusi UH:', totalKontribusiUH);
-      console.log('     Total Bobot UH:', totalBobotUH);
-      console.log('     Nilai PTS:', nilaiPTS, '| Bobot:', bobotPTS);
-      console.log('     Nilai PAS:', nilaiPAS, '| Bobot:', bobotPAS);
-      console.log('     Total Bobot:', totalBobot);
-      console.log('     Nilai Rapor Mentah:', nilaiRapor, '→ Bulat:', nilaiRaporBulat);
+      nilaiRaporBulat = Math.round(nilaiRapor);
     }
 
-    // Ambil deskripsi
+    // Ambil deskripsi dari konfigurasi
     const [configRows] = await db.execute(
-      `SELECT min_nilai, max_nilai, deskripsi 
-       FROM konfigurasi_nilai_rapor 
-       WHERE mapel_id = ?
-       ORDER BY min_nilai DESC`,
-      [mapelIdNum]
+      `SELECT min_nilai, max_nilai, deskripsi
+       FROM konfigurasi_nilai_rapor
+       WHERE mapel_id = ? AND ? BETWEEN min_nilai AND max_nilai
+       ORDER BY min_nilai DESC
+       LIMIT 1`,
+      [mapelIdNum, nilaiRaporBulat]
     );
+    deskripsi = configRows[0]?.deskripsi || '–';
 
-    for (const config of configRows) {
-      if (
-        nilaiRaporBulat >= config.min_nilai &&
-        nilaiRaporBulat <= config.max_nilai
-      ) {
-        deskripsi = config.deskripsi;
-        break;
-      }
-    }
-
-    // Simpan ke nilai_rapor
-    const [kelasRows] = await db.execute(
-      `SELECT kelas_id FROM pembelajaran 
+    // Ambil kelas_id
+    const [kelasRow] = await db.execute(
+      `SELECT kelas_id FROM pembelajaran
        WHERE mata_pelajaran_id = ? AND user_id = ? AND tahun_ajaran_id = ?
        LIMIT 1`,
       [mapelIdNum, userId, tahun_ajaran_id]
     );
-    if (kelasRows.length === 0) {
+    if (kelasRow.length === 0) {
       return res.status(500).json({ success: false, message: 'Kelas tidak ditemukan' });
     }
-    const kelas_id = kelasRows[0].kelas_id;
-
-    const [semesterRows] = await db.execute(`SELECT semester FROM tahun_ajaran WHERE id_tahun_ajaran = ?`, [tahun_ajaran_id]);
-    const semester = semesterRows.length > 0 && (semesterRows[0].semester || '').trim().toLowerCase() === 'ganjil' ? 'Ganjil' : 'Genap';
+    const kelas_id = kelasRow[0].kelas_id;
 
     await db.execute(
       `INSERT INTO nilai_rapor (
         siswa_id, mapel_id, kelas_id, tahun_ajaran_id, semester,
-        nilai_rapor, deskripsi, created_by_user_id, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        nilai_rapor, deskripsi, jenis_penilaian, created_by_user_id, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         nilai_rapor = VALUES(nilai_rapor),
         deskripsi = VALUES(deskripsi),
+        jenis_penilaian = VALUES(jenis_penilaian),
         updated_at = NOW()`,
       [
         siswaIdNum,
@@ -1234,6 +1186,7 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
         semester,
         nilaiRaporBulat,
         deskripsi,
+        jenis_penilaian, 
         userId,
       ]
     );
@@ -1243,8 +1196,8 @@ exports.simpanNilaiKomponenBanyak = async (req, res) => {
       message: 'Nilai komponen berhasil disimpan',
       nilai_rapor: nilaiRaporBulat,
       deskripsi: deskripsi,
+      jenis_penilaian: jenis_penilaian,
     });
-
   } catch (err) {
     console.error('❌ Error simpanNilaiKomponenBanyak:', err);
     res.status(500).json({ success: false, message: 'Gagal menyimpan nilai' });

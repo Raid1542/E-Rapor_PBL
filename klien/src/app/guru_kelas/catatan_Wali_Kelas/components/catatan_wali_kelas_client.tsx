@@ -11,7 +11,7 @@
 
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Pencil, X, Search } from 'lucide-react';
-import { apiFetch } from '@/lib/apiFetch'; 
+import { apiFetch } from '@/lib/apiFetch';
 
 interface SiswaCatatan {
     id: number;
@@ -41,6 +41,7 @@ export default function DataCatatanWaliKelasPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [kelasNama, setKelasNama] = useState<string>('Kelas Anda');
     const [semester, setSemester] = useState<'Ganjil' | 'Genap'>('Ganjil');
+    const [jenisPenilaian, setJenisPenilaian] = useState<'PTS' | 'PAS'>('PTS');
     const [editClosing, setEditClosing] = useState(false);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +60,6 @@ export default function DataCatatanWaliKelasPage() {
         }, 200);
     };
 
-    // === FETCH CATATAN WALI KELAS ===
     useEffect(() => {
         const fetchCatatan = async () => {
             setLoading(true);
@@ -72,12 +72,12 @@ export default function DataCatatanWaliKelasPage() {
                     setFilteredSiswa(siswa);
                     setKelasNama(data.kelas || 'Kelas Anda');
                     setSemester((data.semester || 'Ganjil') as 'Ganjil' | 'Genap');
+                    setJenisPenilaian((data.jenis_penilaian || 'PTS') as 'PTS' | 'PAS');
                 } else {
                     alert(data.message || 'Gagal memuat data catatan wali kelas');
                 }
             } catch (err) {
                 console.error('Error fetch catatan wali kelas:', err);
-                // Jika sesi habis, apiFetch sudah redirect ke /login
             } finally {
                 setLoading(false);
             }
@@ -86,7 +86,6 @@ export default function DataCatatanWaliKelasPage() {
         fetchCatatan();
     }, [API_URL]);
 
-    // === FILTER BERDASARKAN PENCARIAN ===
     useEffect(() => {
         if (!searchQuery.trim()) {
             setFilteredSiswa(siswaList);
@@ -103,7 +102,6 @@ export default function DataCatatanWaliKelasPage() {
         setCurrentPage(1);
     }, [searchQuery, siswaList]);
 
-    // === BUKA MODAL EDIT ===
     const handleEdit = (siswa: SiswaCatatan) => {
         const data = {
             catatan_wali_kelas: siswa.catatan_wali_kelas || '',
@@ -115,7 +113,6 @@ export default function DataCatatanWaliKelasPage() {
         setShowEdit(true);
     };
 
-    // === SIMPAN PERUBAHAN ===
     const handleSave = async () => {
         if (!editId || !originalData) return;
 
@@ -123,7 +120,7 @@ export default function DataCatatanWaliKelasPage() {
             semester === 'Ganjil'
                 ? editData.catatan_wali_kelas !== originalData.catatan_wali_kelas
                 : editData.catatan_wali_kelas !== originalData.catatan_wali_kelas ||
-                  editData.naik_tingkat !== originalData.naik_tingkat;
+                editData.naik_tingkat !== originalData.naik_tingkat;
 
         if (!hasChanges) {
             alert('Tidak ada perubahan yang dilakukan.');
@@ -136,14 +133,13 @@ export default function DataCatatanWaliKelasPage() {
                 catatan_wali_kelas: editData.catatan_wali_kelas,
             };
 
-            if (semester === 'Genap') {
+            if (semester === 'Genap' && jenisPenilaian === 'PAS') {
                 if (editData.naik_tingkat !== 'ya' && editData.naik_tingkat !== 'tidak') {
-                    alert('Di semester Genap, keputusan naik tingkat wajib diisi.');
+                    alert('Di semester Genap saat PAS, keputusan naik tingkat wajib diisi.');
                     return;
                 }
                 payload.naik_tingkat = editData.naik_tingkat;
             } else {
-                // Di semester Ganjil, simpan null untuk naik_tingkat
                 payload.naik_tingkat = null;
             }
 
@@ -168,20 +164,17 @@ export default function DataCatatanWaliKelasPage() {
             }
         } catch (err) {
             console.error('Error simpan catatan:', err);
-            // Jika sesi habis, apiFetch sudah handle redirect
         }
     };
 
-    // === HANDLE PERUBAHAN INPUT ===
     const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setEditData(prev => ({
             ...prev,
-            [name]: value === '' ? null : value,
+            [name]: value,
         }));
     };
 
-    // === PAGINASI ===
     const totalPages = Math.ceil(filteredSiswa.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -293,8 +286,10 @@ export default function DataCatatanWaliKelasPage() {
                             <h2 className="text-xl font-semibold text-gray-800">Kelas: {kelasNama}</h2>
                             <p className="text-sm text-gray-600">
                                 {semester === 'Genap'
-                                    ? 'Isi catatan dan keputusan naik tingkat.'
-                                    : 'Isi catatan. Keputusan naik tingkat hanya di semester Genap.'}
+                                    ? jenisPenilaian === 'PAS'
+                                        ? 'Isi catatan dan keputusan naik tingkat.'
+                                        : 'Isi catatan. Keputusan naik tingkat hanya diisi saat PAS.'
+                                    : 'Isi catatan. Keputusan naik tingkat hanya diisi saat semester Genap dan PAS.'}
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -410,18 +405,14 @@ export default function DataCatatanWaliKelasPage() {
                                             </div>
                                         </td>
                                         <td className="px-3 py-3 text-center align-middle">
-                                            {semester === 'Genap' ? (
-                                                siswa.naik_tingkat === 'ya' ? (
-                                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                                        Ya
-                                                    </span>
-                                                ) : siswa.naik_tingkat === 'tidak' ? (
-                                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
-                                                        Tidak
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">—</span>
-                                                )
+                                            {siswa.naik_tingkat === 'ya' ? (
+                                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                                    Ya
+                                                </span>
+                                            ) : siswa.naik_tingkat === 'tidak' ? (
+                                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                                                    Tidak
+                                                </span>
                                             ) : (
                                                 <span className="text-gray-400">—</span>
                                             )}
@@ -492,7 +483,7 @@ export default function DataCatatanWaliKelasPage() {
                                 />
                             </div>
 
-                            {semester === 'Genap' ? (
+                            {semester === 'Genap' && jenisPenilaian === 'PAS' ? (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Keputusan Naik Tingkat <span className="text-red-500">*</span>
@@ -510,7 +501,9 @@ export default function DataCatatanWaliKelasPage() {
                                 </div>
                             ) : (
                                 <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
-                                    Keputusan naik tingkat hanya diisi pada semester <strong>Genap</strong>.
+                                    {semester === 'Genap'
+                                        ? 'Keputusan naik tingkat hanya diisi saat Penilaian Akhir Semester (PAS).'
+                                        : 'Keputusan naik tingkat hanya diisi saat semester Genap dan PAS.'}
                                 </div>
                             )}
 
