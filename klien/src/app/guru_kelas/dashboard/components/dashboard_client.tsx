@@ -16,7 +16,7 @@ import { apiFetch } from '@/lib/apiFetch';
 
 interface UserData {
     id: string;
-    nama_lengkap: string;
+    name: string;
     email_sekolah: string;
     role: string;
 }
@@ -92,7 +92,7 @@ export default function GuruKelasDashboard() {
             {/* Welcome Card */}
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white">
                 <h2 className="text-2xl font-bold mb-2">
-                    Selamat Datang, {user.nama_lengkap || 'Guru'}! 👋
+                    Selamat Datang, {user.name || 'Guru'}! 👋
                 </h2>
                 <p className="text-orange-100">
                     Anda login sebagai <strong>Guru Kelas</strong>. Silakan kelola siswa Anda.
