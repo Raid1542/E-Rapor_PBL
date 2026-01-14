@@ -368,7 +368,7 @@ const importGuru = async (req, res) => {
         nuptk: row.nuptk || null,
         tempat_lahir: row.tempat_lahir || null,
         tanggal_lahir,
-        jenis_kelamin: row.jenis_kelamin || 'Laki-laki',
+        jenis_kelamin: row.jenis_kelamin || null,
         alamat: row.alamat || null,
         no_telepon: row.no_telepon || null,
       };
@@ -384,6 +384,45 @@ const importGuru = async (req, res) => {
     res
       .status(500)
       .json({ message: err.message || 'Gagal mengimport data guru' });
+  } finally {
+    connection.release();
+  }
+};
+
+const hapusGuru = async (req, res) => {
+  const { id } = req.params;
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Cek apakah guru masih punya data terkait di tabel yang relevan
+    const [cekDep] = await connection.execute(`
+      SELECT
+        (SELECT COUNT(*) FROM pembelajaran WHERE user_id = ?) AS mengajar_count,
+        (SELECT COUNT(*) FROM nilai_rapor WHERE created_by_user_id = ?) AS nilai_count,
+        (SELECT COUNT(*) FROM guru_kelas WHERE user_id = ?) AS wali_kelas_count
+    `, [id, id, id]);
+
+    const dep = cekDep[0];
+    const total = dep.mengajar_count + dep.nilai_count + dep.wali_kelas_count;
+    if (total > 0) {
+      return res.status(400).json({
+        message: 'Guru tidak bisa dihapus karena masih terkait dengan data akademik atau ekstrakurikuler.'
+      });
+    }
+
+    // Hapus dari tabel dependensi (urutan penting: child dulu, baru parent)
+    await connection.execute('DELETE FROM user_role WHERE id_user = ?', [id]);
+    await connection.execute('DELETE FROM guru WHERE user_id = ?', [id]);
+    await connection.execute('DELETE FROM user WHERE id_user = ?', [id]);
+
+    await connection.commit();
+    res.json({ message: 'Data guru berhasil dihapus' });
+
+  } catch (err) {
+    await connection.rollback();
+    console.error('Error hapus guru:', err);
+    res.status(500).json({ message: 'Gagal menghapus data guru' });
   } finally {
     connection.release();
   }
@@ -667,7 +706,7 @@ const importSiswa = async (req, res) => {
           nama_lengkap: row.nama_lengkap,
           tempat_lahir: row.tempat_lahir || null,
           tanggal_lahir,
-          jenis_kelamin: row.jenis_kelamin || 'Laki-laki',
+          jenis_kelamin: row.jenis_kelamin || null,
           alamat: row.alamat || null,
           kelas_id: kelasId,
           status: 'aktif',
@@ -686,6 +725,60 @@ const importSiswa = async (req, res) => {
     res
       .status(500)
       .json({ message: err.message || 'Gagal mengimport data siswa' });
+  } finally {
+    connection.release();
+  }
+};
+
+const hapusSiswa = async (req, res) => {
+  const { id } = req.params;
+  const taId = req.tahunAjaranAktifId; // Dari middleware cekTahunAjaranAktif
+
+  if (!taId) {
+    return res.status(400).json({ message: 'Operasi hanya diperbolehkan di tahun ajaran aktif' });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Pastikan siswa benar-benar ada di tahun ajaran aktif
+    const [siswaRows] = await connection.execute(
+      'SELECT id_siswa FROM siswa s JOIN siswa_kelas sk ON s.id_siswa = sk.siswa_id WHERE s.id_siswa = ? AND sk.tahun_ajaran_id = ?',
+      [id, taId]
+    );
+    if (siswaRows.length === 0) {
+      return res.status(404).json({ message: 'Siswa tidak ditemukan di tahun ajaran aktif' });
+    }
+
+    // Cek ketergantungan data
+    const [cekDep] = await connection.execute(`
+      SELECT
+        (SELECT COUNT(*) FROM nilai_rapor WHERE siswa_id = ?) AS nilai_count,
+        (SELECT COUNT(*) FROM absensi WHERE siswa_id = ?) AS absensi_count,
+        (SELECT COUNT(*) FROM peserta_ekstrakurikuler WHERE siswa_id = ?) AS ekskul_count,
+        (SELECT COUNT(*) FROM catatan_wali_kelas WHERE siswa_id = ?) AS catatan_count
+    `, [id, id, id, id]);
+
+    const dep = cekDep[0];
+    const total = dep.nilai_count + dep.absensi_count + dep.ekskul_count + dep.catatan_count;
+
+    if (total > 0) {
+      return res.status(400).json({
+        message: 'Siswa tidak bisa dihapus karena sudah memiliki data akademik atau ekstrakurikuler.'
+      });
+    }
+
+    // Hapus data siswa
+    await connection.execute('DELETE FROM siswa_kelas WHERE siswa_id = ? AND tahun_ajaran_id = ?', [id, taId]);
+    await connection.execute('DELETE FROM siswa WHERE id_siswa = ?', [id]);
+
+    await connection.commit();
+    res.json({ message: 'Data siswa berhasil dihapus' });
+  } catch (err) {
+    await connection.rollback();
+    console.error('Error hapus siswa:', err);
+    res.status(500).json({ message: 'Gagal menghapus data siswa' });
   } finally {
     connection.release();
   }
@@ -971,7 +1064,7 @@ const hapusKelas = async (req, res) => {
                 (SELECT COUNT(*) FROM siswa_kelas WHERE kelas_id = ?) AS siswa_count,
                 (SELECT COUNT(*) FROM guru_kelas WHERE kelas_id = ?) AS guru_count,
                 (SELECT COUNT(*) FROM absensi WHERE kelas_id = ?) AS absensi_count,
-                (SELECT COUNT(*) FROM nilai WHERE kelas_id = ?) AS nilai_count
+                (SELECT COUNT(*) FROM nilai_rapor WHERE kelas_id = ?) AS nilai_count
         `,
       [id, id, id, id]
     );
@@ -2176,6 +2269,7 @@ module.exports = {
   tambahGuru,
   editGuru,
   importGuru,
+  hapusGuru,
   // Sekolah
   getSekolah,
   editSekolah,
@@ -2186,6 +2280,7 @@ module.exports = {
   tambahSiswa,
   editSiswa,
   importSiswa,
+  hapusSiswa,
   //  Tahun Ajaran
   getTahunAjaran,
   tambahTahunAjaran,

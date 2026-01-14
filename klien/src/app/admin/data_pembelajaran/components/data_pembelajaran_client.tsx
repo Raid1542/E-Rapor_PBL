@@ -1,15 +1,15 @@
 /**
- * Nama File: data_pembelajaran_client.tsx
- * Fungsi: Komponen client-side untuk mengelola data pembelajaran oleh admin.
- *         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
- *         kelas dan mata pelajaran, pencarian, serta paginasi. Hanya tahun ajaran
- *         aktif yang memungkinkan penambahan dan perubahan data.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 September 2025
- */
+* Nama File: data_pembelajaran_client.tsx
+* Fungsi: Komponen client-side untuk mengelola data pembelajaran oleh admin.
+*         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
+*         kelas dan mata pelajaran, pencarian, serta paginasi. Hanya tahun ajaran
+*         aktif yang memungkinkan penambahan dan perubahan data.
+* Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+* Tanggal: 15 September 2025
+*/
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Pencil, Plus, Search, X, Trash2, Filter } from 'lucide-react';
+import { Pencil, Plus, Search, X, Trash2, Filter, Upload } from 'lucide-react';
 import { apiFetch } from '@/lib/apiFetch';
 
 // ====== TYPES ======
@@ -22,16 +22,19 @@ interface Pembelajaran {
     id_mapel: number;
     id_kelas: number;
 }
+
 interface TahunAjaran {
     id: number;
     tahun_ajaran: string;
     semester: string;
     is_aktif: boolean;
 }
+
 interface DropdownItem {
     id: number;
     nama: string;
 }
+
 interface FormDataType {
     user_id: string;
     id_mapel: string;
@@ -49,7 +52,6 @@ export default function DataPembelajaranPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-
     // ====== DROPDOWN DATA ======
     const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
     const [selectedTahunAjaranId, setSelectedTahunAjaranId] = useState<number | null>(null);
@@ -58,7 +60,6 @@ export default function DataPembelajaranPage() {
     const [mapelList, setMapelList] = useState<DropdownItem[]>([]);
     const [kelasList, setKelasList] = useState<DropdownItem[]>([]);
     const [dropdownLoading, setDropdownLoading] = useState(false);
-
     // ====== FILTER STATE ======
     const [showFilter, setShowFilter] = useState(false);
     const [filterClosing, setFilterClosing] = useState(false);
@@ -70,6 +71,10 @@ export default function DataPembelajaranPage() {
         kelas: '',
         mapel: ''
     });
+    // ====== IMPORT STATE ======
+    const [showImport, setShowImport] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importClosing, setImportClosing] = useState(false);
 
     // ====== FORM STATE ======
     const [formData, setFormData] = useState<FormDataType>({
@@ -85,13 +90,11 @@ export default function DataPembelajaranPage() {
         try {
             const res = await apiFetch("http://localhost:5000/api/admin/tahun-ajaran");
             const result = await res.json();
-
             if (!Array.isArray(result.data)) {
                 console.warn("Respons tidak mengandung array data:", result);
                 setTahunAjaranList([]);
                 return;
             }
-
             const options = result.data.map((ta: any) => ({
                 id: ta.id_tahun_ajaran,
                 tahun_ajaran: ta.tahun_ajaran,
@@ -107,32 +110,30 @@ export default function DataPembelajaranPage() {
 
     // ====== FETCH DROPDOWN ======
     const fetchAllDropdowns = async () => {
-  setDropdownLoading(true);
-  try {
-    const res = await apiFetch("http://localhost:5000/api/admin/pembelajaran/dropdown");
-    const result = await res.json(); // ← Tambahkan ini!
-
-    if (!result?.data || typeof result.data !== 'object') {
-      console.warn('Respons dropdown tidak valid:', result);
-      setGuruList([]);
-      setKelasList([]);
-      setMapelList([]);
-      return;
-    }
-
-    setGuruList(result.data.guru || []);
-    setKelasList(result.data.kelas || []);
-    setMapelList(result.data.mata_pelajaran || []);
-  } catch (err) {
-    console.error('Gagal muat dropdown:', err);
-    alert('Gagal memuat data dropdown');
-    setGuruList([]);
-    setKelasList([]);
-    setMapelList([]);
-  } finally {
-    setDropdownLoading(false);
-  }
-};
+        setDropdownLoading(true);
+        try {
+            const res = await apiFetch("http://localhost:5000/api/admin/pembelajaran/dropdown");
+            const result = await res.json();
+            if (!result?.data || typeof result.data !== 'object') {
+                console.warn('Respons dropdown tidak valid:', result);
+                setGuruList([]);
+                setKelasList([]);
+                setMapelList([]);
+                return;
+            }
+            setGuruList(result.data.guru || []);
+            setKelasList(result.data.kelas || []);
+            setMapelList(result.data.mata_pelajaran || []);
+        } catch (err) {
+            console.error('Gagal muat dropdown:', err);
+            alert('Gagal memuat data dropdown');
+            setGuruList([]);
+            setKelasList([]);
+            setMapelList([]);
+        } finally {
+            setDropdownLoading(false);
+        }
+    };
 
     // ====== FETCH DATA PEMBELAJARAN ======
     const fetchData = async (taId: number) => {
@@ -180,6 +181,34 @@ export default function DataPembelajaranPage() {
             setShowFilter(false);
             setFilterClosing(false);
         }, 200);
+    };
+
+    // === HANDLE IMPORT EXCEL ===
+    const handleImportExcel = async () => {
+        if (!importFile) {
+            alert('Silakan pilih file Excel terlebih dahulu');
+            return;
+        }
+        const formDataExcel = new FormData();
+        formDataExcel.append('file', importFile);
+        try {
+            const res = await apiFetch('http://localhost:5000/api/admin/pembelajaran/import', {
+                method: 'POST',
+                body: formDataExcel
+            });
+            const result = await res.json();
+            if (res.ok) {
+                alert(`Berhasil import ${result.total} data pembelajaran!`);
+                setShowImport(false);
+                setImportFile(null);
+                if (selectedTahunAjaranId) fetchData(selectedTahunAjaranId);
+            } else {
+                alert('Gagal: ' + (result.message || 'Gagal import data pembelajaran'));
+            }
+        } catch (err) {
+            console.error('Import error:', err);
+            alert('Gagal terhubung ke server');
+        }
     };
 
     // ====== EVENT HANDLERS ======
@@ -291,8 +320,7 @@ export default function DataPembelajaranPage() {
                     <button
                         key={`page-${i}`}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -303,8 +331,7 @@ export default function DataPembelajaranPage() {
                 <button
                     key="page-1"
                     onClick={() => setCurrentPage(1)}
-                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     1
                 </button>
@@ -317,8 +344,7 @@ export default function DataPembelajaranPage() {
                     <button
                         key={`page-${i}`}
                         onClick={() => setCurrentPage(i)}
-                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                            }`}
+                        className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === i ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                     >
                         {i}
                     </button>
@@ -329,8 +355,7 @@ export default function DataPembelajaranPage() {
                 <button
                     key={`page-${totalPages}`}
                     onClick={() => setCurrentPage(totalPages)}
-                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                        }`}
+                    className={`px-3 py-1 border border-gray-300 rounded transition ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
                 >
                     {totalPages}
                 </button>
@@ -464,8 +489,7 @@ export default function DataPembelajaranPage() {
                             <button
                                 onClick={() => handleSubmit(isEdit)}
                                 disabled={!isFormValid}
-                                className={`flex-1 py-2.5 rounded text-xs sm:text-sm font-medium ${!isFormValid ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'
-                                    }`}
+                                className={`flex-1 py-2.5 rounded text-xs sm:text-sm font-medium ${!isFormValid ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                             >
                                 {isEdit ? 'Update' : 'Simpan'}
                             </button>
@@ -478,7 +502,6 @@ export default function DataPembelajaranPage() {
 
     if (showTambah) return renderForm('Tambah Data Pembelajaran', false);
     if (showEdit) return renderForm('Edit Data Pembelajaran', true);
-
     return (
         <div className="flex-1 p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
@@ -524,17 +547,26 @@ export default function DataPembelajaranPage() {
                         </div>
                     ) : (
                         <>
-                            {/* Tombol Aksi: Tambah + Filter */}
+                            {/* Tombol Aksi: Tambah + Import + Filter */}
                             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                                 <div className="flex flex-wrap gap-2">
                                     {selectedTahunAjaranAktif && (
-                                        <button
-                                            onClick={() => setShowTambah(true)}
-                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
-                                        >
-                                            <Plus size={20} />
-                                            Tambah Pembelajaran
-                                        </button>
+                                        <>
+                                            <button
+                                                onClick={() => setShowTambah(true)}
+                                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+                                            >
+                                                <Plus size={20} />
+                                                Tambah Pembelajaran
+                                            </button>
+                                            <button
+                                                onClick={() => setShowImport(true)}
+                                                className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 transition whitespace-nowrap"
+                                            >
+                                                <Upload size={20} />
+                                                Import Pembelajaran
+                                            </button>
+                                        </>
                                     )}
                                     <button
                                         onClick={() => {
@@ -680,8 +712,7 @@ export default function DataPembelajaranPage() {
                     {/* MODAL FILTER */}
                     {showFilter && (
                         <div
-                            className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${filterClosing ? 'opacity-0' : 'opacity-100'
-                                } p-3 sm:p-4`}
+                            className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${filterClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
                             onClick={(e) => {
                                 if (e.target === e.currentTarget) {
                                     closeFilterModal();
@@ -690,8 +721,7 @@ export default function DataPembelajaranPage() {
                         >
                             <div className="absolute inset-0 bg-gray-900/70"></div>
                             <div
-                                className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${filterClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                                    }`}
+                                className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${filterClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                             >
                                 <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
                                     <h2 className="text-lg sm:text-xl font-bold text-gray-800">Filter Pembelajaran</h2>
@@ -767,6 +797,99 @@ export default function DataPembelajaranPage() {
                                             </div>
                                         </>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* MODAL IMPORT */}
+                    {showImport && (
+                        <div
+                            className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${importClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget) {
+                                    setImportClosing(true);
+                                    setTimeout(() => {
+                                        setShowImport(false);
+                                        setImportClosing(false);
+                                    }, 200);
+                                }
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-gray-900/70"></div>
+                            <div
+                                className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-200 ${importClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+                            >
+                                <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+                                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">Import Data Pembelajaran</h2>
+                                    <button
+                                        onClick={() => {
+                                            setImportClosing(true);
+                                            setTimeout(() => {
+                                                setShowImport(false);
+                                                setImportClosing(false);
+                                            }, 200);
+                                        }}
+                                        className="text-gray-500 hover:text-gray-700"
+                                        aria-label="Tutup modal"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-4 sm:p-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Format file: <strong>.xlsx</strong> atau <strong>.xls</strong>
+                                    </p>
+                                    <div className="mb-4">
+                                        <a
+                                            href="http://localhost:5000/templates/template_import_pembelajaran.xlsx"
+                                            download
+                                            className="text-blue-500 text-sm hover:underline flex items-center gap-1"
+                                        >
+                                            📥 Unduh template Excel
+                                        </a>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Isi sesuai contoh, lalu simpan sebagai <strong>.xlsx</strong>
+                                        </p>
+                                    </div>
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-600">
+                                                {importFile ? (
+                                                    <span className="font-medium text-blue-600">{importFile.name}</span>
+                                                ) : (
+                                                    'Klik untuk pilih file'
+                                                )}
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept=".xlsx,.xls"
+                                            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    <div className="flex gap-3 mt-6">
+                                        <button
+                                            onClick={handleImportExcel}
+                                            disabled={!importFile}
+                                            className={`flex-1 py-2.5 rounded-lg font-medium transition ${!importFile ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                                        >
+                                            Import
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setImportClosing(true);
+                                                setTimeout(() => {
+                                                    setShowImport(false);
+                                                    setImportClosing(false);
+                                                }, 200);
+                                            }}
+                                            className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition"
+                                        >
+                                            Batal
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

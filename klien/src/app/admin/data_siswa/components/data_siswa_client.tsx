@@ -1,15 +1,15 @@
 /**
- * Nama File: data_siswa_client.tsx
- * Fungsi: Komponen client-side untuk mengelola data siswa oleh admin.
- *         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
- *         kelas, jenis kelamin, dan status, serta import data siswa via Excel.
- *         Hanya tahun ajaran aktif yang memungkinkan aksi edit, hapus, tambah, dan import.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 September 2025
- */
+* Nama File: data_siswa_client.tsx
+* Fungsi: Komponen client-side untuk mengelola data siswa oleh admin.
+*         Menyediakan fitur CRUD (Create, Read, Update, Delete), filter berdasarkan
+*         kelas, jenis kelamin, dan status, serta import data siswa via Excel.
+*         Hanya tahun ajaran aktif yang memungkinkan aksi edit, hapus, tambah, dan import.
+* Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+* Tanggal: 15 September 2025
+*/
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
+import { Eye, Pencil, Upload, X, Plus, Search, Filter, Trash2 } from 'lucide-react';
 import { apiFetch } from '@/lib/apiFetch';
 
 interface Siswa {
@@ -135,7 +135,7 @@ export default function DataSiswaPage() {
         }
     };
 
-    // ✅ BARU: Fetch daftar kelas dari API
+    // Fetch daftar kelas dari API
     const fetchKelasDropdown = async () => {
         setKelasLoading(true);
         try {
@@ -187,6 +187,30 @@ export default function DataSiswaPage() {
         }
     };
 
+    // === HANDLE DELETE ===
+    const handleDelete = async (id: number) => {
+        if (!confirm('Yakin ingin menghapus data siswa ini? Tindakan ini tidak bisa dikembalikan.')) {
+            return;
+        }
+
+        try {
+            const res = await apiFetch(`http://localhost:5000/api/admin/siswa/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert('Data siswa berhasil dihapus');
+                if (selectedTahunAjaranId) fetchSiswa(selectedTahunAjaranId);
+            } else {
+                const error = await res.json();
+                alert('Gagal: ' + (error.message || 'Gagal menghapus data siswa'));
+            }
+        } catch (err) {
+            console.error('Error hapus siswa:', err);
+            alert('Gagal terhubung ke server');
+        }
+    };
+
     // === Form & Validation ===
     const [formData, setFormData] = useState<FormDataType>({
         nama: '',
@@ -201,6 +225,7 @@ export default function DataSiswaPage() {
         statusSiswa: 'aktif',
         confirmData: false
     });
+
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleDetail = (siswa: Siswa) => {
@@ -805,13 +830,22 @@ export default function DataSiswaPage() {
                                                                 <span className="hidden sm:inline">Detail</span>
                                                             </button>
                                                             {selectedTahunAjaranAktif && (
-                                                                <button
-                                                                    onClick={() => handleEdit(siswa)}
-                                                                    className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
-                                                                >
-                                                                    <Pencil size={16} />
-                                                                    <span className="hidden sm:inline">Edit</span>
-                                                                </button>
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleEdit(siswa)}
+                                                                        className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                                                                    >
+                                                                        <Pencil size={16} />
+                                                                        <span className="hidden sm:inline">Edit</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(siswa.id)}
+                                                                        className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 transition text-xs sm:text-sm"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                        <span className="hidden sm:inline">Hapus</span>
+                                                                    </button>
+                                                                </>
                                                             )}
                                                         </div>
                                                     </td>
@@ -835,6 +869,7 @@ export default function DataSiswaPage() {
                     )}
                 </div>
             </div>
+
             {/* Modal Detail */}
             {showDetail && selectedSiswa && (
                 <div
@@ -965,6 +1000,7 @@ export default function DataSiswaPage() {
                     </div>
                 </div>
             )}
+
             {/* Modal Import */}
             {showImport && (
                 <div
@@ -1058,6 +1094,7 @@ export default function DataSiswaPage() {
                     </div>
                 </div>
             )}
+
             {/* Modal Filter */}
             {showFilter && (
                 <div

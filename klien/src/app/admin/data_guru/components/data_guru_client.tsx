@@ -1,14 +1,14 @@
 /**
- * Nama File: data_guru_client.tsx
- * Fungsi: Komponen klien untuk mengelola data guru,
- *         mencakup fitur tambah, edit, detail, import Excel, filter,
- *         pencarian, dan pagination.
- * Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
- * Tanggal: 15 September 2025
- */
+* Nama File: data_guru_client.tsx
+* Fungsi: Komponen klien untuk mengelola data guru,
+*         mencakup fitur tambah, edit, detail, import Excel, filter,
+*         pencarian, pagination, dan HAPUS.
+* Pembuat: Raid Aqil Athallah - NIM: 3312401022 & Frima Rizky Lianda - NIM: 3312401016
+* Tanggal: 15 September 2025
+*/
 'use client';
 import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
-import { Eye, Pencil, Upload, X, Plus, Search, Filter } from 'lucide-react';
+import { Eye, Pencil, Upload, X, Plus, Search, Filter, Trash2 } from 'lucide-react';
 import { apiFetch } from '@/lib/apiFetch';
 
 interface Guru {
@@ -101,34 +101,34 @@ export default function DataGuruClient() {
         const validRoles = ['guru kelas', 'guru bidang studi'];
         const list = Array.isArray(data.data)
           ? data.data.map((g: any) => {
-            let normalizedStatus = 'aktif';
-            if (typeof g.status === 'string') {
-              normalizedStatus = g.status.trim().toLowerCase();
-              if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
-            }
-            let roles: string[] = [];
-            if (g.roles) {
-              const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
-              roles = rawRoles
-                .map((r: any) => String(r).toLowerCase().trim())
-                .filter((r: string) => validRoles.includes(r));
-            }
-            return {
-              id: g.id_user || g.id,
-              nama: g.nama_lengkap || g.nama,
-              email: g.email_sekolah || g.email,
-              niy: g.niy,
-              nuptk: g.nuptk,
-              tempat_lahir: g.tempat_lahir || '',
-              tanggal_lahir: g.tanggal_lahir || '',
-              jenisKelamin: g.jenis_kelamin || '',
-              alamat: g.alamat,
-              no_telepon: g.no_telepon || '',
-              statusGuru: normalizedStatus,
-              roles: roles,
-              profileImage: g.profileImage || null,
-            };
-          })
+              let normalizedStatus = 'aktif';
+              if (typeof g.status === 'string') {
+                normalizedStatus = g.status.trim().toLowerCase();
+                if (normalizedStatus !== 'aktif') normalizedStatus = 'nonaktif';
+              }
+              let roles: string[] = [];
+              if (g.roles) {
+                const rawRoles = Array.isArray(g.roles) ? g.roles : [g.roles];
+                roles = rawRoles
+                  .map((r: any) => String(r).toLowerCase().trim())
+                  .filter((r: string) => validRoles.includes(r));
+              }
+              return {
+                id: g.id_user || g.id,
+                nama: g.nama_lengkap || g.nama,
+                email: g.email_sekolah || g.email,
+                niy: g.niy,
+                nuptk: g.nuptk,
+                tempat_lahir: g.tempat_lahir || '',
+                tanggal_lahir: g.tanggal_lahir || '',
+                jenisKelamin: g.jenis_kelamin || '',
+                alamat: g.alamat,
+                no_telepon: g.no_telepon || '',
+                statusGuru: normalizedStatus,
+                roles: roles,
+                profileImage: g.profileImage || null,
+              };
+            })
           : [];
         setGuruList(list);
       } else {
@@ -145,6 +145,30 @@ export default function DataGuruClient() {
   useEffect(() => {
     fetchGuru();
   }, []);
+
+  // === HANDLE DELETE ===
+  const handleDelete = async (id: number) => {
+    if (!confirm('Yakin ingin menghapus data guru ini? Tindakan ini tidak bisa dikembalikan.')) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`http://localhost:5000/api/admin/guru/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        alert('Data guru berhasil dihapus');
+        fetchGuru();
+      } else {
+        const error = await res.json();
+        alert('Gagal menghapus: ' + (error.message || 'Terjadi kesalahan'));
+      }
+    } catch (err) {
+      console.error('Error hapus guru:', err);
+      alert('Gagal terhubung ke server');
+    }
+  };
 
   // === Form & Validasi ===
   const [formData, setFormData] = useState<FormDataType>({
@@ -195,7 +219,6 @@ export default function DataGuruClient() {
 
   const validate = (isEdit: boolean): boolean => {
     const newErrors: Record<string, string> = {};
-    // === WAJIB: SEMUA MODE ===
     if (!formData.nama?.trim()) {
       newErrors.nama = 'Nama wajib diisi';
     }
@@ -219,11 +242,9 @@ export default function DataGuruClient() {
     if (!formData.roles || formData.roles.length === 0) {
       newErrors.roles = 'Pilih minimal satu role';
     }
-    // === WAJIB: HANYA SAAT EDIT ===
     if (isEdit && (!formData.statusGuru || formData.statusGuru === '')) {
       newErrors.statusGuru = 'Status guru wajib dipilih';
     }
-    // Konfirmasi akhir
     if (!formData.confirmData) {
       newErrors.confirmData = 'Harap konfirmasi data sebelum melanjutkan';
     }
@@ -279,6 +300,7 @@ export default function DataGuruClient() {
       formData.no_telepon !== (originalData.no_telepon || '') ||
       formData.statusGuru !== (originalData.statusGuru || 'aktif') ||
       JSON.stringify(formData.roles.sort()) !== JSON.stringify((originalData.roles || []).sort());
+
     if (!hasChanged) {
       alert("Tidak ada perubahan data.");
       return;
@@ -750,6 +772,7 @@ export default function DataGuruClient() {
               </button>
             </div>
           </div>
+
           {/* Tabel Data */}
           <div className="overflow-x-auto rounded-lg border border-gray-100 shadow-sm">
             <table className="w-full min-w-[600px] table-auto text-sm">
@@ -797,7 +820,7 @@ export default function DataGuruClient() {
                           className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${guru.statusGuru === 'aktif'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
-                            }`}
+                          }`}
                         >
                           {guru.statusGuru?.toUpperCase() || 'AKTIF'}
                         </span>
@@ -818,6 +841,13 @@ export default function DataGuruClient() {
                             <Pencil size={16} />{' '}
                             <span className="hidden sm:inline">Edit</span>
                           </button>
+                          <button
+                            onClick={() => handleDelete(guru.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1.5 rounded flex items-center gap-1 text-xs sm:text-sm"
+                          >
+                            <Trash2 size={16} />{' '}
+                            <span className="hidden sm:inline">Hapus</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -826,6 +856,7 @@ export default function DataGuruClient() {
               </tbody>
             </table>
           </div>
+
           {/* Pagination */}
           <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
             <div className="text-sm text-gray-600">
@@ -838,7 +869,8 @@ export default function DataGuruClient() {
           </div>
         </div>
       </div>
-      {/*  MODAL DETAIL DENGAN FOTO/INISIAL */}
+
+      {/* MODAL DETAIL DENGAN FOTO/INISIAL */}
       {showDetail && selectedGuru && (
         <div
           className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${detailClosing ? 'opacity-0' : 'opacity-100'} p-3 sm:p-4`}
@@ -872,7 +904,6 @@ export default function DataGuruClient() {
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              {/*  AVATAR FOTO/INISIAL */}
               <div className="flex flex-col items-center mb-6">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 overflow-hidden mb-3 flex-shrink-0 flex items-center justify-center">
                   {selectedGuru.profileImage ? (
@@ -908,7 +939,7 @@ export default function DataGuruClient() {
                       className={`inline-block px-3 py-1 rounded text-xs sm:text-sm font-medium ${selectedGuru.statusGuru === 'AKTIF' || selectedGuru.statusGuru === 'aktif'
                         ? 'bg-green-500 text-white'
                         : 'bg-red-500 text-white'
-                        }`}
+                      }`}
                     >
                       {selectedGuru.statusGuru?.toUpperCase() || 'AKTIF'}
                     </span>
@@ -1011,6 +1042,7 @@ export default function DataGuruClient() {
           </div>
         </div>
       )}
+
       {/* Modal Import */}
       {showImport && (
         <div
@@ -1104,6 +1136,7 @@ export default function DataGuruClient() {
           </div>
         </div>
       )}
+
       {/* Modal Filter */}
       {showFilter && (
         <div

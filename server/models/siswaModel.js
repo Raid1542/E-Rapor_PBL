@@ -97,7 +97,7 @@ const siswaModel = {
         nama_lengkap,
         tempat_lahir || null,
         tanggal_lahir || null,
-        jenis_kelamin,
+        jenis_kelamin || null,
         alamat || null,
         status,
       ]
@@ -149,7 +149,7 @@ const siswaModel = {
         nama_lengkap,
         tempat_lahir || null,
         tanggal_lahir || null,
-        jenis_kelamin,
+        jenis_kelamin || null,
         alamat || null,
         status,
         id,

@@ -100,6 +100,7 @@ router.get('/guru', adminOnly, adminController.getGuru);
 router.get('/guru/:id', adminOnly, adminController.getGuruById);
 router.post('/guru', adminOnly, adminController.tambahGuru);
 router.put('/guru/:id', adminOnly, adminController.editGuru);
+router.delete('/guru/:id', adminOnly, adminController.hapusGuru); 
 
 // --- Data Siswa ---
 router.post('/siswa/import', adminOnlyWithTahunAjaran, uploadExcel.single('file'), adminController.importSiswa);
@@ -107,6 +108,7 @@ router.get('/siswa', adminOnly, adminController.getSiswa);
 router.get('/siswa/:id', adminOnly, adminController.getSiswaById);
 router.post('/siswa', adminOnlyWithTahunAjaran, adminController.tambahSiswa);
 router.put('/siswa/:id', adminOnlyWithTahunAjaran, adminController.editSiswa);
+router.delete('/siswa/:id', adminOnlyWithTahunAjaran, adminController.hapusSiswa); 
 
 // --- Data Admin ---
 router.get('/admin', adminOnly, adminController.getAdmin);
@@ -152,6 +154,7 @@ router.get('/pembelajaran/dropdown', adminOnlyWithTahunAjaran, adminController.g
 router.post('/pembelajaran', adminOnlyWithTahunAjaran, adminController.tambahPembelajaran);
 router.put('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.editPembelajaran);
 router.delete('/pembelajaran/:id', adminOnlyWithTahunAjaran, adminController.hapusPembelajaran);
+router.post('/pembelajaran/import', adminOnlyWithTahunAjaran, uploadExcel.single('file'), adminController.importPembelajaran);
 
 // --- EKSTRAKURIKULER ---
 router.get('/ekstrakurikuler', adminOnly, adminController.getEkskul);
